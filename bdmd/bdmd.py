@@ -62,7 +62,7 @@ if len(args.initial_pos) != dim:
 pos = args.initial_pos
 mom = np.array([0.0] * dim)
 energy, forces = pot.evaluate(pos)
-rand_gauss = rng.normal(dim)
+rand_gauss = rng.standard_normal(dim)
 
 print("i: position, mom, energy")
 print("0: {}, {}, {},{}, {}".format(*pos,*mom,energy))
@@ -77,7 +77,7 @@ for i in range(1, 1 + args.num_steps):
     energy, new_forces = pot.evaluate(pos)
     mom += 0.5 * (forces + new_forces) * dt
     # second part of thermostat
-    rand_gauss = rng.normal(dim)
+    rand_gauss = rng.standard_normal(dim)
     mom = c1 * mom + c2 * rand_gauss
     if i % print_freq == 0:
         print("{}: {}, {}, {},{}, {}".format(i,*pos,*mom,energy))

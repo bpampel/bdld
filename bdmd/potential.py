@@ -26,7 +26,7 @@ class Potential():
         '''
         pos = np.append(pos, [0.0]*(3-self.dimension)) #  needed to have 3 elements in pos
         energy = poly.polyval3d(*pos, self.coeffs)
-        forces = np.array([poly.polyval3d(*pos, self.der[d]) for d in range(self.dimension)])
+        forces = np.array([-poly.polyval3d(*pos, self.der[d]) for d in range(self.dimension)])
         return (energy, forces)
 
     def set_dimensions(self,dim=None):
