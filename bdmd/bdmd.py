@@ -2,7 +2,10 @@
 
 import argparse
 import numpy as np
+from bussi_parinello_md import BussiParinelloMD as bpmd
 from potential import Potential
+from particle import Particle
+
 
 
 def parse_cliargs():
@@ -28,7 +31,7 @@ def parse_cliargs():
 def main():
     # custom stuff for testing
     print_freq = 100
-    # exemplary potentials for testing, move to input
+    # exemplary potentials for testing, move to input in the end
     double_well = np.array([0, 0.7, -4, 0, 1])
     wolfe_quapp = np.array([[ 0. ,  0.1, -4. ,  0. ,  1. ],
                             [ 0.3,  1. ,  0. ,  0. ,  0. ],
@@ -36,51 +39,24 @@ def main():
                             [ 0. ,  0. ,  0. ,  0. ,  0. ],
                             [ 1. ,  0. ,  0. ,  0. ,  0. ]])
 
-
     args = parse_cliargs()
-    dt = args.time_step
 
-    rng = np.random.default_rng(args.seed)
+    # set up MD
+    md = bpmd(Potential(wolfe_quapp),
+              Particle(pos=args.initial_pos),
+              args.time_step,
+              args.friction,
+              args.kT,
+              args.seed,
+             )
 
-    mass = 1.0  # make variable?
-    one_over_mass = 1. / mass
-
-    # coefficients for thermostat
-    c1 = np.exp(-0.5 * args.friction * args.kT)
-    c2 = np.sqrt((1 - c1 * c1) * mass * args.kT)
-
-
-    pot = Potential(wolfe_quapp)
-
-
-    # initialization
-    dim = pot.dimension
-    if len(args.initial_pos) != dim:
-        raise ValueError("Intial position has not the same dimensions as potential (required: {})"
-                         .format(dim))
-    pos = args.initial_pos
-    mom = np.array([0.0] * dim)
-    energy, forces = pot.evaluate(pos)
-    rand_gauss = rng.standard_normal(dim)
-
+    # run MD
     print("i: position, mom, energy")
-    print("0: {}, {}, {}".format(pos,mom,energy))
-
-
-    # velocity verlet with bussi-parinello thermostat
+    print("0: {}, {}, {}".format(md.p.pos,md.p.mom,md.energy))
     for i in range(1, 1 + args.num_steps):
-        # first part of thermostat
-        mom = c1 * mom + c2 * rand_gauss
-        # velocity verlet
-        pos += mom * one_over_mass * dt + 0.5 * forces * one_over_mass * dt
-        energy, new_forces = pot.evaluate(pos)
-        mom += 0.5 * (forces + new_forces) * dt
-        # second part of thermostat
-        rand_gauss = rng.standard_normal(dim)
-        mom = c1 * mom + c2 * rand_gauss
+        md.step()
         if i % print_freq == 0:
-            print("{}: {}, {}, {}".format(i,pos,mom,energy))
-        forces = new_forces
+            print("{}: {}, {}, {}".format(i, md.p.pos,md.p.mom,md.energy))
 
 
 if __name__ == '__main__':

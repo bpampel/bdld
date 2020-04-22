@@ -16,7 +16,6 @@ class Potential():
         # note: the derivative matrices are larger than needed. Implement trim_zeros for multiple dimensions?
         self.der = [poly.polyder(self.coeffs, axis=d) for d in range(self.dimension)]
 
-
     def evaluate(self, pos):
         '''Get potential energy / forces at position
         :param pos: current position as list or numpy array
