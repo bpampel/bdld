@@ -4,8 +4,6 @@ import argparse
 import numpy as np
 from bussi_parinello_md import BussiParinelloMD as bpmd
 from potential import Potential
-from particle import Particle
-
 
 
 def parse_cliargs():
@@ -13,7 +11,7 @@ def parse_cliargs():
     :return: args: Namespace with cli arguments"""
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-kT', '--temp', type=float, dest='kT',
+    parser.add_argument('-kT', '--temp', type=float, dest='kt',
                         help="Energy (in units of kT) of the FES file", required=True)
     parser.add_argument('-g', '--friction', type=float,
                         help="Friction coefficient", required=True)
@@ -43,20 +41,22 @@ def main():
 
     # set up MD
     md = bpmd(Potential(wolfe_quapp),
-              Particle(pos=args.initial_pos),
               args.time_step,
               args.friction,
-              args.kT,
+              args.kt,
               args.seed,
-             )
+              )
+    md.add_particle(args.initial_pos)
+
+    p = md.particles[0]  # alias for test logging
+    print("i: position, mom, energy")
+    print("0: {}, {}, {}".format(p.pos, p.mom, p.energy))
 
     # run MD
-    print("i: position, mom, energy")
-    print("0: {}, {}, {}".format(md.p.pos,md.p.mom,md.energy))
     for i in range(1, 1 + args.num_steps):
         md.step()
         if i % print_freq == 0:
-            print("{}: {}, {}, {}".format(i, md.p.pos,md.p.mom,md.energy))
+            print("{}: {}, {}, {}".format(i, p.pos, p.mom, p.energy))
 
 
 if __name__ == '__main__':
