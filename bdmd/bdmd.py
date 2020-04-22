@@ -25,60 +25,63 @@ def parse_cliargs():
     return parser.parse_args()
 
 
-# custom stuff for testing
-print_freq = 1
-# set up potential
-# only exemplary system for testing, move to input
-wolfe_quapp = np.array([[ 0. ,  0.1, -4. ,  0. ,  1. ],
-                        [ 0.3,  1. ,  0. ,  0. ,  0. ],
-                        [-2. ,  0. ,  0. ,  0. ,  0. ],
-                        [ 0. ,  0. ,  0. ,  0. ,  0. ],
-                        [ 1. ,  0. ,  0. ,  0. ,  0. ]])
+def main():
+    # custom stuff for testing
+    print_freq = 100
+    # exemplary potentials for testing, move to input
+    double_well = np.array([0, 0.7, -4, 0, 1])
+    wolfe_quapp = np.array([[ 0. ,  0.1, -4. ,  0. ,  1. ],
+                            [ 0.3,  1. ,  0. ,  0. ,  0. ],
+                            [-2. ,  0. ,  0. ,  0. ,  0. ],
+                            [ 0. ,  0. ,  0. ,  0. ,  0. ],
+                            [ 1. ,  0. ,  0. ,  0. ,  0. ]])
 
 
-args = parse_cliargs()
-dt = args.time_step
+    args = parse_cliargs()
+    dt = args.time_step
 
-rng = np.random.default_rng(args.seed)
+    rng = np.random.default_rng(args.seed)
 
-mass = 1.0  # make variable?
-one_over_mass = 1. / mass
+    mass = 1.0  # make variable?
+    one_over_mass = 1. / mass
 
-# coefficients for thermostat
-c1 = np.exp(-0.5 * args.friction * args.kT)
-c2 = np.sqrt((1 - c1 * c1) * mass * args.kT)
-
-
-pot = Potential(wolfe_quapp)
-dim = pot.dimension
+    # coefficients for thermostat
+    c1 = np.exp(-0.5 * args.friction * args.kT)
+    c2 = np.sqrt((1 - c1 * c1) * mass * args.kT)
 
 
+    pot = Potential(wolfe_quapp)
 
 
-# initialization
-if len(args.initial_pos) != dim:
-    raise ValueError("Intial position has not the same dimensions as potential (required: {})"
-                     .format(dim))
-pos = args.initial_pos
-mom = np.array([0.0] * dim)
-energy, forces = pot.evaluate(pos)
-rand_gauss = rng.standard_normal(dim)
-
-print("i: position, mom, energy")
-print("0: {}, {}, {},{}, {}".format(*pos,*mom,energy))
-
-
-# velocity verlet with bussi-parinello thermostat
-for i in range(1, 1 + args.num_steps):
-    # first part of thermostat
-    mom = c1 * mom + c2 * rand_gauss
-    # velocity verlet
-    pos += mom * one_over_mass * dt + 0.5 * forces * one_over_mass * dt
-    energy, new_forces = pot.evaluate(pos)
-    mom += 0.5 * (forces + new_forces) * dt
-    # second part of thermostat
+    # initialization
+    dim = pot.dimension
+    if len(args.initial_pos) != dim:
+        raise ValueError("Intial position has not the same dimensions as potential (required: {})"
+                         .format(dim))
+    pos = args.initial_pos
+    mom = np.array([0.0] * dim)
+    energy, forces = pot.evaluate(pos)
     rand_gauss = rng.standard_normal(dim)
-    mom = c1 * mom + c2 * rand_gauss
-    if i % print_freq == 0:
-        print("{}: {}, {}, {},{}, {}".format(i,*pos,*mom,energy))
-    forces = new_forces
+
+    print("i: position, mom, energy")
+    print("0: {}, {}, {}".format(pos,mom,energy))
+
+
+    # velocity verlet with bussi-parinello thermostat
+    for i in range(1, 1 + args.num_steps):
+        # first part of thermostat
+        mom = c1 * mom + c2 * rand_gauss
+        # velocity verlet
+        pos += mom * one_over_mass * dt + 0.5 * forces * one_over_mass * dt
+        energy, new_forces = pot.evaluate(pos)
+        mom += 0.5 * (forces + new_forces) * dt
+        # second part of thermostat
+        rand_gauss = rng.standard_normal(dim)
+        mom = c1 * mom + c2 * rand_gauss
+        if i % print_freq == 0:
+            print("{}: {}, {}, {}".format(i,pos,mom,energy))
+        forces = new_forces
+
+
+if __name__ == '__main__':
+    main()
