@@ -4,9 +4,21 @@ import numpy as np
 
 
 class Particle:
-    """Simple particle class"""
-    def __init__(self, pos, mom=None, mass=1):
-        self.pos = np.array(pos)
+    """Simple particle class
+
+    :param numpy.array pos: position
+    :param numpy.array mom: momentum
+    :param float mass: mass of particle
+   """
+
+    def __init__(self, pos, mom=None, mass=1.0):
+        """Initializes particle with given parameters
+
+        :param pos: scalar, list or numpy.array
+        :param mom: scalar, list or numpy.array, defaults to None
+        :param float mass: defaults to 1.0
+        """
+        self.pos = np.array(pos, dtype=float)
         self.mom = None
         self.mass = mass
         self.init_momentum(mom)
@@ -16,7 +28,7 @@ class Particle:
         if mom is None:
             self.mom = np.array([0.0] * len(self.pos))
         else:
-            self.mom = np.array(mom)
+            self.mom = np.array(mom, dtype=float)
         if len(self.pos) != len(self.mom):
             raise ValueError("Dimensions of position and momentum do not match: {} vs {}"
                              .format(len(self.pos), len(self.mom)))

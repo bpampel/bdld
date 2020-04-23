@@ -5,8 +5,15 @@ from particle import Particle
 
 
 class BpmdParticle(Particle):
-    """Particle class that additionally stores MD related variables"""
+    """Derived Particle class that additionally stores MD related variables
+
+    :param list of float rand: storage for one random number per dimension
+    :param float energy: stores last energy evaluation
+    :param list of float forces: stores last force evaluation
+    :param float c2: constant for the MD thermostat (mass dependent)
+    """
     def __init__(self, *args):
+        """Creates particle from base class with additional attributes"""
         super(BpmdParticle, self).__init__(*args)
         self.rand = None  # storage for one random number per dimension
         self.forces = None
@@ -16,14 +23,27 @@ class BpmdParticle(Particle):
 
 class BussiParinelloMD():
     """Perform MD with Bussi-Parinello thermostat
+
     Can handle multiple non-interacting particles (= walkers) simultaneously
+
+    :param potential.Potential pot: potential to perform MD on
+    :param list of BdmdParticles particles: particles (=walkers) of simulation
+    :param float dt: timestep
+    :param float kt: thermal energy in units of kt
+    :param rng: numpy.random.Generator instance for the thermostat
+    :param float c1: constant for thermostat
     """
     def __init__(self, *args):
+        """Creates MD instance
+
+        If arguments are provided they are passed to the setup function
+        Otherwise creates empty instance
+        """
         self.pot = None  # potential
         self.particles = []  # list of particles
         self.dt = None  # timestep
-        self.rng = None
         self.kt = None
+        self.rng = None
         self.c1 = None  # constant for thermostat
         if args is not None:  # ugly shortcut for setup
             self.setup(*args)
@@ -43,7 +63,14 @@ class BussiParinelloMD():
             p.mom = self.c1 * p.mom + p.c2 * p.rand
 
     def setup(self, potential, dt, friction, kt, seed=None):
-        """Setup function"""
+        """Setup function
+
+        :param potential.Potential potential: potential to use
+        :param float dt: timestep of MD
+        :param float friction: friction parameter of langevin dynamics thermostat
+        :param float kt: thermal energy in units of kt
+        :param int seed: seed for rng, optional
+        """
         self.pot = potential
         self.dt = dt
         self.kt = kt
@@ -53,8 +80,10 @@ class BussiParinelloMD():
 
     def add_particle(self, pos, partnum=-1):
         """Add particle to MD
-        :param pos: float or array of floats that give the initial position of the particle
-        :param partnum: int to specify particle number in list. Default is -1 (add at end)
+
+        :param pos: initial position of the particle
+        :type pos: float, list of floats or np.array
+        :param int partnum: specifies particle number (position in list). Default is -1 (add at end)
         """
         if len(pos) != self.pot.dimension:
             raise ValueError("Dimensions of particle and potential do not match: {} vs. {}"
@@ -63,5 +92,11 @@ class BussiParinelloMD():
         p.energy, p.forces = self.pot.evaluate(p.pos)
         p.c2 = np.sqrt((1 - self.c1 * self.c1) * p.mass * self.kt)
         p.rand = self.rng.standard_normal(self.pot.dimension) # initialize for first step
-        self.particles.append(p)
+        self.particles.insert(partnum, p)
 
+    def remove_particle(self, partnum):
+        """Removes particle from MD
+
+        :param int partnum: specifies particle number in list
+        """
+        del self.particles[partnum]
