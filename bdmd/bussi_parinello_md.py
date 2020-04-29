@@ -78,12 +78,13 @@ class BussiParinelloMD():
         self.c1 = np.exp(-0.5 * friction * kt)
         self.rng = np.random.default_rng(seed)
 
-    def add_particle(self, pos, partnum=-1):
+    def add_particle(self, pos, partnum=-1, overwrite=False):
         """Add particle to MD
 
         :param pos: initial position of the particle
         :type pos: float, list of floats or np.array
-        :param int partnum: specifies particle number (position in list). Default is -1 (add at end)
+        :param int partnum: specifies particle number (position in list). Default is -1 (at end)
+        :param bool overwrite: overwrite existing particle instead of inserting (default False)
         """
         if len(pos) != self.pot.dimension:
             raise ValueError("Dimensions of particle and potential do not match: {} vs. {}"
@@ -92,7 +93,10 @@ class BussiParinelloMD():
         p.energy, p.forces = self.pot.evaluate(p.pos)
         p.c2 = np.sqrt((1 - self.c1 * self.c1) * p.mass * self.kt)
         p.rand = self.rng.standard_normal(self.pot.dimension) # initialize for first step
-        self.particles.insert(partnum, p)
+        if overwrite:
+            self.particles[partnum] = p
+        else:
+            self.particles.insert(partnum, p)
 
     def remove_particle(self, partnum):
         """Removes particle from MD

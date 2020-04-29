@@ -18,6 +18,8 @@ class Particle:
         :param mom: scalar, list or numpy.array, defaults to None
         :param float mass: defaults to 1.0
         """
+        if not isinstance(pos, (list, np.ndarray)):  # single float
+            pos = [pos]
         self.pos = np.array(pos, dtype=float)
         self.mom = None
         self.mass = mass
@@ -28,6 +30,8 @@ class Particle:
         if mom is None:
             self.mom = np.array([0.0] * len(self.pos))
         else:
+            if not isinstance(mom, (list, np.ndarray)):  # single float
+                mom = [mom]
             self.mom = np.array(mom, dtype=float)
         if len(self.pos) != len(self.mom):
             raise ValueError("Dimensions of position and momentum do not match: {} vs {}"

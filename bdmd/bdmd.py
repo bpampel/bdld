@@ -3,6 +3,7 @@
 import argparse
 import numpy as np
 from bussi_parinello_md import BussiParinelloMD as bpmd
+from birth_death import BirthDeath
 from potential import Potential
 
 
@@ -19,6 +20,10 @@ def parse_cliargs():
                         help="Time step", required=True)
     parser.add_argument('--num-steps', type=int, dest='num_steps',
                         help="Time step", required=True)
+    parser.add_argument('-bw', '--kernel-bandwidth', type=float, dest='bw',
+                        help="Bandwidth for gaussian kernels", required=True)
+    parser.add_argument('--birth-death-stride', type=int, dest='bd_stride',
+                        help="Stride for the birth-death processes", required=True)
     parser.add_argument('--random-seed', type=int, dest='seed',
                         help="Seed for the random number generator")
     parser.add_argument('--initial-pos', type=float, dest='initial_pos', nargs='+',
@@ -39,25 +44,31 @@ def main():
 
     args = parse_cliargs()
 
-    # set up MD
+    # set up MD and BD
     md = bpmd(Potential(wolfe_quapp),
               args.time_step,
               args.friction,
               args.kt,
               args.seed,
               )
-    md.add_particle(args.initial_pos)
+    if args.seed is not None:
+        args.seed += 1000
+    bd = BirthDeath(md.particles, args.time_step, args.bw, args.seed)
 
-    p = md.particles[0]  # alias for test logging
+
+    # testing again
+    for _ in range(5):
+        md.add_particle(args.initial_pos)
+    p = md.particles[2]  # alias for test logging
     print("i: position, mom, energy")
     print("0: {}, {}, {}".format(p.pos, p.mom, p.energy))
 
     # run MD
     for i in range(1, 1 + args.num_steps):
         md.step()
+        bd.step()
         if i % print_freq == 0:
             print("{}: {}, {}, {}".format(i, p.pos, p.mom, p.energy))
-
 
 if __name__ == '__main__':
     main()
