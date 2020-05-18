@@ -96,7 +96,10 @@ class BussiParinelloMD():
         if overwrite:
             self.particles[partnum] = p
         else:
-            self.particles.insert(partnum, p)
+            if partnum == -1:
+                self.particles.append(p)
+            else:
+                self.particles.insert(partnum, p)
 
     def remove_particle(self, partnum):
         """Removes particle from MD

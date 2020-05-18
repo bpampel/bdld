@@ -20,7 +20,7 @@ def parse_cliargs():
                         help="Time step", required=True)
     parser.add_argument('--num-steps', type=int, dest='num_steps',
                         help="Time step", required=True)
-    parser.add_argument('-bw', '--kernel-bandwidth', type=float, dest='bw',
+    parser.add_argument('-bw', '--kernel-bandwidth', type=float, dest='bw', nargs='+',
                         help="Bandwidth for gaussian kernels", required=True)
     parser.add_argument('--birth-death-stride', type=int, dest='bd_stride',
                         help="Stride for the birth-death processes", required=True)
@@ -45,7 +45,7 @@ def main():
     args = parse_cliargs()
 
     # set up MD and BD
-    md = bpmd(Potential(wolfe_quapp),
+    md = bpmd(Potential(double_well),
               args.time_step,
               args.friction,
               args.kt,
@@ -56,19 +56,25 @@ def main():
     bd = BirthDeath(md.particles, args.time_step, args.bw, args.seed)
 
 
-    # testing again
-    for _ in range(5):
-        md.add_particle(args.initial_pos)
-    p = md.particles[2]  # alias for test logging
+    # testing again, distribute equally
+    extrema = np.polynomial.polynomial.polyroots(*md.pot.der) # includes also maximum
+    md.add_particle([extrema[2]])
+    for _ in range(25):
+        md.add_particle([extrema[0]])
+
+    p = md.particles[0]  # alias for test logging
     print("i: position, mom, energy")
     print("0: {}, {}, {}".format(p.pos, p.mom, p.energy))
 
     # run MD
     for i in range(1, 1 + args.num_steps):
         md.step()
-        bd.step()
+        if i % args.bd_stride == 0:
+            bd.step()
         if i % print_freq == 0:
+            p = md.particles[0]  # redo if particle has been killed
             print("{}: {}, {}, {}".format(i, p.pos, p.mom, p.energy))
+
 
 if __name__ == '__main__':
     main()
