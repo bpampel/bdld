@@ -75,7 +75,7 @@ class BussiParinelloMD():
         self.dt = dt
         self.kt = kt
         # friction is only needed here and not stored
-        self.c1 = np.exp(-0.5 * friction * kt)
+        self.c1 = np.exp(-0.5 * friction * dt)
         self.rng = np.random.default_rng(seed)
 
     def add_particle(self, pos, partnum=-1, overwrite=False):

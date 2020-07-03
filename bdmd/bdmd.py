@@ -2,6 +2,7 @@
 
 import argparse
 import numpy as np
+import analysis
 from bussi_parinello_md import BussiParinelloMD as bpmd
 from birth_death import BirthDeath
 from potential import Potential
@@ -28,14 +29,21 @@ def parse_cliargs():
                         help="Seed for the random number generator")
     parser.add_argument('--initial-pos', type=float, dest='initial_pos', nargs='+',
                         required=True, help="Initial position of particle.")
+    parser.add_argument('--trajectory-files', dest='traj_files',
+                        help="Filename (prefix) to write the trajectories to. Will not save them if empty")
+    parser.add_argument('-v','--verbose', action='store_true',
+                        help="Print more verbose information")
     return parser.parse_args()
+
+
 
 
 def main():
     # custom stuff for testing
-    print_freq = 100
-    # exemplary potentials for testing, move to input in the end
-    double_well = np.array([0, 0.7, -4, 0, 1])
+    print_freq = 0
+    # exemplary potentials
+    double_well = np.array([0, 0, -4, 0, 1])
+    scewed_double_well = np.array([0, 0.7, -4, 0, 1])
     wolfe_quapp = np.array([[ 0. ,  0.1, -4. ,  0. ,  1. ],
                             [ 0.3,  1. ,  0. ,  0. ,  0. ],
                             [-2. ,  0. ,  0. ,  0. ,  0. ],
@@ -53,27 +61,56 @@ def main():
               )
     if args.seed is not None:
         args.seed += 1000
-    bd = BirthDeath(md.particles, args.time_step, args.bw, args.seed)
+    bd = BirthDeath(md.particles, args.time_step, args.bw, args.seed, True)
 
 
     # testing again, distribute equally
     extrema = np.polynomial.polynomial.polyroots(*md.pot.der) # includes also maximum
-    md.add_particle([extrema[2]])
-    for _ in range(25):
+    for _ in range(25): # add 50 particles evenly distributed
         md.add_particle([extrema[0]])
+        md.add_particle([extrema[2]])
+    # for _ in range(50): # add particles randomly
+        # md.add_particle(np.random.random(1)*6 - 3)
 
-    p = md.particles[0]  # alias for test logging
-    print("i: position, mom, energy")
-    print("0: {}, {}, {}".format(p.pos, p.mom, p.energy))
+    # logging: store trajectories in list of lists
+    traj = [[p.pos] for p in md.particles]
+
+    if print_freq > 0:
+        print("i: left_bin, right_bin, total_momentum, total_energy")
 
     # run MD
     for i in range(1, 1 + args.num_steps):
         md.step()
-        if i % args.bd_stride == 0:
-            bd.step()
-        if i % print_freq == 0:
-            p = md.particles[0]  # redo if particle has been killed
+        for j,p in enumerate(md.particles):
+            traj[j].append(np.copy(p.pos))
+        if (args.bd_stride > 0 and i % args.bd_stride == 0):
+            bd_events = bd.step()
+            if args.verbose:
+                print("Step {}: Duplicated/Killed particles: {}".format(i, bd_events))
+        if (print_freq > 0 and i % print_freq == 0):
+            p = md.particles[21]  # redo if particle has been killed
             print("{}: {}, {}, {}".format(i, p.pos, p.mom, p.energy))
+
+    print("Finished simulation")
+    print("Succesful kills: {}".format(bd.kill_count))
+    print("Succesful dups: {}".format(bd.kill_count))
+
+    # save trajectories to files
+    if args.traj_files:
+        print("Saving trajectories to: {}".format(args.traj_files))
+        for i,t in enumerate(traj):
+            np.savetxt(args.traj_files + '.' + str(i), t)
+
+    # flatten trajectory for histogramming
+    comb_traj = [pos for p in traj for pos in p]
+    fes, axes = analysis.calculate_fes(comb_traj, args.kt,[(-2.5,2.5)], bins=201)
+    ref = analysis.calculate_reference_fes(md.pot, np.array(axes).T, args.kt)
+    analysis.plot_fes(fes, axes, ref)
+
+    fesfile = input("Save FES data to path: (empty for no save) ")
+    if fesfile:
+        np.savetxt(fesfile, np.vstack((axes,fes)).T)
+
 
 
 if __name__ == '__main__':
