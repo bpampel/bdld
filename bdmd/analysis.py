@@ -24,16 +24,15 @@ def calculate_fes(trajectory, kt, ranges, bins=101, mintozero=True):
     return fes, axes
 
 
-def calculate_reference_fes(pot, positions, kt):
+def calculate_reference(pot, positions):
     """Calculate FES from potential
 
     :param pot: the potential to evaluate
     :param positions: list of positions to evaluate
-    :param float kt: thermal energy
     """
-    fes = np.fromiter((pot.evaluate(p)[0] / kt for p in positions), float, len(positions))
-    fes -= np.min(fes)
-    return fes
+    ref = np.fromiter((pot.evaluate(p)[0] for p in positions), float, len(positions))
+    ref -= np.min(ref)
+    return ref
 
 
 def plot_fes(fes, axes, ref=None):

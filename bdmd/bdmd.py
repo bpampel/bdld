@@ -40,7 +40,7 @@ def parse_cliargs():
 
 def main():
     # custom stuff for testing
-    print_freq = 0
+    print_freq = 100
     # exemplary potentials
     double_well = np.array([0, 0, -4, 0, 1])
     scewed_double_well = np.array([0, 0.7, -4, 0, 1])
@@ -61,14 +61,14 @@ def main():
               )
     if args.seed is not None:
         args.seed += 1000
-    bd = BirthDeath(md.particles, args.time_step, args.bw, args.seed, True)
+    bd = BirthDeath(md.particles, args.time_step * args.bd_stride, args.bw, args.seed, True)
 
 
-    # testing again, distribute equally
+    # add particles to md
     extrema = np.polynomial.polynomial.polyroots(*md.pot.der) # includes also maximum
-    for _ in range(25): # add 50 particles evenly distributed
+    for _ in range(49):
         md.add_particle([extrema[0]])
-        md.add_particle([extrema[2]])
+    md.add_particle([extrema[2]])
     # for _ in range(50): # add particles randomly
         # md.add_particle(np.random.random(1)*6 - 3)
 
@@ -76,7 +76,7 @@ def main():
     traj = [[p.pos] for p in md.particles]
 
     if print_freq > 0:
-        print("i: left_bin, right_bin, total_momentum, total_energy")
+        print("i: pos, mom, energyy, forces")
 
     # run MD
     for i in range(1, 1 + args.num_steps):
@@ -88,12 +88,14 @@ def main():
             if args.verbose:
                 print("Step {}: Duplicated/Killed particles: {}".format(i, bd_events))
         if (print_freq > 0 and i % print_freq == 0):
-            p = md.particles[21]  # redo if particle has been killed
-            print("{}: {}, {}, {}".format(i, p.pos, p.mom, p.energy))
+            p = md.particles[0]  # redo if particle has been killed
+            print(f"{i}: {p.pos}, {p.mom}, {p.energy}, {p.forces}")
+            counts = count_basins(md.particles,[[-3,0],[0,3]])
+            print(f"{counts} particles in left/right basin")
 
     print("Finished simulation")
     print("Succesful kills: {}".format(bd.kill_count))
-    print("Succesful dups: {}".format(bd.kill_count))
+    print("Succesful dups: {}".format(bd.dup_count))
 
     # save trajectories to files
     if args.traj_files:
@@ -103,13 +105,23 @@ def main():
 
     # flatten trajectory for histogramming
     comb_traj = [pos for p in traj for pos in p]
+
     fes, axes = analysis.calculate_fes(comb_traj, args.kt,[(-2.5,2.5)], bins=201)
-    ref = analysis.calculate_reference_fes(md.pot, np.array(axes).T, args.kt)
+    ref = analysis.calculate_reference(md.pot, np.array(axes).T)
     analysis.plot_fes(fes, axes, ref)
 
     fesfile = input("Save FES data to path: (empty for no save) ")
     if fesfile:
         np.savetxt(fesfile, np.vstack((axes,fes)).T)
+
+
+def count_basins(particles, ranges):
+    counts = [0] * len(ranges)
+    for p in particles:
+        for i, ra in enumerate(ranges):
+            if ra[0] < p.pos < ra[1]:
+                counts[i] += 1
+    return counts
 
 
 

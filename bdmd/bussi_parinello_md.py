@@ -15,7 +15,6 @@ class BpmdParticle(Particle):
     def __init__(self, *args):
         """Creates particle from base class with additional attributes"""
         super(BpmdParticle, self).__init__(*args)
-        self.rand = None  # storage for one random number per dimension
         self.forces = None
         self.energy = None
         self.c2 = None  # second thermostat constant depends on mass
@@ -52,15 +51,14 @@ class BussiParinelloMD():
         """Perform single MD step on all particles"""
         for p in self.particles:
             # first part of thermostat
-            p.mom = self.c1 * p.mom + p.c2 * p.rand
+            p.mom = self.c1 * p.mom + p.c2 * self.rng.standard_normal(self.pot.dimension)
             # velocity verlet with force evaluation
-            p.pos += p.mom / p.mass * self.dt + 0.5 * p.forces / p.mass * self.dt
-            p.energy, new_forces = self.pot.evaluate(p.pos)
-            p.mom += 0.5 * (p.forces + new_forces) * self.dt
-            p.forces = new_forces
+            p.mom += 0.5 * p.forces * self.dt
+            p.pos += (p.mom / p.mass) * self.dt
+            p.energy, p.forces = self.pot.evaluate(p.pos)
+            p.mom += 0.5 * p.forces * self.dt
             # second part of thermostat
-            p.rand = self.rng.standard_normal(self.pot.dimension)
-            p.mom = self.c1 * p.mom + p.c2 * p.rand
+            p.mom = self.c1 * p.mom + p.c2 * self.rng.standard_normal(self.pot.dimension)
 
     def setup(self, potential, dt, friction, kt, seed=None):
         """Setup function
@@ -92,7 +90,6 @@ class BussiParinelloMD():
         p = BpmdParticle(pos)
         p.energy, p.forces = self.pot.evaluate(p.pos)
         p.c2 = np.sqrt((1 - self.c1 * self.c1) * p.mass * self.kt)
-        p.rand = self.rng.standard_normal(self.pot.dimension) # initialize for first step
         if overwrite:
             self.particles[partnum] = p
         else:

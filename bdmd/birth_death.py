@@ -19,7 +19,7 @@ def kernel(pos, bw):
 
 class BirthDeath():
     """Birth death algorithm"""
-    def __init__(self, particles, dt, bw, seed=None):
+    def __init__(self, particles, dt, bw, seed=None, logging=False):
         """Set arguments
 
         :param particles: list of Particles shared with MD
@@ -32,9 +32,15 @@ class BirthDeath():
         self.dt = dt
         self.bw = np.array(bw, dtype=float)
         self.rng = np.random.default_rng(seed)
+        self.logging = logging
+        if self.logging:
+            self.dup_count = 0
+            self.kill_count = 0
 
     def step(self):
-        """Perform birth-death step on particles"""
+        """Perform birth-death step on particles
+
+        Returns list of succesful birth/death events"""
         pos = np.array([p.pos for p in self.particles])
         ene = np.array([p.energy for p in self.particles])
         bd_events = self.calculate_birth_death(pos, ene)
@@ -44,7 +50,7 @@ class BirthDeath():
             # what should be done with the momentum? Keep? Set to 0?
             # -> violates energy conservation!
             # keep the old random number for the initial thermostat step or generate new?
-        print("Duplicated/Killed particles: {}".format(bd_events))
+        return bd_events
 
     def calculate_birth_death(self, pos, ene):
         """Calculate which particles to kill and duplicate
@@ -52,7 +58,7 @@ class BirthDeath():
         The returned lists are ordered, so the first element of the kill_list
         should be replaced by a copy of the first element in the dup_list
 
-        :param numpy.ndarray pot: positions of all particles
+        :param numpy.ndarray pos: positions of all particles
         :param numpy.ndarray ene: energy of all particles
         :return list of tuples (dup, kill): particle to duplicate and kill per event
         """
@@ -70,10 +76,14 @@ class BirthDeath():
                 if beta[i] > 0:
                     kill_list.append(i)
                     dup_list.append(self.random_particle(num_part, [i]))
+                    if self.logging:
+                        self.kill_count += 1
                 elif beta[i] < 0:
                     dup_list.append(i)
                     # prevent killing twice
                     kill_list.append(self.random_particle(num_part, kill_list + [i]))
+                    if self.logging:
+                        self.dup_count += 1
 
         return list(zip(dup_list, kill_list))
 
