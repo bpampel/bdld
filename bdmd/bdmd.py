@@ -22,28 +22,29 @@ def parse_cliargs():
     parser.add_argument('--num-steps', type=int, dest='num_steps',
                         help="Time step", required=True)
     parser.add_argument('-bw', '--kernel-bandwidth', type=float, dest='bw', nargs='+',
-                        help="Bandwidth for gaussian kernels", required=True)
+                        help="Bandwidth for gaussian kernels")
     parser.add_argument('--birth-death-stride', type=int, dest='bd_stride',
                         help="Stride for the birth-death processes", required=True)
     parser.add_argument('--random-seed', type=int, dest='seed',
                         help="Seed for the random number generator")
-    parser.add_argument('--initial-pos', type=float, dest='initial_pos', nargs='+',
-                        required=True, help="Initial position of particle.")
     parser.add_argument('--trajectory-files', dest='traj_files',
                         help="Filename (prefix) to write the trajectories to. Will not save them if empty")
     parser.add_argument('-v','--verbose', action='store_true',
                         help="Print more verbose information")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.bd_stride != 0 and args.bw is None:
+        raise ValueError("Error: Bandwidth for birth-death kernels not specified. (-bw argument)")
+    return args
 
 
 
 
 def main():
     # custom stuff for testing
-    print_freq = 100
+    print_freq = 0
     # exemplary potentials
     double_well = np.array([0, 0, -4, 0, 1])
-    scewed_double_well = np.array([0, 0.7, -4, 0, 1])
+    scewed_double_well = np.array([0, 0.1, -4, 0, 1])
     wolfe_quapp = np.array([[ 0. ,  0.1, -4. ,  0. ,  1. ],
                             [ 0.3,  1. ,  0. ,  0. ,  0. ],
                             [-2. ,  0. ,  0. ,  0. ,  0. ],
@@ -66,11 +67,12 @@ def main():
 
     # add particles to md
     extrema = np.polynomial.polynomial.polyroots(*md.pot.der) # includes also maximum
-    for _ in range(49):
-        md.add_particle([extrema[0]])
-    md.add_particle([extrema[2]])
-    # for _ in range(50): # add particles randomly
-        # md.add_particle(np.random.random(1)*6 - 3)
+    # for _ in range(49):
+        # md.add_particle([extrema[0]])
+    # for _ in range(1):
+        # md.add_particle([extrema[2]])
+    for _ in range(50): # add particles randomly
+        md.add_particle([extrema[np.random.randint(2)*2]])
 
     # logging: store trajectories in list of lists
     traj = [[p.pos] for p in md.particles]
@@ -86,20 +88,20 @@ def main():
         if (args.bd_stride > 0 and i % args.bd_stride == 0):
             bd_events = bd.step()
             if args.verbose:
-                print("Step {}: Duplicated/Killed particles: {}".format(i, bd_events))
+                print(f"Step {i}: Duplicated/Killed particles: {bd_events}")
+                counts = count_basins(md.particles,[[-3,0],[0,3]])
+                print(f"{*counts,} particles in left/right basin")
         if (print_freq > 0 and i % print_freq == 0):
             p = md.particles[0]  # redo if particle has been killed
             print(f"{i}: {p.pos}, {p.mom}, {p.energy}, {p.forces}")
-            counts = count_basins(md.particles,[[-3,0],[0,3]])
-            print(f"{counts} particles in left/right basin")
 
     print("Finished simulation")
-    print("Succesful kills: {}".format(bd.kill_count))
-    print("Succesful dups: {}".format(bd.dup_count))
+    print(f"Succesful kills: {bd.kill_count}")
+    print(f"Succesful dups: {bd.dup_count}")
 
     # save trajectories to files
     if args.traj_files:
-        print("Saving trajectories to: {}".format(args.traj_files))
+        print(f"Saving trajectories to: {args.traj_files}")
         for i,t in enumerate(traj):
             np.savetxt(args.traj_files + '.' + str(i), t)
 
@@ -108,7 +110,7 @@ def main():
 
     fes, axes = analysis.calculate_fes(comb_traj, args.kt,[(-2.5,2.5)], bins=201)
     ref = analysis.calculate_reference(md.pot, np.array(axes).T)
-    analysis.plot_fes(fes, axes, ref)
+    analysis.plot_fes(fes, axes, ref, fesrange=[-0.5,8.0])
 
     fesfile = input("Save FES data to path: (empty for no save) ")
     if fesfile:

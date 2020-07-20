@@ -55,8 +55,8 @@ class BirthDeath():
     def calculate_birth_death(self, pos, ene):
         """Calculate which particles to kill and duplicate
 
-        The returned lists are ordered, so the first element of the kill_list
-        should be replaced by a copy of the first element in the dup_list
+        The returned tuples are ordered, so the first particle in the tuple
+        should be replaced by a copy of the second one
 
         :param numpy.ndarray pos: positions of all particles
         :param numpy.ndarray ene: energy of all particles
@@ -65,7 +65,7 @@ class BirthDeath():
         num_part = len(pos)
         dup_list = []
         kill_list = []
-        beta = np.average(kernel(pos, self.bw), axis=0) + ene
+        beta = np.log(np.average(kernel(pos, self.bw), axis=0)) + ene
         beta -= np.average(beta)
         # evaluate all at same time not sequentially as in original paper
         # does it matter?

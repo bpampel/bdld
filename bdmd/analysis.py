@@ -35,24 +35,43 @@ def calculate_reference(pot, positions):
     return ref
 
 
-def plot_fes(fes, axes, ref=None):
+def plot_fes(fes, axes, ref=None, fesrange=None):
     """Show fes with matplotlib
 
     :param fes: the fes to plot
     :param axes: axes of plot
     :param ref: optional reference FES to plot (makes only sense for 1d fes)
+    :param fesrange: optional list with minimum and maximum value to show
     """
-    fig = plt.figure()
+    fig = plt.figure(figsize=(8,4),dpi=100)
+    if plt.get_backend() == "Qt5Agg":
+        fig.canvas.setFixedSize(*fig.get_size_inches()*fig.dpi)  # ensure we really have that size
     ax = plt.axes()
     if len(fes.shape) == 1:
-        ax.plot(axes[0],fes,'r-',label='FES')
         if ref is not None:
             ax.plot(axes[0],ref,'b-',label='ref')
+        ax.plot(axes[0],fes,'r-',label='FES')
         ax.legend()
+        ax.set_ylabel('F (energy units)')
+        if fesrange is not None:
+            ax.set_ylim(fesrange)
+        else:  # automatically crop from fes values
+            ylim = np.where(np.isinf(fes), 0, fes).max()  # find max that is not inf
+            ax.set_ylim([-0.05*ylim,1.05*ylim])  # crop unused parts
     elif len(fes.shape) == 2:
         img = ax.imshow(fes, origin='lower', extent=(axes[0][0],axes[0][-1],axes[-1][0],axes[-1][-1]))
         fig.colorbar(img, ax=ax)
     fig.show()
-    filename = input("Save figure to path: (empty for no save) ")
-    if filename:
-        fig.savefig(filename)
+    while True:
+        try:
+            filename = input("Save figure to path: (empty for no save) ")
+        except ValueError as e:
+            print(e)
+            continue
+        if filename is None:
+            break
+        try:
+            fig.savefig(filename)
+            break
+        except OSError as e:
+            print(f"Could not save: {e}")
