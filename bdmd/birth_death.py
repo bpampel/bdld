@@ -19,18 +19,20 @@ def kernel(pos, bw):
 
 class BirthDeath():
     """Birth death algorithm"""
-    def __init__(self, particles, dt, bw, seed=None, logging=False):
+    def __init__(self, particles, dt, bw, kt, seed=None, logging=False):
         """Set arguments
 
         :param particles: list of Particles shared with MD
         :param float dt: timestep of MD
         :param bw: bandwidth for gaussian kernels per direction
         :type bw: list or numpy.ndarray
+        :param float kt: thermal energy of system
         :param int seed: Seed for rng (optional)
         """
         self.particles = particles
         self.dt = dt
         self.bw = np.array(bw, dtype=float)
+        self.inv_kt = 1/kt
         self.rng = np.random.default_rng(seed)
         self.logging = logging
         if self.logging:
@@ -65,7 +67,7 @@ class BirthDeath():
         num_part = len(pos)
         dup_list = []
         kill_list = []
-        beta = np.log(np.average(kernel(pos, self.bw), axis=0)) + ene
+        beta = np.log(np.average(kernel(pos, self.bw), axis=0)) + ene * self.inv_kt
         beta -= np.average(beta)
         # evaluate all at same time not sequentially as in original paper
         # does it matter?

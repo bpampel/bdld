@@ -44,7 +44,7 @@ def main():
     print_freq = 0
     # exemplary potentials
     double_well = np.array([0, 0, -4, 0, 1])
-    scewed_double_well = np.array([0, 0.1, -4, 0, 1])
+    skewed_double_well = np.array([0, 0.2, -4, 0, 1])
     wolfe_quapp = np.array([[ 0. ,  0.1, -4. ,  0. ,  1. ],
                             [ 0.3,  1. ,  0. ,  0. ,  0. ],
                             [-2. ,  0. ,  0. ,  0. ,  0. ],
@@ -54,7 +54,7 @@ def main():
     args = parse_cliargs()
 
     # set up MD and BD
-    md = bpmd(Potential(double_well),
+    md = bpmd(Potential(skewed_double_well),
               args.time_step,
               args.friction,
               args.kt,
@@ -62,8 +62,13 @@ def main():
               )
     if args.seed is not None:
         args.seed += 1000
-    bd = BirthDeath(md.particles, args.time_step * args.bd_stride, args.bw, args.seed, True)
-
+    bd = BirthDeath(md.particles,
+                    args.time_step * args.bd_stride,
+                    args.bw,
+                    args.kt,
+                    args.seed,
+                    True,
+                    )
 
     # add particles to md
     extrema = np.polynomial.polynomial.polyroots(*md.pot.der) # includes also maximum
