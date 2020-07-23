@@ -1,4 +1,4 @@
-"""Simple MD with Bussi-Parinello thermostat"""
+"""Simple Langevin Dynamics with Bussi-Parinello thermostat"""
 
 import numpy as np
 from particle import Particle
@@ -20,8 +20,8 @@ class BpmdParticle(Particle):
         self.c2 = None  # second thermostat constant depends on mass
 
 
-class BussiParinelloMD():
-    """Perform MD with Bussi-Parinello thermostat
+class BussiParinelloLD():
+    """Perform Langevin Dynamics with Bussi-Parinello thermostat
 
     Can handle multiple non-interacting particles (= walkers) simultaneously
 
@@ -75,6 +75,16 @@ class BussiParinelloMD():
         # friction is only needed here and not stored
         self.c1 = np.exp(-0.5 * friction * dt)
         self.rng = np.random.default_rng(seed)
+        print(f'Setting up Langevin dynamics with Bussi-Parinello-Thermostat \n'
+              f'Parameters:\n'
+              f'  potential = {self.pot}\n'
+              f'  dw = {self.dt}\n'
+              f'  g = {friction}\n'
+              f'  kt = {self.kt}')
+        if seed:
+            print(f'  seed = {seed}')
+        print()
+
 
     def add_particle(self, pos, partnum=-1, overwrite=False):
         """Add particle to MD

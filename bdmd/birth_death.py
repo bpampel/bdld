@@ -35,9 +35,19 @@ class BirthDeath():
         self.inv_kt = 1/kt
         self.rng = np.random.default_rng(seed)
         self.logging = logging
+        print(f'Setting up birth/death scheme\n'
+              f'Parameters:\n'
+              f'  dt = {self.dt}\n'
+              f'  bw = {self.bw}\n'
+              f'  kt = {kt}')
+        if seed:
+            print(f'  seed = {seed}')
+        print()
         if self.logging:
             self.dup_count = 0
+            self.dup_attempts = 0
             self.kill_count = 0
+            self.kill_attempts = 0
 
     def step(self):
         """Perform birth-death step on particles
@@ -69,6 +79,11 @@ class BirthDeath():
         kill_list = []
         beta = np.log(np.average(kernel(pos, self.bw), axis=0)) + ene * self.inv_kt
         beta -= np.average(beta)
+        if self.logging:  # get number of attempts from betas
+            curr_kill_attempts = np.count_nonzero(beta > 0)
+            self.kill_attempts += curr_kill_attempts
+            self.dup_attempts += (num_part - curr_kill_attempts)
+
         # evaluate all at same time not sequentially as in original paper
         # does it matter?
         prob = 1 - np.exp(- np.abs(beta) * self.dt)

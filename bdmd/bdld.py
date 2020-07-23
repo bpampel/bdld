@@ -3,7 +3,7 @@
 import argparse
 import numpy as np
 import analysis
-from bussi_parinello_md import BussiParinelloMD as bpmd
+from bussi_parinello_ld import BussiParinelloLD as bpld
 from birth_death import BirthDeath
 from potential import Potential
 
@@ -29,6 +29,10 @@ def parse_cliargs():
                         help="Seed for the random number generator")
     parser.add_argument('--trajectory-files', dest='traj_files',
                         help="Filename (prefix) to write the trajectories to. Will not save them if empty")
+    parser.add_argument('--fes-file', dest='fes_file',
+                        help="Save fes data to given path")
+    parser.add_argument('--fes-image', dest='fes_image',
+                        help="Save fes image to given path. If not specified it will show the image and ask for the name.")
     parser.add_argument('-v','--verbose', action='store_true',
                         help="Print more verbose information")
     args = parser.parse_args()
@@ -53,8 +57,8 @@ def main():
 
     args = parse_cliargs()
 
-    # set up MD and BD
-    md = bpmd(Potential(skewed_double_well),
+    # set up LD and BD
+    ld = bpld(Potential(double_well),
               args.time_step,
               args.friction,
               args.kt,
@@ -62,7 +66,7 @@ def main():
               )
     if args.seed is not None:
         args.seed += 1000
-    bd = BirthDeath(md.particles,
+    bd = BirthDeath(ld.particles,
                     args.time_step * args.bd_stride,
                     args.bw,
                     args.kt,
@@ -71,38 +75,42 @@ def main():
                     )
 
     # add particles to md
-    extrema = np.polynomial.polynomial.polyroots(*md.pot.der) # includes also maximum
-    # for _ in range(49):
-        # md.add_particle([extrema[0]])
-    # for _ in range(1):
-        # md.add_particle([extrema[2]])
-    for _ in range(50): # add particles randomly
-        md.add_particle([extrema[np.random.randint(2)*2]])
+    extrema = np.polynomial.polynomial.polyroots(*ld.pot.der) # includes also maximum
+    for _ in range(25):
+        ld.add_particle([extrema[0]])
+    for _ in range(25):
+        ld.add_particle([extrema[2]])
+    # for _ in range(50): # add particles randomly
+        # md.add_particle([extrema[np.random.randint(2)*2]])
 
     # logging: store trajectories in list of lists
-    traj = [[p.pos] for p in md.particles]
+    traj = [[p.pos] for p in ld.particles]
 
     if print_freq > 0:
         print("i: pos, mom, energyy, forces")
 
     # run MD
+    print(f'Running for {args.num_steps} timesteps with a birth/death stride of {args.bd_stride}')
     for i in range(1, 1 + args.num_steps):
-        md.step()
-        for j,p in enumerate(md.particles):
+        ld.step()
+        for j,p in enumerate(ld.particles):
             traj[j].append(np.copy(p.pos))
         if (args.bd_stride > 0 and i % args.bd_stride == 0):
             bd_events = bd.step()
             if args.verbose:
                 print(f"Step {i}: Duplicated/Killed particles: {bd_events}")
-                counts = count_basins(md.particles,[[-3,0],[0,3]])
+                counts = count_basins(ld.particles,[[-3,0],[0,3]])
                 print(f"{*counts,} particles in left/right basin")
         if (print_freq > 0 and i % print_freq == 0):
-            p = md.particles[0]  # redo if particle has been killed
+            p = ld.particles[0]  # redo if particle has been killed
             print(f"{i}: {p.pos}, {p.mom}, {p.energy}, {p.forces}")
 
     print("Finished simulation")
-    print(f"Succesful kills: {bd.kill_count}")
-    print(f"Succesful dups: {bd.dup_count}")
+    kill_perc = 100 * bd.kill_count / bd.kill_attempts
+    dup_perc = 100 * bd.dup_count / bd.dup_attempts
+    print(f"Succesful kills: {bd.kill_count}/{bd.kill_attempts} ({kill_perc:.4}%)")
+    print(f"Succesful dups: {bd.dup_count}/{bd.dup_attempts} ({dup_perc:.4}%)")
+    print(f"Ratio kills/dups: {bd.kill_count/bd.dup_count:.4} (succesful)  {bd.kill_attempts/bd.dup_attempts:.4} (attemps)")
 
     # save trajectories to files
     if args.traj_files:
@@ -114,12 +122,12 @@ def main():
     comb_traj = [pos for p in traj for pos in p]
 
     fes, axes = analysis.calculate_fes(comb_traj, args.kt,[(-2.5,2.5)], bins=201)
-    ref = analysis.calculate_reference(md.pot, np.array(axes).T)
-    analysis.plot_fes(fes, axes, ref, fesrange=[-0.5,8.0])
+    ref = analysis.calculate_reference(ld.pot, np.array(axes).T)
+    analysis.plot_fes(fes, axes, ref, fesrange=[-0.5,8.0], filename=args.fes_image)
 
-    fesfile = input("Save FES data to path: (empty for no save) ")
-    if fesfile:
-        np.savetxt(fesfile, np.vstack((axes,fes)).T)
+    if args.fes_file:
+        np.savetxt(args.fes_file, np.vstack((axes,fes)).T)
+    # fesfile = input("Save FES data to path: (empty for no save) ")
 
 
 def count_basins(particles, ranges):

@@ -35,7 +35,7 @@ def calculate_reference(pot, positions):
     return ref
 
 
-def plot_fes(fes, axes, ref=None, fesrange=None):
+def plot_fes(fes, axes, ref=None, fesrange=None, filename=None):
     """Show fes with matplotlib
 
     :param fes: the fes to plot
@@ -61,7 +61,18 @@ def plot_fes(fes, axes, ref=None, fesrange=None):
     elif len(fes.shape) == 2:
         img = ax.imshow(fes, origin='lower', extent=(axes[0][0],axes[0][-1],axes[-1][0],axes[-1][-1]))
         fig.colorbar(img, ax=ax)
-    fig.show()
+    if filename:
+        try:
+            fig.savefig(filename)
+        except ValueError as e:
+            print(e)
+    else:
+        fig.show()
+        save_fig_interactive(fig, filename)
+
+
+def save_fig_interactive(fig, filename=None):
+    """Ask for filename to save file to"""
     while True:
         try:
             filename = input("Save figure to path: (empty for no save) ")
