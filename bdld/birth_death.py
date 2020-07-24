@@ -119,13 +119,17 @@ class BirthDeath():
         :param numpy.ndarray grid: energies of the grid values
         """
         rho = []
-        walker_pos = np.array([p.pos for p in self.particles])
-        for g in grid:
-            # instead of the full kernels, just generate the values for the grid
-            dist = np.fromiter((sqeuclidean(g, p) for p in walker_pos), float, len(walker_pos))
-            gauss = 1 / (2 * np.pi * self.bw**2)**(walker_pos.ndim/2) * np.exp(-dist / (2*self.bw)**2)
-            rho.append(np.average(gauss))
+        beta = []
+        walker_pos = [p.pos for p in self.particles]
+        walker_ene = [p.energy for p in self.particles]
+        for g,e in zip(grid,energy):
+            pos = np.append(g, walker_pos).reshape((len(walker_pos)+1,walker_pos[1].ndim))  # array with positions as subarrays
+            ene = np.append(e, walker_ene)
+            # full kernel is needed for probability (normalization)
+            rho_g = np.average(kernel(pos, self.bw), axis=0)
+            rho.append(rho_g[0])
 
-        prob = [np.log(rho[i]) + energy[i] * self.inv_kt for i in range(len(grid))]
+            beta_g = np.log(rho_g) + ene * self.inv_kt
+            beta.append(beta_g[0] - np.average(beta_g))
 
-        return np.c_[grid, rho, prob]
+        return np.c_[grid, rho, beta]
