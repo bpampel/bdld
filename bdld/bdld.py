@@ -24,7 +24,7 @@ def parse_cliargs():
     parser.add_argument('-bw', '--kernel-bandwidth', type=float, dest='bw', nargs='+',
                         help="Bandwidth for gaussian kernels")
     parser.add_argument('--birth-death-stride', type=int, dest='bd_stride',
-                        help="Stride for the birth-death processes", required=True)
+                        help="Stride for the birth-death processes", default=0)
     parser.add_argument('--random-seed', type=int, dest='seed',
                         help="Seed for the random number generator")
     parser.add_argument('--trajectory-files', dest='traj_files',
@@ -33,6 +33,10 @@ def parse_cliargs():
                         help="Save fes data to given path")
     parser.add_argument('--fes-image', dest='fes_image',
                         help="Save fes image to given path. If not specified it will show the image and ask for the name.")
+    parser.add_argument('--grid-analysis-stride', dest='grid_analysis_stride',type=int, default=0,
+                        help="Stride for calculating and saving the analysis grid")
+    parser.add_argument('--grid-analysis-filename', dest='grid_analysis_filename', default="dens_prob_grid",
+                        help="Filename for saving the analysis grids. Default is 'dens_prob_grid'")
     parser.add_argument('-v','--verbose', action='store_true',
                         help="Print more verbose information")
     args = parser.parse_args()
@@ -91,6 +95,9 @@ def main():
 
     # run MD
     print(f'Running for {args.num_steps} timesteps with a birth/death stride of {args.bd_stride}')
+    if args.grid_analysis_stride != 0:
+        print(f'Writing analysis grid every {args.grid_analysis_stride} timesteps to {args.grid_analysis_filename}.$i')
+
     for i in range(1, 1 + args.num_steps):
         ld.step()
         for j,p in enumerate(ld.particles):
@@ -104,18 +111,20 @@ def main():
         if (print_freq > 0 and i % print_freq == 0):
             p = ld.particles[0]  # redo if particle has been killed
             print(f"{i}: {p.pos}, {p.mom}, {p.energy}, {p.forces}")
+        if (args.grid_analysis_stride > 0 and i % args.grid_analysis_stride == 0):
+            ana_grid = np.linspace(-2.5, 2.5, 201)
+            ana_ene = [ld.pot.evaluate(p)[0] for p in ana_grid]
+            ana_values = bd.prob_density_grid(ana_grid, ana_ene)
+            fname = f'{args.grid_analysis_filename}.{i}'
+            np.savetxt(fname, ana_values, fmt='%14.9f', comments='', delimiter=' ', newline='\n')
 
-    testpos = np.linspace(-2.5, 2.5, 201)
-    testene = [ld.pot.evaluate(p)[0] for p in testpos]
-    testgrid = bd.prob_density_grid(testpos, testene)
-    np.savetxt('testgrid', testgrid, fmt='%14.9f', comments='', delimiter=' ', newline='\n')
 
-    print("Finished simulation")
+    print("\nFinished simulation")
     kill_perc = 100 * bd.kill_count / bd.kill_attempts
     dup_perc = 100 * bd.dup_count / bd.dup_attempts
-    print(f"Succesful kills: {bd.kill_count}/{bd.kill_attempts} ({kill_perc:.4}%)")
-    print(f"Succesful dups: {bd.dup_count}/{bd.dup_attempts} ({dup_perc:.4}%)")
-    print(f"Ratio kills/dups: {bd.kill_count/bd.dup_count:.4} (succesful)  {bd.kill_attempts/bd.dup_attempts:.4} (attemps)")
+    print(f"Succesful birth events: {bd.dup_count}/{bd.dup_attempts} ({dup_perc:.4}%)")
+    print(f"Succesful death events: {bd.kill_count}/{bd.kill_attempts} ({kill_perc:.4}%)")
+    print(f"Ratio birth/death: {bd.kill_count/bd.dup_count:.4} (succesful)  {bd.kill_attempts/bd.dup_attempts:.4} (attemps)")
 
     # save trajectories to files
     if args.traj_files:
@@ -128,11 +137,14 @@ def main():
 
     fes, axes = analysis.calculate_fes(comb_traj, args.kt,[(-2.5,2.5)], bins=201)
     ref = analysis.calculate_reference(ld.pot, np.array(axes).T)
-    analysis.plot_fes(fes, axes, ref, fesrange=[-0.5,8.0], filename=args.fes_image)
-
     if args.fes_file:
         np.savetxt(args.fes_file, np.vstack((axes,fes)).T)
-    # fesfile = input("Save FES data to path: (empty for no save) ")
+        print(f"Saving fes to: {args.fes_file}")
+    if args.fes_image:
+        print(f"Saving fes image to: {args.fes_image}")
+    analysis.plot_fes(fes, axes, ref, fesrange=[-0.5,8.0], filename=args.fes_image)
+
+
 
 
 def count_basins(particles, ranges):

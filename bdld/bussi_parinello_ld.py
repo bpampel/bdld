@@ -75,7 +75,7 @@ class BussiParinelloLD():
         # friction is only needed here and not stored
         self.c1 = np.exp(-0.5 * friction * dt)
         self.rng = np.random.default_rng(seed)
-        print(f'Setting up Langevin dynamics with Bussi-Parinello-Thermostat \n'
+        print(f'Setting up Langevin dynamics with Bussi-Parinello thermostat\n'
               f'Parameters:\n'
               f'  potential = {self.pot}\n'
               f'  dw = {self.dt}\n'
