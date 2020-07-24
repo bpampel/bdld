@@ -2,8 +2,7 @@
 
 import copy
 import numpy as np
-from scipy.spatial.distance import pdist, squareform
-
+from scipy.spatial.distance import pdist, sqeuclidean, squareform
 
 def kernel(pos, bw):
     """Calculate (gaussian) kernels of all positions
@@ -13,7 +12,7 @@ def kernel(pos, bw):
     :return numpy.ndarray kernel: kernel value matrix
     """
     dist = pdist(pos, 'sqeuclidean')
-    gauss = 1 / (2 * np.pi * bw**2)**(pos.ndim/2) * np.exp(-dist / (2*bw)**2 )
+    gauss = 1 / (2 * np.pi * bw**2)**(pos.ndim/2) * np.exp(-dist / (2*bw)**2)
     return squareform(gauss)
 
 
@@ -112,3 +111,21 @@ class BirthDeath():
         :return int num: random particle
         """
         return self.rng.choice([i for i in range(num_part) if i not in excl])
+
+    def prob_density_grid(self, grid, energy):
+        """Calculate the density of walkers (kernel density) on a grid
+
+        :param numpy.ndarray grid: positions to calculate the kernel values
+        :param numpy.ndarray grid: energies of the grid values
+        """
+        rho = []
+        walker_pos = np.array([p.pos for p in self.particles])
+        for g in grid:
+            # instead of the full kernels, just generate the values for the grid
+            dist = np.fromiter((sqeuclidean(g, p) for p in walker_pos), float, len(walker_pos))
+            gauss = 1 / (2 * np.pi * self.bw**2)**(walker_pos.ndim/2) * np.exp(-dist / (2*self.bw)**2)
+            rho.append(np.average(gauss))
+
+        prob = [np.log(rho[i]) + energy[i] * self.inv_kt for i in range(len(grid))]
+
+        return np.c_[grid, rho, prob]

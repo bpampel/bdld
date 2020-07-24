@@ -105,6 +105,11 @@ def main():
             p = ld.particles[0]  # redo if particle has been killed
             print(f"{i}: {p.pos}, {p.mom}, {p.energy}, {p.forces}")
 
+    testpos = np.linspace(-2.5, 2.5, 201)
+    testene = [ld.pot.evaluate(p)[0] for p in testpos]
+    testgrid = bd.prob_density_grid(testpos, testene)
+    np.savetxt('testgrid', testgrid, fmt='%14.9f', comments='', delimiter=' ', newline='\n')
+
     print("Finished simulation")
     kill_perc = 100 * bd.kill_count / bd.kill_attempts
     dup_perc = 100 * bd.dup_count / bd.dup_attempts
