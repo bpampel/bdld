@@ -77,7 +77,8 @@ class BirthDeath():
         dup_list = []
         kill_list = []
         beta = np.log(np.average(kernel(pos, self.bw), axis=0)) + ene * self.inv_kt
-        beta -= np.average(beta)
+        # kernel can be zero and make beta -inf. Filter for averaging
+        beta -= np.average(beta[beta != -np.inf])
         if self.logging:  # get number of attempts from betas
             curr_kill_attempts = np.count_nonzero(beta > 0)
             self.kill_attempts += curr_kill_attempts
