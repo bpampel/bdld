@@ -131,6 +131,6 @@ class BirthDeath():
             rho.append(rho_g[0])
 
             beta_g = np.log(rho_g) + ene * self.inv_kt
-            beta.append(beta_g[0] - np.average(beta_g))
+            beta.append(beta_g[0] - np.average(beta_g[beta_g != -np.inf]))
 
         return np.c_[grid, rho, beta]

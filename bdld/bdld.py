@@ -6,6 +6,7 @@ import analysis
 from bussi_parinello_ld import BussiParinelloLD as bpld
 from birth_death import BirthDeath
 from potential import Potential
+from helpers.plumed_header import PlumedHeader as PlmdHeader
 
 
 def parse_cliargs():
@@ -98,6 +99,13 @@ def main():
     if args.grid_analysis_stride != 0:
         print(f'Writing analysis grid every {args.grid_analysis_stride} timesteps to {args.grid_analysis_filename}.$i')
 
+    header = PlmdHeader(['FIELDS',
+                        f'SET kt {args.kt}',
+                        f'SET friction {args.friction}',
+                        f'SET bd_stride {args.bd_stride}',
+                        f'SET bd_bandwidth {args.bw}',
+                        ])
+
     for i in range(1, 1 + args.num_steps):
         ld.step()
         for j,p in enumerate(ld.particles):
@@ -116,7 +124,9 @@ def main():
             ana_ene = [ld.pot.evaluate(p)[0] for p in ana_grid]
             ana_values = bd.prob_density_grid(ana_grid, ana_ene)
             fname = f'{args.grid_analysis_filename}.{i}'
-            np.savetxt(fname, ana_values, fmt='%14.9f', comments='', delimiter=' ', newline='\n')
+            header[0] = 'FIELDS pos rho beta'
+            np.savetxt(fname, ana_values, fmt='%14.9f', header=str(header),
+                       comments='', delimiter=' ', newline='\n')
 
 
     print("\nFinished simulation")
@@ -130,7 +140,8 @@ def main():
     if args.traj_files:
         print(f"Saving trajectories to: {args.traj_files}")
         for i,t in enumerate(traj):
-            np.savetxt(args.traj_files + '.' + str(i), t)
+            header = PlmdHeader(f'FIELDS traj.{i}')
+            np.savetxt(args.traj_files + '.' + str(i), t, header=str(header))
 
     # flatten trajectory for histogramming
     comb_traj = [pos for p in traj for pos in p]
@@ -138,8 +149,10 @@ def main():
     fes, axes = analysis.calculate_fes(comb_traj, args.kt,[(-2.5,2.5)], bins=201)
     ref = analysis.calculate_reference(ld.pot, np.array(axes).T)
     if args.fes_file:
-        np.savetxt(args.fes_file, np.vstack((axes,fes)).T)
         print(f"Saving fes to: {args.fes_file}")
+        header[0] = "FIELDS pos fes"
+        np.savetxt(args.fes_file, np.vstack((axes,fes)).T, fmt='%14.9f', header=str(header),
+                   comments='', delimiter=' ', newline='\n')
     if args.fes_image:
         print(f"Saving fes image to: {args.fes_image}")
     analysis.plot_fes(fes, axes, ref, fesrange=[-0.5,8.0], filename=args.fes_image)

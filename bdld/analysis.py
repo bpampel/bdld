@@ -66,12 +66,13 @@ def plot_fes(fes, axes, ref=None, fesrange=None, filename=None):
             fig.savefig(filename)
         except ValueError as e:
             print(e)
+            save_fig_interactive(fig)
     else:
         fig.show()
-        save_fig_interactive(fig, filename)
+        save_fig_interactive(fig)
 
 
-def save_fig_interactive(fig, filename=None):
+def save_fig_interactive(fig):
     """Ask for filename to save file to"""
     while True:
         try:
