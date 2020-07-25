@@ -71,13 +71,14 @@ def main():
               )
     if args.seed is not None:
         args.seed += 1000
-    bd = BirthDeath(ld.particles,
-                    args.time_step * args.bd_stride,
-                    args.bw,
-                    args.kt,
-                    args.seed,
-                    True,
-                    )
+    if args.bd_stride != 0:
+        bd = BirthDeath(ld.particles,
+                        args.time_step * args.bd_stride,
+                        args.bw,
+                        args.kt,
+                        args.seed,
+                        True,
+                        )
 
     # add particles to md
     extrema = np.polynomial.polynomial.polyroots(*ld.pot.der) # includes also maximum

@@ -70,6 +70,7 @@ def plot_fes(fes, axes, ref=None, fesrange=None, filename=None):
     else:
         fig.show()
         save_fig_interactive(fig)
+    plt.close(fig)
 
 
 def save_fig_interactive(fig):
