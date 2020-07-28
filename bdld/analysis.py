@@ -2,7 +2,6 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
 
 def calculate_fes(trajectory, kt, ranges, bins=101, mintozero=True):
     """Calculate free energy surface from trajectory
@@ -35,13 +34,15 @@ def calculate_reference(pot, positions):
     return ref
 
 
-def plot_fes(fes, axes, ref=None, fesrange=None, filename=None):
+def plot_fes(fes, axes, ref=None, fesrange=None, filename=None, title=None):
     """Show fes with matplotlib
 
     :param fes: the fes to plot
     :param axes: axes of plot
     :param ref: optional reference FES to plot (makes only sense for 1d fes)
     :param fesrange: optional list with minimum and maximum value to show
+    :param filename: optional filename to save figure to
+    :param title: optional title for the legend
     """
     fig = plt.figure(figsize=(8,4),dpi=100)
     if plt.get_backend() == "Qt5Agg":
@@ -51,7 +52,7 @@ def plot_fes(fes, axes, ref=None, fesrange=None, filename=None):
         if ref is not None:
             ax.plot(axes[0],ref,'b-',label='ref')
         ax.plot(axes[0],fes,'r-',label='FES')
-        ax.legend()
+        ax.legend(title=title)
         ax.set_ylabel('F (energy units)')
         if fesrange is not None:
             ax.set_ylim(fesrange)

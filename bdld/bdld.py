@@ -71,7 +71,9 @@ def main():
               )
     if args.seed is not None:
         args.seed += 1000
+    do_bd = False
     if args.bd_stride != 0:
+        do_bd = True
         bd = BirthDeath(ld.particles,
                         args.time_step * args.bd_stride,
                         args.bw,
@@ -111,7 +113,7 @@ def main():
         ld.step()
         for j,p in enumerate(ld.particles):
             traj[j].append(np.copy(p.pos))
-        if (args.bd_stride > 0 and i % args.bd_stride == 0):
+        if (do_bd and i % args.bd_stride == 0):
             bd_events = bd.step()
             if args.verbose:
                 print(f"Step {i}: Duplicated/Killed particles: {bd_events}")
@@ -131,11 +133,12 @@ def main():
 
 
     print("\nFinished simulation")
-    kill_perc = 100 * bd.kill_count / bd.kill_attempts
-    dup_perc = 100 * bd.dup_count / bd.dup_attempts
-    print(f"Succesful birth events: {bd.dup_count}/{bd.dup_attempts} ({dup_perc:.4}%)")
-    print(f"Succesful death events: {bd.kill_count}/{bd.kill_attempts} ({kill_perc:.4}%)")
-    print(f"Ratio birth/death: {bd.kill_count/bd.dup_count:.4} (succesful)  {bd.kill_attempts/bd.dup_attempts:.4} (attemps)")
+    if do_bd:
+        kill_perc = 100 * bd.kill_count / bd.kill_attempts
+        dup_perc = 100 * bd.dup_count / bd.dup_attempts
+        print(f"Succesful birth events: {bd.dup_count}/{bd.dup_attempts} ({dup_perc:.4}%)")
+        print(f"Succesful death events: {bd.kill_count}/{bd.kill_attempts} ({kill_perc:.4}%)")
+        print(f"Ratio birth/death: {bd.kill_count/bd.dup_count:.4} (succesful)  {bd.kill_attempts/bd.dup_attempts:.4} (attemps)")
 
     # save trajectories to files
     if args.traj_files:
@@ -156,7 +159,8 @@ def main():
                    comments='', delimiter=' ', newline='\n')
     if args.fes_image:
         print(f"Saving fes image to: {args.fes_image}")
-    analysis.plot_fes(fes, axes, ref, fesrange=[-0.5,8.0], filename=args.fes_image)
+    plot_title = 'bw '+str(args.bw[0]) if do_bd else None
+    analysis.plot_fes(fes, axes, ref, fesrange=[-0.5,8.0], filename=args.fes_image, title=plot_title)
 
 
 
