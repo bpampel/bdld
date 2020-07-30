@@ -162,6 +162,12 @@ def main():
     plot_title = 'bw '+str(args.bw[0]) if do_bd else None
     analysis.plot_fes(fes, axes, ref, fesrange=[-0.5,8.0], filename=args.fes_image, title=plot_title)
 
+    # simply divide states by the 0 line
+    delta_F_masks = [np.where(axes[0] < 0, True, False), np.where(axes[0] > 0, True, False)]
+    delta_F = analysis.calculate_delta_F(fes, args.kt, delta_F_masks)[0]
+    delta_F_ref = analysis.calculate_delta_F(ref, args.kt, delta_F_masks)[0]
+    print(f'Delta F: {delta_F:.4} (ref: {delta_F_ref:.4})')
+
 
 
 

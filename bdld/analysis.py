@@ -89,3 +89,21 @@ def save_fig_interactive(fig):
             break
         except OSError as e:
             print(f"Could not save: {e}")
+
+
+def calculate_delta_F(fes, kt, masks):
+    """Calculates the free energy difference between states
+
+    If more than two are specified, this returns the difference to the first state for all others
+
+    :param fes: free energy surface to examine
+    :type fes: list or numpy.ndarray
+    :param float kt: energy in units of kT
+    :param masks: a list of boolean numpy arrays resembling the states
+
+    :return delta_F: a list of doubles containing the free energy difference to the first state
+    """
+    probabilities = np.exp(- fes / float(kt))
+    state_probs = [np.sum(probabilities[m]) for m in masks]
+    delta_F = [- kt * np.log(state_probs[i]/state_probs[0]) for i in range(1, len(state_probs))]
+    return delta_F
