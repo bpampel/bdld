@@ -107,3 +107,19 @@ def calculate_delta_F(fes, kt, masks):
     state_probs = [np.sum(probabilities[m]) for m in masks]
     delta_F = [- kt * np.log(state_probs[i]/state_probs[0]) for i in range(1, len(state_probs))]
     return delta_F
+
+
+def count_particles_per_state(particles, ranges):
+    """Return the number of particles in each state
+
+    currently for 1d only
+
+    :param particles: list with all Particles
+    :param ranges: list with [min, max] ranges for each state
+    """
+    counts = [0] * len(ranges)
+    for p in particles:
+        for i, ra in enumerate(ranges):
+            if ra[0] < p.pos < ra[1]:
+                counts[i] += 1
+    return counts
