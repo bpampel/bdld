@@ -64,9 +64,9 @@ def main():
     # minumum slightly changes with tilt, calculate from coefficients
     extrema = np.polynomial.polynomial.polyroots(*ld.pot.der) # includes also maximum
     # add particles, round in favor of first state
-    for _ in range(int(np.ceil(args.nw * args.walker_frac))):
+    for _ in range(int(np.ceil(args.num_walkers * args.walkers_frac))):
         ld.add_particle([extrema[0]])
-    for _ in range(int(args.nw * (1 - args.walker_frac))):
+    for _ in range(int(args.num_walkers * (1 - args.walkers_frac))):
         ld.add_particle([extrema[2]])
 
     if args.seed is not None:

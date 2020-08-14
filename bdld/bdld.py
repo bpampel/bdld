@@ -43,7 +43,7 @@ class BirthDeathLangevinDynamics():
     def setup(self):
         """Set up bd and initialize trajectory lists"""
         if self.bd_stride != 0:
-            if self.bd_bw <= 0:
+            if any(bw <= 0 for bw in self.bd_bw):
                 raise ValueError(f"The bandwidth of the Gaussian kernels needs"
                                  f"to be greater than 0 (is {self.bd_bw})")
             self.setup_bd()
