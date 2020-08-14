@@ -3,6 +3,7 @@
 import numpy as np
 from bussi_parinello_ld import BussiParinelloLD as bpld
 from birth_death import BirthDeath
+from histogram import Histogram
 from potential import Potential
 from helpers.plumed_header import PlumedHeader as PlmdHeader
 
@@ -38,6 +39,8 @@ class BirthDeathLangevinDynamics():
         self.bd_bw = bd_bw
         self.traj = []
         self.steps_since_bd = 0
+        self.histo = None
+        self.histo_stride = 0
         self.setup()
 
     def setup(self):
@@ -61,6 +64,38 @@ class BirthDeathLangevinDynamics():
                                  True,
                                  )
 
+    def init_histogram(self, n_bins, ranges, stride=None):
+        """Initialize a histogram for the trajectories
+
+        :param int n_bins: number of bins of the histogram
+        :param ranges: extent of histogram (min, max) per dimension
+        :type ranges: list of tuples
+        :param int stride: add trajectory to the histogram every n steps
+        """
+        if self.ld.n_dim != len(n_bins):
+            e = "Dimensions of histogram bins don't match dimensions of system " \
+                + f"({len(n_bins)} vs. {self.ld.n_dim})"
+            raise ValueError(e)
+        if self.ld.n_dim != len(ranges):
+            e = "Dimensions of histogram ranges don't match dimensions of system " \
+                + f"({len(ranges)} vs. {self.ld.n_dim})"
+            raise ValueError(e)
+        self.histo = Histogram(n_bins, ranges)
+        self.histo_stride = stride
+        if self.histo_stride is None:
+            # add to histogram every 100000 trajectory points by default
+            self.histo_stride = 100000 / len(self.ld.particles)
+
+    def add_trajectory_to_histogram(self, clear_traj):
+        """Add trajectory data to histogram
+
+        :param bool clear_traj: delete the trajectory data after adding to histogram
+        """
+        comb_traj = [pos for part in self.traj for pos in part]
+        self.histo.add(comb_traj)
+        if clear_traj:
+            self.traj = []
+
     def run(self, num_steps):
         """Run the simulation for given number of steps
 
@@ -80,6 +115,8 @@ class BirthDeathLangevinDynamics():
                 self.bd.step()
             for j,p in enumerate(self.ld.particles):
                 self.traj[j].append(np.copy(p.pos))
+            if (self.histo_stride != 0 and i % self.histo_stride == 0):
+                self.add_trajectory_to_histogram(True)
         # increase counter only once
         if self.bd_stride != 0:
             self.steps_since_bd = (self.steps_since_bd + num_steps) % self.bd_stride
@@ -88,9 +125,12 @@ class BirthDeathLangevinDynamics():
         """Print birth/death probabilities to screen"""
         kill_perc = 100 * self.bd.kill_count / self.bd.kill_attempts
         dup_perc = 100 * self.bd.dup_count / self.bd.dup_attempts
+        ratio_succ = self.bd.kill_count / self.bd.dup_count
+        ratio_attempts = self.bd.kill_attempts / self.bd.dup_attempts
         print(f"Succesful birth events: {self.bd.dup_count}/{self.bd.dup_attempts} ({dup_perc:.4}%)")
         print(f"Succesful death events: {self.bd.kill_count}/{self.bd.kill_attempts} ({kill_perc:.4}%)")
-        print(f"Ratio birth/death: {self.bd.kill_count/self.bd.dup_count:.4} (succesful)  {self.bd.kill_attempts/self.bd.dup_attempts:.4} (attemps)")
+        print(f"Ratio birth/death: {ratio_succ:.4} (succesful)  {ratio_attempts:.4} (attemps)")
+
 
     def save_analysis_grid(self, filename, grid):
         """Analyse the values of rho and beta on a grid
@@ -123,7 +163,7 @@ class BirthDeathLangevinDynamics():
         header = PlmdHeader([' '.join(['FIELDS'] + fields),
                              f'SET dt {self.ld.dt}',
                              f'SET kt {self.ld.kt}',
-                             f'SET friction {self.ld.friction}',
+                             f'SET friction {self.ld.g}',
                              f'SET bd_stride {self.bd_stride}',
                              f'SET bd_bandwidth {self.bd_bw}',
                              ])

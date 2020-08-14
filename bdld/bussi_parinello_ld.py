@@ -28,6 +28,7 @@ class BussiParinelloLD():
     :param potential.Potential pot: potential to perform MD on
     :param list of BdmdParticles particles: particles (=walkers) of simulation
     :param float dt: timestep
+    :param float friction: friction parameter of langevin equation
     :param float kt: thermal energy in units of kt
     :param rng: numpy.random.Generator instance for the thermostat
     :param float c1: constant for thermostat
@@ -41,6 +42,7 @@ class BussiParinelloLD():
         self.pot = None  # potential
         self.particles = []  # list of particles
         self.dt = None  # timestep
+        self.friction = None
         self.kt = None
         self.rng = None
         self.c1 = None  # constant for thermostat
@@ -51,14 +53,14 @@ class BussiParinelloLD():
         """Perform single MD step on all particles"""
         for p in self.particles:
             # first part of thermostat
-            p.mom = self.c1 * p.mom + p.c2 * self.rng.standard_normal(self.pot.dimension)
+            p.mom = self.c1 * p.mom + p.c2 * self.rng.standard_normal(self.pot.n_dim)
             # velocity verlet with force evaluation
             p.mom += 0.5 * p.forces * self.dt
             p.pos += (p.mom / p.mass) * self.dt
             p.energy, p.forces = self.pot.evaluate(p.pos)
             p.mom += 0.5 * p.forces * self.dt
             # second part of thermostat
-            p.mom = self.c1 * p.mom + p.c2 * self.rng.standard_normal(self.pot.dimension)
+            p.mom = self.c1 * p.mom + p.c2 * self.rng.standard_normal(self.pot.n_dim)
 
     def setup(self, potential, dt, friction, kt, seed=None):
         """Setup function
@@ -72,14 +74,14 @@ class BussiParinelloLD():
         self.pot = potential
         self.dt = dt
         self.kt = kt
-        # friction is only needed here and not stored
+        self.friction = friction
         self.c1 = np.exp(-0.5 * friction * dt)
         self.rng = np.random.default_rng(seed)
         print(f'Setting up Langevin dynamics with Bussi-Parinello thermostat\n'
               f'Parameters:\n'
               f'  potential = {self.pot}\n'
-              f'  dw = {self.dt}\n'
-              f'  g = {friction}\n'
+              f'  timestep = {self.dt}\n'
+              f'  friction = {self.friction}\n'
               f'  kt = {self.kt}')
         if seed:
             print(f'  seed = {seed}')

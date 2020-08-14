@@ -19,9 +19,9 @@ class Potential():
         :type coeffs: list (1D) or numpy.array with coefficients (2D,3D).
         """
         self.coeffs = np.array(coeffs)
-        self.dimension = self.coeffs.ndim
+        self.n_dim = self.coeffs.ndim
         # note: the derivative matrices are larger than needed. Implement trim_zeros for multiple dimensions?
-        self.der = [poly.polyder(self.coeffs, axis=d) for d in range(self.dimension)]
+        self.der = [poly.polyder(self.coeffs, axis=d) for d in range(self.n_dim)]
 
     def __str__(self):
         """Give out coefficients"""
@@ -35,7 +35,7 @@ class Potential():
         :return: (energy, forces)
         :rtype: Tuple(float, list of float)
         """
-        pos = np.append(pos, [0.0]*(3-self.dimension)) #  needed to have 3 elements in pos
+        pos = np.append(pos, [0.0]*(3-self.n_dim)) #  needed to have 3 elements in pos
         energy = poly.polyval3d(*pos, self.coeffs)
-        forces = np.array([-poly.polyval3d(*pos, self.der[d]) for d in range(self.dimension)])
+        forces = np.array([-poly.polyval3d(*pos, self.der[d]) for d in range(self.n_dim)])
         return (energy, forces)
