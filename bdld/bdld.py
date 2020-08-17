@@ -96,7 +96,7 @@ class BirthDeathLangevinDynamics():
         comb_traj = np.vstack([pos for part in self.traj for pos in part])
         self.histo.add(comb_traj)
         if clear_traj:
-            self.traj = []
+            self.traj = [ [] for i in range(len(self.ld.particles))]
 
     def run(self, num_steps):
         """Run the simulation for given number of steps
@@ -163,7 +163,7 @@ class BirthDeathLangevinDynamics():
 
         :param string filename: path to save FES to
         """
-        if self.traj:  # if not empty
+        if any(t for t in self.traj):
             self.add_trajectory_to_histogram(True)
         fes, pos = self.histo.calculate_fes(self.ld.kt)
         header = self.generate_fileheader(['pos fes'])
@@ -178,7 +178,7 @@ class BirthDeathLangevinDynamics():
         :param plot_domain: optional list with minimum and maximum value to show
         :param plot_title: optional title for the legend
         """
-        if self.traj:  # if not empty
+        if any(t for t in self.traj):
             self.add_trajectory_to_histogram(True)
         if self.histo.fes is None:
             self.histo.calculate_fes(self.ld.kt)
