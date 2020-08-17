@@ -4,17 +4,29 @@ import copy
 import numpy as np
 from scipy.spatial.distance import pdist, sqeuclidean, squareform
 
-def kernel(pos, bw):
-    """Calculate (gaussian) kernels of all positions
+def kernel_average(pos, bw):
+    """Calculate the local density at each walker (average kernel value)
+
+    For less than 10000 walkers a spare pdist matrix is calculated and averaged.
+    Because the matix size scales exponentially with the number of walkers for
+    more than 10,000 a walker-wise calculation is done that requires less memory
+    but calculates each distance twice.
 
     :param numpy.ndarray pos: positions of particles
     :param float bw: bandwidth parameter of kernel
     :return numpy.ndarray kernel: kernel value matrix
     """
-    dist = pdist(pos, 'sqeuclidean')
-    gauss = 1 / (2 * np.pi * bw**2)**(pos.ndim/2) * np.exp(-dist / (2*bw)**2)
-    return squareform(gauss)
-
+    if len(pos) <= 10000:  # pdist matrix with maximum 10e8 float64 values
+        dist = pdist(pos, 'sqeuclidean')
+        gauss = 1 / (2 * np.pi * bw**2)**(pos.ndim/2) * np.exp(-dist / (2*bw)**2)
+        return np.average(squareform(gauss), axis=0)
+    else:
+        kernel_avg = np.empty((len(pos)))
+        for i in range(len(pos)):
+            dist = [sqeuclidean(pos[i],pos[j]) for j in range(len(pos)) if j != i]
+            gauss_dist = 1 / (2 * np.pi * bw**2)**(pos.ndim/2) * np.exp(-dist / (2*bw)**2)
+            kernel_avg[i] = np.average(gauss_dist)
+        return kernel_avg
 
 class BirthDeath():
     """Birth death algorithm"""
@@ -76,7 +88,7 @@ class BirthDeath():
         num_part = len(pos)
         dup_list = []
         kill_list = []
-        beta = np.log(np.average(kernel(pos, self.bw), axis=0)) + ene * self.inv_kt
+        beta = np.log(kernel_average(pos, self.bw)) + ene * self.inv_kt
         # kernel can be zero and make beta -inf. Filter for averaging
         beta -= np.average(beta[beta != -np.inf])
         if self.logging:  # get number of attempts from betas
@@ -127,7 +139,7 @@ class BirthDeath():
             pos = np.append(g, walker_pos).reshape((len(walker_pos)+1,walker_pos[1].ndim))  # array with positions as subarrays
             ene = np.append(e, walker_ene)
             # full kernel is needed for probability (normalization)
-            rho_g = np.average(kernel(pos, self.bw), axis=0)
+            rho_g = kernel_average(pos, self.bw)
             rho.append(rho_g[0])
 
             beta_g = np.log(rho_g) + ene * self.inv_kt
