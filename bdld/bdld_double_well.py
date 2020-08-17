@@ -86,7 +86,7 @@ def main():
     if args.log_stride == 0:
         bdld.run(args.num_steps)
     else:
-        for i in range(args.num_steps / args.log_stride):
+        for i in range(int(args.num_steps / args.log_stride)):
             bdld.run(args.log_stride)
             print(f"After {i * args.log_stride} time steps:")
             bdld.print_stats()
