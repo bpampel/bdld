@@ -28,15 +28,15 @@ class Histogram():
         self.histo = []
         self.fes = None
         # create bins from arbitrary value, there doesn't seem to be a function doing it
-        _, self.bins = np.histogramdd([0], bins=self.n_bins, range=self.ranges)
+        self.histo, self.bins = np.histogramdd([0], bins=self.n_bins, range=self.ranges)
 
     def add(self, data):
         """Add data to histogram
 
-        :param data: The values to add. If multidimensional should be either a list of lists or
+        :param data: The values to add to the histogram, see numpy's histogramdd for details
         :type data: list (1d), list of lists or numpy.ndarrays (arbitrary dimensions)
         """
-        tmp_histo, _ = np.histogramdd(np.vstack(data), bins=self.bins)
+        tmp_histo, _ = np.histogramdd(data, bins=self.bins)
         self.histo += tmp_histo
 
     def bin_centers(self):

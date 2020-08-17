@@ -58,7 +58,7 @@ class BirthDeathLangevinDynamics():
         """Set up birth death from parameters"""
         if self.bd_stride != 0:
             self.bd = BirthDeath(self.ld.particles,
-                                 self.bd_time_step * self.bd_stride,
+                                 self.bd_time_step,
                                  self.bd_bw,
                                  self.ld.kt,
                                  self.bd_seed,
@@ -68,31 +68,32 @@ class BirthDeathLangevinDynamics():
     def init_histogram(self, n_bins, ranges, stride=None):
         """Initialize a histogram for the trajectories
 
-        :param int n_bins: number of bins of the histogram
+        :param n_bins: number of bins of the histogram per dimension
+        :type n_bins: list or numpy array
         :param ranges: extent of histogram (min, max) per dimension
         :type ranges: list of tuples
         :param int stride: add trajectory to the histogram every n steps
         """
-        if self.ld.n_dim != len(n_bins):
+        if self.ld.pot.n_dim != len(n_bins):
             e = "Dimensions of histogram bins don't match dimensions of system " \
                 + f"({len(n_bins)} vs. {self.ld.n_dim})"
             raise ValueError(e)
-        if self.ld.n_dim != len(ranges):
+        if self.ld.pot.n_dim != len(ranges):
             e = "Dimensions of histogram ranges don't match dimensions of system " \
                 + f"({len(ranges)} vs. {self.ld.n_dim})"
             raise ValueError(e)
         self.histo = Histogram(n_bins, ranges)
         self.histo_stride = stride
         if self.histo_stride is None:
-            # add to histogram every 100000 trajectory points by default
-            self.histo_stride = 100000 / len(self.ld.particles)
+            # add to histogram every 1,000,000 trajectory points by default
+            self.histo_stride = 1000000 / len(self.ld.particles)
 
     def add_trajectory_to_histogram(self, clear_traj):
         """Add trajectory data to histogram
 
         :param bool clear_traj: delete the trajectory data after adding to histogram
         """
-        comb_traj = [pos for part in self.traj for pos in part]
+        comb_traj = np.vstack([pos for part in self.traj for pos in part])
         self.histo.add(comb_traj)
         if clear_traj:
             self.traj = []
@@ -177,10 +178,13 @@ class BirthDeathLangevinDynamics():
         :param plot_domain: optional list with minimum and maximum value to show
         :param plot_title: optional title for the legend
         """
+        if self.traj:  # if not empty
+            self.add_trajectory_to_histogram(True)
         if self.histo.fes is None:
             self.histo.calculate_fes(self.ld.kt)
         analysis.plot_fes(self.histo.fes, self.histo.bin_centers(),
-                          ref=self.ld.potential.calculate_reference(self.histo.bin_centers()),
+                          # temporary fix, needs to be changed for more than 1d
+                          ref=self.ld.pot.calculate_reference(self.histo.bin_centers()[0]),
                           plot_domain=plot_domain, filename=filename, title=plot_title)
 
 
@@ -193,7 +197,7 @@ class BirthDeathLangevinDynamics():
         header = PlmdHeader([' '.join(['FIELDS'] + fields),
                              f'SET dt {self.ld.dt}',
                              f'SET kt {self.ld.kt}',
-                             f'SET friction {self.ld.g}',
+                             f'SET friction {self.ld.friction}',
                              f'SET bd_stride {self.bd_stride}',
                              f'SET bd_bandwidth {self.bd_bw}',
                              ])

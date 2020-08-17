@@ -89,16 +89,16 @@ class BussiParinelloLD():
 
 
     def add_particle(self, pos, partnum=-1, overwrite=False):
-        """Add particle to MD
+        """Add particle to system
 
         :param pos: initial position of the particle
-        :type pos: float, list of floats or np.array
+        :type pos: list of floats or np.array
         :param int partnum: specifies particle number (position in list). Default is -1 (at end)
         :param bool overwrite: overwrite existing particle instead of inserting (default False)
         """
-        if len(pos) != self.pot.dimension:
+        if len(pos) != self.pot.n_dim:
             raise ValueError("Dimensions of particle and potential do not match: {} vs. {}"
-                             .format(pos, self.pot.dimension))
+                             .format(pos, self.pot.n_dim))
         p = BpmdParticle(pos)
         p.energy, p.forces = self.pot.evaluate(p.pos)
         p.c2 = np.sqrt((1 - self.c1 * self.c1) * p.mass * self.kt)

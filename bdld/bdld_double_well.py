@@ -80,7 +80,7 @@ def main():
                                       )
 
     # add to histogram every 1000000 trajectory points
-    bdld.init_histogram(201,[(-2.5,2.5)], 1000000 / args.num_walkers)
+    bdld.init_histogram([200], [(-2.5,2.5)], 1000000 / args.num_walkers)
 
     print(f'Running for {args.num_steps} timesteps with a birth/death stride of {args.bd_stride}')
     if args.log_stride == 0:
@@ -113,7 +113,7 @@ def main():
     delta_F_masks = [np.where(bdld.histo.bin_centers()[0] < 0, True, False),
                      np.where(bdld.histo.bin_centers()[0] > 0, True, False)]
     delta_F = analysis.calculate_delta_F(bdld.histo.fes, args.kt, delta_F_masks)[0]
-    delta_F_ref = analysis.calculate_delta_F(ld.pot.calculate_reference(), args.kt, delta_F_masks)[0]
+    delta_F_ref = analysis.calculate_delta_F(ld.pot.calculate_reference(bdld.histo.bin_centers()[0]), args.kt, delta_F_masks)[0]
     print(f'Delta F: {delta_F:.4} (ref: {delta_F_ref:.4})')
 
 

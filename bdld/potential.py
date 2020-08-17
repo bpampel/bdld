@@ -40,7 +40,7 @@ class Potential():
         forces = np.array([-poly.polyval3d(*pos, self.der[d]) for d in range(self.n_dim)])
         return (energy, forces)
 
-    def calculate_reference(self, pos, mintozero=False):
+    def calculate_reference(self, pos, mintozero=True):
         """Calculate reference from potential at given positions
 
         :param pos: positions to evaluate
