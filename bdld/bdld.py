@@ -3,6 +3,7 @@
 import numpy as np
 from bussi_parinello_ld import BussiParinelloLD as bpld
 from birth_death import BirthDeath
+import analysis
 from histogram import Histogram
 from potential import Potential
 from helpers.plumed_header import PlumedHeader as PlmdHeader
@@ -153,6 +154,35 @@ class BirthDeathLangevinDynamics():
             header = self.generate_fileheader([f'traj.{i}'])
             np.savetxt(filename + '.' + str(i), t, header=str(header),
                        comments='', delimiter=' ', newline='\n')
+
+    def save_fes(self, filename):
+        """Calculate FES and save to text file
+
+        This does histogramming of the trajectories first if necessary
+
+        :param string filename: path to save FES to
+        """
+        if self.traj:  # if not empty
+            self.add_trajectory_to_histogram(True)
+        fes, pos = self.histo.calculate_fes(self.ld.kt)
+        header = self.generate_fileheader(['pos fes'])
+        data = np.vstack(pos, fes).T
+        np.savetxt(filename, data, header=str(header),
+                   comments='', delimiter=' ', newline='\n')
+
+    def plot_fes(self, filename=None, plot_domain=None, plot_title=None):
+        """Plot fes with reference and optionally save to file
+
+        :param filename: optional filename to save figure to
+        :param plot_domain: optional list with minimum and maximum value to show
+        :param plot_title: optional title for the legend
+        """
+        if self.histo.fes is None:
+            self.histo.calculate_fes(self.ld.kt)
+        analysis.plot_fes(self.histo.fes, self.histo.bin_centers(),
+                          ref=self.ld.potential.calculate_reference(self.histo.bin_centers()),
+                          plot_domain=plot_domain, filename=filename, title=plot_title)
+
 
     def generate_fileheader(self, fields):
         """Get plumed-style header from variables to print with data to file

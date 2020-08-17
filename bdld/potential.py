@@ -39,3 +39,15 @@ class Potential():
         energy = poly.polyval3d(*pos, self.coeffs)
         forces = np.array([-poly.polyval3d(*pos, self.der[d]) for d in range(self.n_dim)])
         return (energy, forces)
+
+    def calculate_reference(self, pos, mintozero=False):
+        """Calculate reference from potential at given positions
+
+        :param pos: positions to evaluate
+        :param bool mintozero: shift fes minimum to zero
+        :return fes: list numpy array with fes values at positions
+        """
+        fes = np.fromiter((self.evaluate(p)[0] for p in pos), float, len(pos))
+        if mintozero:
+            fes -= np.min(fes)
+        return fes

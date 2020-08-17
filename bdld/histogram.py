@@ -19,12 +19,14 @@ class Histogram():
         :type bins: list of numpy.ndarray per dimension
         :param histo: the histogram data (counts) corresponding to the bins
         :type histo: list of numpy.ndarray per dimension
+        :param fes: the free energy values corresponding to the histogram
+        :type fes: list of numpy.ndarray per dimension
         """
         self.n_bins = n_bins
         self.ranges = ranges
         self.bins = []
         self.histo = []
-        self.ranges = []
+        self.fes = None
         # create bins from arbitrary value, there doesn't seem to be a function doing it
         _, self.bins = np.histogramdd([0], bins=self.n_bins, range=self.ranges)
 
@@ -48,6 +50,9 @@ class Histogram():
     def calculate_fes(self, kt, mintozero=True):
         """Calculate free energy surface from histogram
 
+        Overwrites the fes attribute from the class instance and returns the data
+        in plottable form
+
         :param float kt: thermal energy of the system
         :param bool mintozero: shift FES to have minimum at zero
 
@@ -57,4 +62,5 @@ class Histogram():
         fes = np.where(self.histo == 0, np.inf, - kt * np.log(self.histo, where=(self.histo!=0)))
         if mintozero:
             fes -= np.min(fes)
+        self.fes = fes
         return fes, self.bin_centers()

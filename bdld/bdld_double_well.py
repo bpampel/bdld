@@ -86,12 +86,12 @@ def main():
     if args.log_stride == 0:
         bdld.run(args.num_steps)
     else:
-        for i in range(num_steps / log_stride):
+        for i in range(args.num_steps / args.log_stride):
             bdld.run(args.log_stride)
-            print(f"After {i * log_stride} time steps:")
+            print(f"After {i * args.log_stride} time steps:")
             bdld.print_stats()
-            print(,flush=True)
-        bdld.run(num_steps % log_stride)
+            print("",flush=True)
+        bdld.run(args.num_steps % args.log_stride)
 
 
     print("\nFinished simulation")
@@ -102,25 +102,18 @@ def main():
         print(f"Saving trajectories to: {args.traj_files}.i")
         bdld.save_trajectories(args.traj_files)
 
-    # flatten trajectory for histogramming
-    comb_traj = [pos for p in bdld.traj for pos in p]
-
-    fes, axes = analysis.calculate_fes(comb_traj, args.kt,[(-2.5,2.5)], bins=201)
-    ref = analysis.calculate_reference(ld.pot, np.array(axes).T)
     if args.fes_file:
-        print(f"Saving fes to: {args.fes_file}")
-        header = bdld.generate_fileheader(['pos', 'fes'])
-        np.savetxt(args.fes_file, np.vstack((axes,fes)).T, fmt='%14.9f', header=str(header),
-                   comments='', delimiter=' ', newline='\n')
+        bdld.save_fes(args.fes_file)
     if args.fes_image:
         print(f"Saving fes image to: {args.fes_image}")
     plot_title = 'bw '+str(args.bw[0]) if args.bd_stride != 0 else None
-    analysis.plot_fes(fes, axes, ref, fesrange=[-0.5,8.0], filename=args.fes_image, title=plot_title)
+    bdld.plot_fes(args.fes_image, plot_domain=[-0.5,8.0], plot_title=plot_title)
 
     # simply divide states by the 0 line for deltaF analysis
-    delta_F_masks = [np.where(axes[0] < 0, True, False), np.where(axes[0] > 0, True, False)]
-    delta_F = analysis.calculate_delta_F(fes, args.kt, delta_F_masks)[0]
-    delta_F_ref = analysis.calculate_delta_F(ref, args.kt, delta_F_masks)[0]
+    delta_F_masks = [np.where(bdld.histo.bin_centers()[0] < 0, True, False),
+                     np.where(bdld.histo.bin_centers()[0] > 0, True, False)]
+    delta_F = analysis.calculate_delta_F(bdld.histo.fes, args.kt, delta_F_masks)[0]
+    delta_F_ref = analysis.calculate_delta_F(ld.pot.calculate_reference(), args.kt, delta_F_masks)[0]
     print(f'Delta F: {delta_F:.4} (ref: {delta_F_ref:.4})')
 
 

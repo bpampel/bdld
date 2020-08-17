@@ -3,44 +3,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def calculate_fes(trajectory, kt, ranges, bins=101, mintozero=True):
-    """Calculate free energy surface from trajectory
 
-    :param trajectory: list of positions as numpy arrays
-    :param float kt: thermal energy of system
-    :param ranges: list of tuples with extent of FES (min and max) per direction
-    :param int bins: number of bins for histogram
-
-    :return fes: numpy array with free energy values
-    :return axes: list of numpy arrays with axes for the fes values
-    """
-    hist, axes = np.histogramdd(np.vstack(trajectory),bins=bins, range=ranges, density=True)
-    # axes have bin boundaries -> shift to middle of intervals
-    axes = [np.array([(axis[i] + axis[i+1]) / 2 for i in range(0,len(axis)-1)]) for axis in axes]
-    fes = np.where(hist == 0, np.inf, - kt * np.log(hist, where=(hist!=0)))
-    if mintozero:
-        fes -= np.min(fes)
-    return fes, axes
-
-
-def calculate_reference(pot, positions):
-    """Calculate FES from potential
-
-    :param pot: the potential to evaluate
-    :param positions: list of positions to evaluate
-    """
-    ref = np.fromiter((pot.evaluate(p)[0] for p in positions), float, len(positions))
-    ref -= np.min(ref)
-    return ref
-
-
-def plot_fes(fes, axes, ref=None, fesrange=None, filename=None, title=None):
+def plot_fes(fes, axes, ref=None, plot_domain=None, filename=None, title=None):
     """Show fes with matplotlib
 
     :param fes: the fes to plot
     :param axes: axes of plot
     :param ref: optional reference FES to plot (makes only sense for 1d fes)
-    :param fesrange: optional list with minimum and maximum value to show
+    :param plot_domain: optional list with minimum and maximum value to show
     :param filename: optional filename to save figure to
     :param title: optional title for the legend
     """
@@ -54,8 +24,8 @@ def plot_fes(fes, axes, ref=None, fesrange=None, filename=None, title=None):
         ax.plot(axes[0],fes,'r-',label='FES')
         ax.legend(title=title)
         ax.set_ylabel('F (energy units)')
-        if fesrange is not None:
-            ax.set_ylim(fesrange)
+        if plot_domain is not None:
+            ax.set_ylim(plot_domain)
         else:  # automatically crop from fes values
             ylim = np.where(np.isinf(fes), 0, fes).max()  # find max that is not inf
             ax.set_ylim([-0.05*ylim,1.05*ylim])  # crop unused parts
