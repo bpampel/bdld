@@ -167,7 +167,7 @@ class BirthDeathLangevinDynamics():
             self.add_trajectory_to_histogram(True)
         fes, pos = self.histo.calculate_fes(self.ld.kt)
         header = self.generate_fileheader(['pos fes'])
-        data = np.vstack(pos, fes).T
+        data = np.vstack((pos, fes)).T
         np.savetxt(filename, data, header=str(header),
                    comments='', delimiter=' ', newline='\n')
 

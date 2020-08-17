@@ -30,6 +30,7 @@ def walker_density(pos, bw):
             density[i] = np.average(gauss_dist)
         return density
 
+
 class BirthDeath():
     """Birth death algorithm"""
     def __init__(self, particles, dt, bw, kt, seed=None, logging=False):
@@ -90,8 +91,9 @@ class BirthDeath():
         num_part = len(pos)
         dup_list = []
         kill_list = []
-        beta = np.log(walker_density(pos, self.bw)) + ene * self.inv_kt
-        # kernel can be zero and make beta -inf. Filter for averaging
+        with np.errstate(divide='ignore'):
+            # density can be zero and make beta -inf. Filter when averaging in next step
+            beta = np.log(walker_density(pos, self.bw)) + ene * self.inv_kt
         beta -= np.average(beta[beta != -np.inf])
         if self.logging:  # get number of attempts from betas
             curr_kill_attempts = np.count_nonzero(beta > 0)
@@ -112,7 +114,7 @@ class BirthDeath():
                 elif beta[i] < 0:
                     dup_list.append(i)
                     # prevent killing twice
-                    kill_list.append(self.random_particle(num_part, kill_list + [i]))
+                    kill_list.append(self.random_particle(num_part, [i]))
                     if self.logging:
                         self.dup_count += 1
 
