@@ -40,6 +40,8 @@ def parse_cliargs():
                         help="Save fes image to given path. If not specified it will show the image and ask for the name.")
     parser.add_argument('--tilt', type=float,
                         help="Tilt of the one-dimensional potential (linear coefficient)")
+    parser.add_argument('--log-stride', type=int, dest='log_stride', default=0,
+                        help="Print information every n time steps")
     args = parser.parse_args()
     if args.bd_stride != 0 and args.bw is None:
         raise ValueError("Error: Bandwidth for birth-death kernels not specified. (-bw argument)")
@@ -77,8 +79,20 @@ def main():
                                       args.seed,
                                       )
 
+    # add to histogram every 1000000 trajectory points
+    bdld.init_histogram(201,[(-2.5,2.5)], 1000000 / args.num_walkers)
+
     print(f'Running for {args.num_steps} timesteps with a birth/death stride of {args.bd_stride}')
-    bdld.run(args.num_steps)
+    if args.log_stride == 0:
+        bdld.run(args.num_steps)
+    else:
+        for i in range(num_steps / log_stride):
+            bdld.run(args.log_stride)
+            print()
+            print(f"After {i * log_stride} time steps:")
+            bdld.print_stats()
+        bdld.run(num_steps % log_stride)
+
 
     print("\nFinished simulation")
     bdld.print_stats()
