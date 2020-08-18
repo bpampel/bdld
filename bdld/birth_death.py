@@ -154,3 +154,16 @@ class BirthDeath():
             beta.append(beta_g[0] - np.average(beta_g[beta_g != -np.inf]))
 
         return np.c_[grid, rho, beta]
+
+    def print_stats(self):
+        """Print birth/death probabilities to screen"""
+        if self.logging:
+            kill_perc = 100 * self.kill_count / self.kill_attempts
+            dup_perc = 100 * self.dup_count / self.dup_attempts
+            ratio_succ = self.kill_count / self.dup_count
+            ratio_attempts = self.kill_attempts / self.dup_attempts
+            print(f"Succesful birth events: {self.dup_count}/{self.dup_attempts} ({dup_perc:.4}%)")
+            print(f"Succesful death events: {self.kill_count}/{self.kill_attempts} ({kill_perc:.4}%)")
+            print(f"Ratio birth/death: {ratio_succ:.4} (succesful)  {ratio_attempts:.4} (attemps)")
+        else:
+            raise ValueError("Can't print statistics: Logging is turned off")

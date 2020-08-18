@@ -123,17 +123,6 @@ class BirthDeathLangevinDynamics():
         if self.bd_stride != 0:
             self.steps_since_bd = (self.steps_since_bd + num_steps) % self.bd_stride
 
-    def print_stats(self):
-        """Print birth/death probabilities to screen"""
-        kill_perc = 100 * self.bd.kill_count / self.bd.kill_attempts
-        dup_perc = 100 * self.bd.dup_count / self.bd.dup_attempts
-        ratio_succ = self.bd.kill_count / self.bd.dup_count
-        ratio_attempts = self.bd.kill_attempts / self.bd.dup_attempts
-        print(f"Succesful birth events: {self.bd.dup_count}/{self.bd.dup_attempts} ({dup_perc:.4}%)")
-        print(f"Succesful death events: {self.bd.kill_count}/{self.bd.kill_attempts} ({kill_perc:.4}%)")
-        print(f"Ratio birth/death: {ratio_succ:.4} (succesful)  {ratio_attempts:.4} (attemps)")
-
-
     def save_analysis_grid(self, filename, grid):
         """Analyse the values of rho and beta on a grid
 

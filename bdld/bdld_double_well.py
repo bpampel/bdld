@@ -83,13 +83,13 @@ def main():
     bdld.init_histogram([200], [(-2.5,2.5)], 1000000 / args.num_walkers)
 
     print(f'Running for {args.num_steps} timesteps with a birth/death stride of {args.bd_stride}')
-    if args.log_stride == 0:
+    if args.log_stride == 0 or args.bd_stride == 0:
         bdld.run(args.num_steps)
     else:
         for i in range(int(args.num_steps / args.log_stride)):
             bdld.run(args.log_stride)
             print(f"After {(i+1) * args.log_stride} time steps:")
-            bdld.print_stats()
+            bdld.bd.print_stats()
             print("", flush=True)
         bdld.run(args.num_steps % args.log_stride)
 
