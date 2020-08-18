@@ -94,7 +94,8 @@ def main():
         bdld.run(args.num_steps % args.log_stride)
 
     print("\nFinished simulation")
-    bdld.print_stats()
+    if args.bd_stride != 0:
+        bdld.print_stats()
 
     # save trajectories to files
     if args.traj_files:
