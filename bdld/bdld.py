@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
 import numpy as np
-from bussi_parinello_ld import BussiParinelloLD as bpld
 from birth_death import BirthDeath
 import analysis
 from histogram import Histogram
-from potential import Potential
 from helpers.plumed_header import PlumedHeader as PlmdHeader
 
 
