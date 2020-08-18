@@ -7,7 +7,10 @@ from scipy.spatial.distance import pdist, sqeuclidean, squareform
 def walker_density(pos, bw):
     """Calculate the local density at each walker (average kernel value)
 
-    This is done by a Kernel density estimate with gaussian kernels
+    This is done by a Kernel density estimate with gaussian kernels.
+    The current implementation only works in 1d, because the distance is calculated
+    as euclidean for all directions without weighting but would need to take the
+    individual bandwidths into account.
 
     For less than 10000 walkers a spare pdist matrix is calculated and averaged.
     Because the matrix size scales exponentially with the number of walkers for
@@ -25,7 +28,8 @@ def walker_density(pos, bw):
     else:
         density = np.empty((len(pos)))
         for i in range(len(pos)):
-            dist = [sqeuclidean(pos[i],pos[j]) for j in range(len(pos)) if j != i]
+            dist = np.fromiter((sqeuclidean(pos[i],pos[j]) for j in range(len(pos)) if j != i),
+                               float, len(pos) - 1)
             gauss_dist = 1 / (2 * np.pi * bw**2)**(pos.ndim/2) * np.exp(-dist / (2*bw)**2)
             density[i] = np.average(gauss_dist)
         return density
