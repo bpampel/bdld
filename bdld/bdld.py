@@ -9,7 +9,7 @@ from bdld.birth_death import BirthDeath
 from bdld.histogram import Histogram
 
 
-class BirthDeathLangevinDynamics():
+class BirthDeathLangevinDynamics:
     """Combine Langevin dynamics with birth/death events
 
     :param ld: completely set up BussiParinelloLD instance
@@ -48,8 +48,10 @@ class BirthDeathLangevinDynamics():
         """Set up bd and initialize trajectory lists"""
         if self.bd_stride != 0:
             if any(bw <= 0 for bw in self.bd_bw):
-                raise ValueError(f"The bandwidth of the Gaussian kernels needs"
-                                 f"to be greater than 0 (is {self.bd_bw})")
+                raise ValueError(
+                    f"The bandwidth of the Gaussian kernels needs"
+                    f"to be greater than 0 (is {self.bd_bw})"
+                )
             self.setup_bd()
         # initialize trajectory list
         self.traj = [[np.copy(p.pos)] for p in self.ld.particles]
@@ -57,13 +59,14 @@ class BirthDeathLangevinDynamics():
     def setup_bd(self):
         """Set up birth death from parameters"""
         if self.bd_stride != 0:
-            self.bd = BirthDeath(self.ld.particles,
-                                 self.bd_time_step,
-                                 self.bd_bw,
-                                 self.ld.kt,
-                                 self.bd_seed,
-                                 True,
-                                 )
+            self.bd = BirthDeath(
+                self.ld.particles,
+                self.bd_time_step,
+                self.bd_bw,
+                self.ld.kt,
+                self.bd_seed,
+                True,
+            )
 
     def init_histogram(self, n_bins, ranges, stride=None):
         """Initialize a histogram for the trajectories
@@ -75,12 +78,16 @@ class BirthDeathLangevinDynamics():
         :param int stride: add trajectory to the histogram every n steps
         """
         if self.ld.pot.n_dim != len(n_bins):
-            e = "Dimensions of histogram bins don't match dimensions of system " \
+            e = (
+                "Dimensions of histogram bins don't match dimensions of system "
                 + f"({len(n_bins)} vs. {self.ld.n_dim})"
+            )
             raise ValueError(e)
         if self.ld.pot.n_dim != len(ranges):
-            e = "Dimensions of histogram ranges don't match dimensions of system " \
+            e = (
+                "Dimensions of histogram ranges don't match dimensions of system "
                 + f"({len(ranges)} vs. {self.ld.n_dim})"
+            )
             raise ValueError(e)
         self.histo = Histogram(n_bins, ranges)
         self.histo_stride = stride
@@ -96,7 +103,7 @@ class BirthDeathLangevinDynamics():
         comb_traj = np.vstack([pos for part in self.traj for pos in part])
         self.histo.add(comb_traj)
         if clear_traj:
-            self.traj = [ [] for i in range(len(self.ld.particles))]
+            self.traj = [[] for i in range(len(self.ld.particles))]
 
     def run(self, num_steps):
         """Run the simulation for given number of steps
@@ -113,11 +120,11 @@ class BirthDeathLangevinDynamics():
         """
         for i in range(self.steps_since_bd + 1, self.steps_since_bd + 1 + num_steps):
             self.ld.step()
-            if (self.bd_stride != 0 and i % self.bd_stride == 0):
+            if self.bd_stride != 0 and i % self.bd_stride == 0:
                 self.bd.step()
-            for j,p in enumerate(self.ld.particles):
+            for j, p in enumerate(self.ld.particles):
                 self.traj[j].append(np.copy(p.pos))
-            if (self.histo_stride != 0 and i % self.histo_stride == 0):
+            if self.histo_stride != 0 and i % self.histo_stride == 0:
                 self.add_trajectory_to_histogram(True)
         # increase counter only once
         if self.bd_stride != 0:
@@ -131,19 +138,32 @@ class BirthDeathLangevinDynamics():
         """
         ana_ene = [self.ld.pot.evaluate(p)[0] for p in grid]
         ana_values = self.bd.prob_density_grid(grid, ana_ene)
-        header = self.generate_fileheader(['pos', 'rho', 'beta'])
-        np.savetxt(filename, ana_values, fmt='%14.9f', header=str(header),
-                   comments='', delimiter=' ', newline='\n')
+        header = self.generate_fileheader(["pos", "rho", "beta"])
+        np.savetxt(
+            filename,
+            ana_values,
+            fmt="%14.9f",
+            header=str(header),
+            comments="",
+            delimiter=" ",
+            newline="\n",
+        )
 
     def save_trajectories(self, filename):
         """Save all trajectories to files
 
         :param filename: basename for files, is appended by '.i' for the individual files
         """
-        for i,t in enumerate(self.traj):
-            header = self.generate_fileheader([f'traj.{i}'])
-            np.savetxt(filename + '.' + str(i), t, header=str(header),
-                       comments='', delimiter=' ', newline='\n')
+        for i, t in enumerate(self.traj):
+            header = self.generate_fileheader([f"traj.{i}"])
+            np.savetxt(
+                filename + "." + str(i),
+                t,
+                header=str(header),
+                comments="",
+                delimiter=" ",
+                newline="\n",
+            )
 
     def save_fes(self, filename):
         """Calculate FES and save to text file
@@ -155,10 +175,11 @@ class BirthDeathLangevinDynamics():
         if any(t for t in self.traj):
             self.add_trajectory_to_histogram(True)
         fes, pos = self.histo.calculate_fes(self.ld.kt)
-        header = self.generate_fileheader(['pos fes'])
+        header = self.generate_fileheader(["pos fes"])
         data = np.vstack((pos, fes)).T
-        np.savetxt(filename, data, header=str(header),
-                   comments='', delimiter=' ', newline='\n')
+        np.savetxt(
+            filename, data, header=str(header), comments="", delimiter=" ", newline="\n"
+        )
 
     def plot_fes(self, filename=None, plot_domain=None, plot_title=None):
         """Plot fes with reference and optionally save to file
@@ -171,11 +192,15 @@ class BirthDeathLangevinDynamics():
             self.add_trajectory_to_histogram(True)
         if self.histo.fes is None:
             self.histo.calculate_fes(self.ld.kt)
-        analysis.plot_fes(self.histo.fes, self.histo.bin_centers(),
-                          # temporary fix, needs to be changed for more than 1d
-                          ref=self.ld.pot.calculate_reference(self.histo.bin_centers()[0]),
-                          plot_domain=plot_domain, filename=filename, title=plot_title)
-
+        analysis.plot_fes(
+            self.histo.fes,
+            self.histo.bin_centers(),
+            # temporary fix, needs to be changed for more than 1d
+            ref=self.ld.pot.calculate_reference(self.histo.bin_centers()[0]),
+            plot_domain=plot_domain,
+            filename=filename,
+            title=plot_title,
+        )
 
     def generate_fileheader(self, fields):
         """Get plumed-style header from variables to print with data to file
@@ -183,11 +208,14 @@ class BirthDeathLangevinDynamics():
         :param fields: list of strings for the field names (first line of header)
         :return header:
         """
-        header = PlmdHeader([' '.join(['FIELDS'] + fields),
-                             f'SET dt {self.ld.dt}',
-                             f'SET kt {self.ld.kt}',
-                             f'SET friction {self.ld.friction}',
-                             f'SET bd_stride {self.bd_stride}',
-                             f'SET bd_bandwidth {self.bd_bw}',
-                             ])
+        header = PlmdHeader(
+            [
+                " ".join(["FIELDS"] + fields),
+                f"SET dt {self.ld.dt}",
+                f"SET kt {self.ld.kt}",
+                f"SET friction {self.ld.friction}",
+                f"SET bd_stride {self.bd_stride}",
+                f"SET bd_bandwidth {self.bd_bw}",
+            ]
+        )
         return header

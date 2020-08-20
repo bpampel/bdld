@@ -1,10 +1,11 @@
 """Potential class to be evaluated with md"""
 
 import numpy as np
+
 poly = np.polynomial.polynomial
 
 
-class Potential():
+class Potential:
     """Simple class holding a polynomial potential
 
     :param numpy.array coeffs: Coefficients of polynomial potential
@@ -25,7 +26,7 @@ class Potential():
 
     def __str__(self):
         """Give out coefficients"""
-        return 'polynomial with coefficients ' + list(self.coeffs).__str__()
+        return "polynomial with coefficients " + list(self.coeffs).__str__()
 
     def evaluate(self, pos):
         """Get potential energy and forces at position
@@ -35,9 +36,13 @@ class Potential():
         :return: (energy, forces)
         :rtype: Tuple(float, list of float)
         """
-        pos = np.append(pos, [0.0]*(3-self.n_dim)) #  needed to have 3 elements in pos
+        pos = np.append(
+            pos, [0.0] * (3 - self.n_dim)
+        )  #  needed to have 3 elements in pos
         energy = poly.polyval3d(*pos, self.coeffs)
-        forces = np.array([-poly.polyval3d(*pos, self.der[d]) for d in range(self.n_dim)])
+        forces = np.array(
+            [-poly.polyval3d(*pos, self.der[d]) for d in range(self.n_dim)]
+        )
         return (energy, forces)
 
     def calculate_reference(self, pos, mintozero=True):

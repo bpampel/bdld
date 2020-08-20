@@ -23,21 +23,31 @@ def walker_density(pos, bw):
     :return numpy.ndarray kernel: kernel value matrix
     """
     if len(pos) <= 10000:  # pdist matrix with maximum 10e8 float64 values
-        dist = pdist(pos, 'sqeuclidean')
-        gauss = 1 / (2 * np.pi * bw**2)**(pos.ndim/2) * np.exp(-dist / (2*bw)**2)
+        dist = pdist(pos, "sqeuclidean")
+        gauss = (
+            1 / (2 * np.pi * bw ** 2) ** (pos.ndim / 2) * np.exp(-dist / (2 * bw) ** 2)
+        )
         return np.average(squareform(gauss), axis=0)
     else:
         density = np.empty((len(pos)))
         for i in range(len(pos)):
-            dist = np.fromiter((sqeuclidean(pos[i],pos[j]) for j in range(len(pos)) if j != i),
-                               float, len(pos) - 1)
-            gauss_dist = 1 / (2 * np.pi * bw**2)**(pos.ndim/2) * np.exp(-dist / (2*bw)**2)
+            dist = np.fromiter(
+                (sqeuclidean(pos[i], pos[j]) for j in range(len(pos)) if j != i),
+                float,
+                len(pos) - 1,
+            )
+            gauss_dist = (
+                1
+                / (2 * np.pi * bw ** 2) ** (pos.ndim / 2)
+                * np.exp(-dist / (2 * bw) ** 2)
+            )
             density[i] = np.average(gauss_dist)
         return density
 
 
-class BirthDeath():
+class BirthDeath:
     """Birth death algorithm"""
+
     def __init__(self, particles, dt, bw, kt, seed=None, logging=False):
         """Set arguments
 
@@ -51,16 +61,18 @@ class BirthDeath():
         self.particles = particles
         self.dt = dt
         self.bw = np.array(bw, dtype=float)
-        self.inv_kt = 1/kt
+        self.inv_kt = 1 / kt
         self.rng = np.random.default_rng(seed)
         self.logging = logging
-        print(f'Setting up birth/death scheme\n'
-              f'Parameters:\n'
-              f'  dt = {self.dt}\n'
-              f'  bw = {self.bw}\n'
-              f'  kt = {kt}')
+        print(
+            f"Setting up birth/death scheme\n"
+            f"Parameters:\n"
+            f"  dt = {self.dt}\n"
+            f"  bw = {self.bw}\n"
+            f"  kt = {kt}"
+        )
         if seed:
-            print(f'  seed = {seed}')
+            print(f"  seed = {seed}")
         print()
         if self.logging:
             self.dup_count = 0
@@ -96,18 +108,18 @@ class BirthDeath():
         num_part = len(pos)
         dup_list = []
         kill_list = []
-        with np.errstate(divide='ignore'):
+        with np.errstate(divide="ignore"):
             # density can be zero and make beta -inf. Filter when averaging in next step
             beta = np.log(walker_density(pos, self.bw)) + ene * self.inv_kt
         beta -= np.average(beta[beta != -np.inf])
         if self.logging:  # get number of attempts from betas
             curr_kill_attempts = np.count_nonzero(beta > 0)
             self.kill_attempts += curr_kill_attempts
-            self.dup_attempts += (num_part - curr_kill_attempts)
+            self.dup_attempts += num_part - curr_kill_attempts
 
         # evaluate all at same time not sequentially as in original paper
         # does it matter?
-        prob = 1 - np.exp(- np.abs(beta) * self.dt)
+        prob = 1 - np.exp(-np.abs(beta) * self.dt)
         rand = self.rng.random(num_part)
         for i in np.where(rand <= prob)[0]:
             if i not in kill_list:
@@ -144,8 +156,10 @@ class BirthDeath():
         beta = []
         walker_pos = [p.pos for p in self.particles]
         walker_ene = [p.energy for p in self.particles]
-        for g,e in zip(grid,energy):
-            pos = np.append(g, walker_pos).reshape((len(walker_pos)+1,walker_pos[1].ndim))  # array with positions as subarrays
+        for g, e in zip(grid, energy):
+            pos = np.append(g, walker_pos).reshape(
+                (len(walker_pos) + 1, walker_pos[1].ndim)
+            )  # array with positions as subarrays
             ene = np.append(e, walker_ene)
             # full kernel is needed for probability (normalization)
             rho_g = walker_density(pos, self.bw)
@@ -163,8 +177,14 @@ class BirthDeath():
             dup_perc = 100 * self.dup_count / self.dup_attempts
             ratio_succ = self.kill_count / self.dup_count
             ratio_attempts = self.kill_attempts / self.dup_attempts
-            print(f"Succesful birth events: {self.dup_count}/{self.dup_attempts} ({dup_perc:.4}%)")
-            print(f"Succesful death events: {self.kill_count}/{self.kill_attempts} ({kill_perc:.4}%)")
-            print(f"Ratio birth/death: {ratio_succ:.4} (succesful)  {ratio_attempts:.4} (attemps)")
+            print(
+                f"Succesful birth events: {self.dup_count}/{self.dup_attempts} ({dup_perc:.4}%)"
+            )
+            print(
+                f"Succesful death events: {self.kill_count}/{self.kill_attempts} ({kill_perc:.4}%)"
+            )
+            print(
+                f"Ratio birth/death: {ratio_succ:.4} (succesful)  {ratio_attempts:.4} (attemps)"
+            )
         else:
             raise ValueError("Can't print statistics: Logging is turned off")

@@ -13,6 +13,7 @@ class BpmdParticle(Particle):
     :param list of float forces: stores last force evaluation
     :param float c2: constant for the MD thermostat (mass dependent)
     """
+
     def __init__(self, *args):
         """Creates particle from base class with additional attributes"""
         super(BpmdParticle, self).__init__(*args)
@@ -21,7 +22,7 @@ class BpmdParticle(Particle):
         self.c2 = None  # second thermostat constant depends on mass
 
 
-class BussiParinelloLD():
+class BussiParinelloLD:
     """Perform Langevin Dynamics with Bussi-Parinello thermostat
 
     Can handle multiple non-interacting particles (= walkers) simultaneously
@@ -34,6 +35,7 @@ class BussiParinelloLD():
     :param rng: numpy.random.Generator instance for the thermostat
     :param float c1: constant for thermostat
     """
+
     def __init__(self, *args):
         """Creates MD instance
 
@@ -78,16 +80,17 @@ class BussiParinelloLD():
         self.friction = friction
         self.c1 = np.exp(-0.5 * friction * dt)
         self.rng = np.random.default_rng(seed)
-        print(f'Setting up Langevin dynamics with Bussi-Parinello thermostat\n'
-              f'Parameters:\n'
-              f'  potential = {self.pot}\n'
-              f'  timestep = {self.dt}\n'
-              f'  friction = {self.friction}\n'
-              f'  kt = {self.kt}')
+        print(
+            f"Setting up Langevin dynamics with Bussi-Parinello thermostat\n"
+            f"Parameters:\n"
+            f"  potential = {self.pot}\n"
+            f"  timestep = {self.dt}\n"
+            f"  friction = {self.friction}\n"
+            f"  kt = {self.kt}"
+        )
         if seed:
-            print(f'  seed = {seed}')
+            print(f"  seed = {seed}")
         print()
-
 
     def add_particle(self, pos, partnum=-1, overwrite=False):
         """Add particle to system
@@ -98,8 +101,11 @@ class BussiParinelloLD():
         :param bool overwrite: overwrite existing particle instead of inserting (default False)
         """
         if len(pos) != self.pot.n_dim:
-            raise ValueError("Dimensions of particle and potential do not match: {} vs. {}"
-                             .format(pos, self.pot.n_dim))
+            raise ValueError(
+                "Dimensions of particle and potential do not match: {} vs. {}".format(
+                    pos, self.pot.n_dim
+                )
+            )
         p = BpmdParticle(pos)
         p.energy, p.forces = self.pot.evaluate(p.pos)
         p.c2 = np.sqrt((1 - self.c1 * self.c1) * p.mass * self.kt)

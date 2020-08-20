@@ -3,7 +3,7 @@
 import numpy as np
 
 
-class Histogram():
+class Histogram:
     """Histogram data and calculate FES from the histogram
 
     Enables histogramming over time, i.e. adding more data to the existing histogram
@@ -45,7 +45,12 @@ class Histogram():
         :return centered_bins: the centers of the histogram bins
         :type centered_bins: list with numpy.ndarray per dimension
         """
-        return [np.array([(bins_x[i] + bins_x[i+1]) / 2 for i in range(0,len(bins_x)-1)]) for bins_x in self.bins]
+        return [
+            np.array(
+                [(bins_x[i] + bins_x[i + 1]) / 2 for i in range(0, len(bins_x) - 1)]
+            )
+            for bins_x in self.bins
+        ]
 
     def calculate_fes(self, kt, mintozero=True):
         """Calculate free energy surface from histogram
@@ -59,7 +64,9 @@ class Histogram():
         :return fes: numpy array with free energy values
         :return pos: list of numpy arrays with the positions corresponding to the FES values
         """
-        fes = np.where(self.histo == 0, np.inf, - kt * np.log(self.histo, where=(self.histo!=0)))
+        fes = np.where(
+            self.histo == 0, np.inf, -kt * np.log(self.histo, where=(self.histo != 0))
+        )
         if mintozero:
             fes -= np.min(fes)
         self.fes = fes
