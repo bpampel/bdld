@@ -1,7 +1,8 @@
 """Simple Langevin Dynamics with Bussi-Parinello thermostat"""
 
 import numpy as np
-from particle import Particle
+
+from bdld.particle import Particle
 
 
 class BpmdParticle(Particle):

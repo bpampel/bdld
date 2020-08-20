@@ -1,10 +1,12 @@
-#!/usr/bin/env python3
+"""Main bdld algorithm file hosting the BirthDeathLangevinDynamics class"""
 
 import numpy as np
-from birth_death import BirthDeath
-import analysis
-from histogram import Histogram
-from helpers.plumed_header import PlumedHeader as PlmdHeader
+
+from bdld.helpers.plumed_header import PlumedHeader as PlmdHeader
+
+from bdld import analysis
+from bdld.birth_death import BirthDeath
+from bdld.histogram import Histogram
 
 
 class BirthDeathLangevinDynamics():

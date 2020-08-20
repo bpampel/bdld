@@ -4,6 +4,7 @@ import copy
 import numpy as np
 from scipy.spatial.distance import pdist, sqeuclidean, squareform
 
+
 def walker_density(pos, bw):
     """Calculate the local density at each walker (average kernel value)
 

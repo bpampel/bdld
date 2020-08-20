@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+"""Run bdld simulation on a 1d double-well potential"""
 
 import argparse
 import numpy as np
-import analysis
-from bdld import BirthDeathLangevinDynamics
-from bussi_parinello_ld import BussiParinelloLD as bpld
-from potential import Potential
+from bdld import analysis
+from bdld.bdld import BirthDeathLangevinDynamics
+from bdld.bussi_parinello_ld import BussiParinelloLD
+from bdld.potential import Potential
 
 
 def parse_cliargs():
@@ -57,12 +58,12 @@ def main():
     pot = Potential(np.array([0, float(args.tilt or 0.0), -4, 0, 1]))
 
     # set up LD and add particles
-    ld = bpld(pot,
-              args.time_step,
-              args.friction,
-              args.kt,
-              args.seed,
-              )
+    ld = BussiParinelloLD(pot,
+                          args.time_step,
+                          args.friction,
+                          args.kt,
+                          args.seed,
+                          )
     # minumum slightly changes with tilt, calculate from coefficients
     extrema = np.polynomial.polynomial.polyroots(*ld.pot.der) # includes also maximum
     # add particles, round in favor of first state
@@ -95,7 +96,7 @@ def main():
 
     print("\nFinished simulation")
     if args.bd_stride != 0:
-        bdld.print_stats()
+        bdld.bd.print_stats()
 
     # save trajectories to files
     if args.traj_files:
@@ -107,7 +108,7 @@ def main():
     if args.fes_image:
         print(f"Saving fes image to: {args.fes_image}")
     plot_title = 'bw '+str(args.bw[0]) if args.bd_stride != 0 else None
-    bdld.plot_fes(args.fes_image, plot_domain=[-0.5,8.0], plot_title=plot_title)
+    bdld.plot_fes(args.fes_image, plot_domain=[-0.5, 8.0], plot_title=plot_title)
 
     # simply divide states by the 0 line for deltaF analysis
     delta_F_masks = [np.where(bdld.histo.bin_centers()[0] < 0, True, False),
