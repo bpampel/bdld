@@ -1,5 +1,6 @@
-#!/usr/bin/env python3
+"""Implement a simple histogramming and FES calculation class"""
 
+from typing import Iterable, List, Optional, Union, Tuple
 import numpy as np
 
 
@@ -9,28 +10,32 @@ class Histogram:
     Enables histogramming over time, i.e. adding more data to the existing histogram
     """
 
-    def __init__(self, n_bins, ranges):
+    def __init__(
+        self,
+        n_bins: Union[np.ndarray, List[int], int],
+        ranges: List[Tuple[float, float]],
+    ):
         """Set up empty histogram instance
 
-        :param int n_bins: number of bins for histogramming
+        :param n_bins: number of bins for histogramming per dimension
         :param ranges: extent of histogram (min, max) per dimension
-        :type ranges: list of tuples
-        :param bins: bin edges of the histogram
-        :type bins: list of numpy.ndarray per dimension
+        :param bins: bin edges of the histogram per dimension
         :param histo: the histogram data (counts) corresponding to the bins
-        :type histo: list of numpy.ndarray per dimension
         :param fes: the free energy values corresponding to the histogram
-        :type fes: list of numpy.ndarray per dimension
         """
-        self.n_bins = n_bins
-        self.ranges = ranges
-        self.bins = []
-        self.histo = []
-        self.fes = None
+        if not isinstance(n_bins, (list, np.ndarray)):  # single float
+            n_bins = [n_bins]
+        self.n_bins: Union[np.ndarray, List[int]] = n_bins
+        self.ranges: List[Tuple[float, float]] = ranges
+        self.bins: List = []
+        self.histo: np.ndarray = np.empty(0)
+        self.fes: Optional[np.ndarray] = None
         # create bins from arbitrary value, there doesn't seem to be a function doing it
-        self.histo, self.bins = np.histogramdd([0], bins=self.n_bins, range=self.ranges)
+        self.histo, self.bins = np.histogramdd(
+            np.zeros((1, len(n_bins))), bins=self.n_bins, range=self.ranges
+        )
 
-    def add(self, data):
+    def add(self, data: np.ndarray) -> None:
         """Add data to histogram
 
         :param data: The values to add to the histogram, see numpy's histogramdd for details

@@ -9,7 +9,7 @@ from bdld.bussi_parinello_ld import BussiParinelloLD
 from bdld.potential import Potential
 
 
-def parse_cliargs():
+def parse_cliargs() -> argparse.Namespace:
     """Use argparse to get cli arguments
     :return: args: Namespace with cli arguments"""
 
@@ -107,7 +107,7 @@ def parse_cliargs():
     return args
 
 
-def main():
+def main() -> None:
     args = parse_cliargs()
 
     # double well potential with optional tilt
@@ -157,7 +157,7 @@ def main():
     if args.fes_image:
         print(f"Saving fes image to: {args.fes_image}")
     plot_title = "bw " + str(args.bw[0]) if args.bd_stride != 0 else None
-    bdld.plot_fes(args.fes_image, plot_domain=[-0.5, 8.0], plot_title=plot_title)
+    bdld.plot_fes(args.fes_image, plot_domain=(-0.5, 8.0), plot_title=plot_title)
 
     # simply divide states by the 0 line for deltaF analysis
     delta_f_masks = [
@@ -165,7 +165,7 @@ def main():
         np.where(bdld.histo.bin_centers()[0] > 0, True, False),
     ]
     delta_f = analysis.calculate_delta_f(bdld.histo.fes, args.kt, delta_f_masks)[0]
-    delta_f_ref = analysis.calculate_delta_F(
+    delta_f_ref = analysis.calculate_delta_f(
         ld.pot.calculate_reference(bdld.histo.bin_centers()[0]), args.kt, delta_f_masks
     )[0]
     print(f"Delta F: {delta_f:.4} (ref: {delta_f_ref:.4})")

@@ -1,5 +1,6 @@
 """Potential class to be evaluated with md"""
 
+from typing import Any, List, Union, Tuple
 import numpy as np
 
 poly = np.polynomial.polynomial
@@ -13,7 +14,7 @@ class Potential:
     :param int dimension: Dimensions of potential
     """
 
-    def __init__(self, coeffs):
+    def __init__(self, coeffs: Union[List[float], np.ndarray]) -> None:
         """Set up from given coefficients
 
         :param coeffs: The coefficient i,j,k has to be given in coeffs[i,j,k]
@@ -24,17 +25,17 @@ class Potential:
         # note: the derivative matrices are larger than needed. Implement trim_zeros for multiple dimensions?
         self.der = [poly.polyder(self.coeffs, axis=d) for d in range(self.n_dim)]
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Give out coefficients"""
         return "polynomial with coefficients " + list(self.coeffs).__str__()
 
-    def evaluate(self, pos):
+    def evaluate(
+        self, pos: Union[float, List[float], np.ndarray]
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Get potential energy and forces at position
 
         :param pos: position to be evaluated
-        :type pos: list or numpy.array
         :return: (energy, forces)
-        :rtype: Tuple(float, list of float)
         """
         pos = np.append(
             pos, [0.0] * (3 - self.n_dim)
@@ -45,14 +46,16 @@ class Potential:
         )
         return (energy, forces)
 
-    def calculate_reference(self, pos, mintozero=True):
+    def calculate_reference(
+        self, pos: Union[List[float], np.ndarray], mintozero: bool = True
+    ) -> np.ndarray:
         """Calculate reference from potential at given positions
 
         :param pos: positions to evaluate
         :param bool mintozero: shift fes minimum to zero
         :return fes: list numpy array with fes values at positions
         """
-        fes = np.fromiter((self.evaluate(p)[0] for p in pos), float, len(pos))
+        fes = np.fromiter((self.evaluate(p)[0] for p in pos), np.float64, len(pos))
         if mintozero:
             fes -= np.min(fes)
         return fes

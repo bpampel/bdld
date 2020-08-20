@@ -1,11 +1,15 @@
 """Birth death algorithm"""
 
 import copy
+from typing import List, Optional, Union, Tuple
+
 import numpy as np
 from scipy.spatial.distance import pdist, sqeuclidean, squareform
 
+from bdld.bussi_parinello_ld import BpldParticle
 
-def walker_density(pos, bw):
+
+def walker_density(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
     """Calculate the local density at each walker (average kernel value)
 
     This is done by a Kernel density estimate with gaussian kernels.
@@ -27,13 +31,13 @@ def walker_density(pos, bw):
         gauss = (
             1 / (2 * np.pi * bw ** 2) ** (pos.ndim / 2) * np.exp(-dist / (2 * bw) ** 2)
         )
-        return np.average(squareform(gauss), axis=0)
+        return np.mean(squareform(gauss), axis=0)
     else:
         density = np.empty((len(pos)))
         for i in range(len(pos)):
             dist = np.fromiter(
                 (sqeuclidean(pos[i], pos[j]) for j in range(len(pos)) if j != i),
-                float,
+                np.float64,
                 len(pos) - 1,
             )
             gauss_dist = (
@@ -41,29 +45,36 @@ def walker_density(pos, bw):
                 / (2 * np.pi * bw ** 2) ** (pos.ndim / 2)
                 * np.exp(-dist / (2 * bw) ** 2)
             )
-            density[i] = np.average(gauss_dist)
+            density[i] = np.mean(gauss_dist)
         return density
 
 
 class BirthDeath:
     """Birth death algorithm"""
 
-    def __init__(self, particles, dt, bw, kt, seed=None, logging=False):
+    def __init__(
+        self,
+        particles: List[BpldParticle],
+        dt: float,
+        bw: Union[List[float], np.ndarray],
+        kt: float,
+        seed: Optional[int] = None,
+        logging: bool = False,
+    ) -> None:
         """Set arguments
 
         :param particles: list of Particles shared with MD
         :param float dt: timestep of MD
         :param bw: bandwidth for gaussian kernels per direction
-        :type bw: list or numpy.ndarray
         :param float kt: thermal energy of system
         :param int seed: Seed for rng (optional)
         """
-        self.particles = particles
-        self.dt = dt
-        self.bw = np.array(bw, dtype=float)
-        self.inv_kt = 1 / kt
-        self.rng = np.random.default_rng(seed)
-        self.logging = logging
+        self.particles: List[BpldParticle] = particles
+        self.dt: float = dt
+        self.bw: np.ndarray = np.array(bw, dtype=float)
+        self.inv_kt: float = 1 / kt
+        self.rng: np.random.Generator = np.random.default_rng(seed)
+        self.logging: bool = logging
         print(
             f"Setting up birth/death scheme\n"
             f"Parameters:\n"
@@ -80,7 +91,7 @@ class BirthDeath:
             self.kill_count = 0
             self.kill_attempts = 0
 
-    def step(self):
+    def step(self) -> List[Tuple[int, int]]:
         """Perform birth-death step on particles
 
         Returns list of succesful birth/death events"""
@@ -95,15 +106,17 @@ class BirthDeath:
             # keep the old random number for the initial thermostat step or generate new?
         return bd_events
 
-    def calculate_birth_death(self, pos, ene):
+    def calculate_birth_death(
+        self, pos: np.ndarray, ene: np.ndarray
+    ) -> List[Tuple[int, int]]:
         """Calculate which particles to kill and duplicate
 
         The returned tuples are ordered, so the first particle in the tuple
         should be replaced by a copy of the second one
 
-        :param numpy.ndarray pos: positions of all particles
-        :param numpy.ndarray ene: energy of all particles
-        :return list of tuples (dup, kill): particle to duplicate and kill per event
+        :param pos: positions of all particles
+        :param ene: energy of all particles
+        :return bd_events: list of tuples with particles to duplicate and kill per event
         """
         num_part = len(pos)
         dup_list = []
@@ -111,7 +124,7 @@ class BirthDeath:
         with np.errstate(divide="ignore"):
             # density can be zero and make beta -inf. Filter when averaging in next step
             beta = np.log(walker_density(pos, self.bw)) + ene * self.inv_kt
-        beta -= np.average(beta[beta != -np.inf])
+        beta -= np.mean(beta[beta != -np.inf])
         if self.logging:  # get number of attempts from betas
             curr_kill_attempts = np.count_nonzero(beta > 0)
             self.kill_attempts += curr_kill_attempts
@@ -137,20 +150,21 @@ class BirthDeath:
 
         return list(zip(dup_list, kill_list))
 
-    def random_particle(self, num_part, excl):
+    def random_particle(self, num_part: int, excl: List[int]) -> int:
         """Select random particle while excluding list
 
-        :param int num_part: total number of particles
-        :param list of int excl: particles to exclude
-        :return int num: random particle
+        :param num_part: total number of particles
+        :param excl: particles to exclude
+        :return num: random particle
         """
         return self.rng.choice([i for i in range(num_part) if i not in excl])
 
-    def prob_density_grid(self, grid, energy):
+    def prob_density_grid(self, grid: np.ndarray, energy: np.ndarray) -> np.ndarray:
         """Calculate the density of walkers (kernel density) on a grid
 
-        :param numpy.ndarray grid: positions to calculate the kernel values
-        :param numpy.ndarray grid: energies of the grid values
+        :param grid: positions to calculate the kernel values
+        :param grid: energies of the grid values
+        :return array: grid rho beta
         """
         rho = []
         beta = []
@@ -166,11 +180,11 @@ class BirthDeath:
             rho.append(rho_g[0])
 
             beta_g = np.log(rho_g) + ene * self.inv_kt
-            beta.append(beta_g[0] - np.average(beta_g[beta_g != -np.inf]))
+            beta.append(beta_g[0] - np.mean(beta_g[beta_g != -np.inf]))
 
         return np.c_[grid, rho, beta]
 
-    def print_stats(self):
+    def print_stats(self) -> None:
         """Print birth/death probabilities to screen"""
         if self.logging:
             kill_perc = 100 * self.kill_count / self.kill_attempts
