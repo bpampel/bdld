@@ -18,8 +18,8 @@ def walker_density(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
     individual bandwidths into account.
 
     For less than 10000 walkers a spare pdist matrix is calculated and averaged.
-    Because the matrix size scales exponentially with the number of walkers for
-    more than 10,000 a walker-wise calculation is done that requires less memory
+    Because the matrix size scales exponentially with the number of walkers,
+    for more than 10,000 a walker-wise calculation is done that requires less memory
     but calculates each distance twice.
 
     :param numpy.ndarray pos: positions of particles
@@ -29,7 +29,9 @@ def walker_density(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
     if len(pos) <= 10000:  # pdist matrix with maximum 10e8 float64 values
         dist = pdist(pos, "sqeuclidean")
         gauss = (
-            1 / (2 * np.pi * bw ** 2) ** (pos.ndim / 2) * np.exp(-dist / (2 * bw) ** 2)
+            1
+            / (2 * np.pi * bw ** 2) ** (pos.shape[1] / 2)
+            * np.exp(-dist / (2 * bw ** 2))
         )
         return np.mean(squareform(gauss), axis=0)
     else:
