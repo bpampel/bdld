@@ -29,7 +29,7 @@ def walker_density(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
     if len(pos) <= 10000:  # pdist matrix with maximum 10e8 float64 values
         dist = pdist(pos, "sqeuclidean")
         gauss = (
-            1 / (2 * np.pi * bw ** 2) ** (pos.ndim / 2) * np.exp(-dist / (2 * bw) ** 2)
+            1 / (2 * np.pi) ** (pos[0].ndim / 2) * (bw ** 2) * np.exp(-dist / (2 * bw ** 2))
         )
         return np.mean(squareform(gauss), axis=0)
     else:
