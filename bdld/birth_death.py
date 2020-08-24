@@ -88,10 +88,7 @@ class BirthDeath:
             print(f"  seed = {seed}")
         print()
         if self.logging:
-            self.dup_count = 0
-            self.dup_attempts = 0
-            self.kill_count = 0
-            self.kill_attempts = 0
+            self.reset_stats()
 
     def step(self) -> List[Tuple[int, int]]:
         """Perform birth-death step on particles
@@ -186,7 +183,7 @@ class BirthDeath:
 
         return np.c_[grid, rho, beta]
 
-    def print_stats(self) -> None:
+    def print_stats(self, reset: bool = False) -> None:
         """Print birth/death probabilities to screen"""
         if self.logging:
             kill_perc = 100 * self.kill_count / self.kill_attempts
@@ -202,5 +199,17 @@ class BirthDeath:
             print(
                 f"Ratio birth/death: {ratio_succ:.4} (succesful)  {ratio_attempts:.4} (attemps)"
             )
+            if reset:
+                self.reset_stats()
         else:
             raise ValueError("Can't print statistics: Logging is turned off")
+
+    def reset_stats(self) -> None:
+        """Set all logging counters to zero"""
+        if self.logging:
+            self.dup_count = 0
+            self.dup_attempts = 0
+            self.kill_count = 0
+            self.kill_attempts = 0
+        else:
+            raise ValueError("Can't reset statistics: Logging is turned off")
