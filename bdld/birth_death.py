@@ -4,49 +4,19 @@ import copy
 from typing import List, Optional, Union, Tuple
 
 import numpy as np
-from scipy.spatial.distance import pdist, sqeuclidean, squareform
+from scipy.stats import gaussian_kde
 
 from bdld.bussi_parinello_ld import BpldParticle
 
 
 def walker_density(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
-    """Calculate the local density at each walker (average kernel value)
+    """Calculate the local density at each walker via KDE from scipy
 
-    This is done by a Kernel density estimate with gaussian kernels.
-    The current implementation only works in 1d, because the distance is calculated
-    as euclidean for all directions without weighting but would need to take the
-    individual bandwidths into account.
-
-    For less than 10000 walkers a spare pdist matrix is calculated and averaged.
-    Because the matrix size scales exponentially with the number of walkers for
-    more than 10,000 a walker-wise calculation is done that requires less memory
-    but calculates each distance twice.
-
-    :param numpy.ndarray pos: positions of particles
-    :param float bw: bandwidth parameter of kernel
-    :return numpy.ndarray kernel: kernel value matrix
     """
-    if len(pos) <= 10000:  # pdist matrix with maximum 10e8 float64 values
-        dist = pdist(pos, "sqeuclidean")
-        gauss = (
-            1 / (2 * np.pi) ** (pos[0].ndim / 2) * (bw ** 2) * np.exp(-dist / (2 * bw ** 2))
-        )
-        return np.mean(squareform(gauss), axis=0)
-    else:
-        density = np.empty((len(pos)))
-        for i in range(len(pos)):
-            dist = np.fromiter(
-                (sqeuclidean(pos[i], pos[j]) for j in range(len(pos)) if j != i),
-                np.float64,
-                len(pos) - 1,
-            )
-            gauss_dist = (
-                1
-                / (2 * np.pi * bw ** 2) ** (pos.ndim / 2)
-                * np.exp(-dist / (2 * bw) ** 2)
-            )
-            density[i] = np.mean(gauss_dist)
-        return density
+    if pos.shape[1] == 1:
+        pos = pos.reshape(pos.shape[0])
+    kde = gaussian_kde(pos)
+    return kde.pdf(pos)
 
 
 class BirthDeath:
