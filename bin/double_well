@@ -151,7 +151,7 @@ def main() -> None:
             print_stats(args.log_stride, bdld)
             passed_steps = args.log_stride
         else:
-            log_iters = int(args.omit_initial / args.log_stride)
+            log_iters = args.omit_initial // args.log_stride
             for i in range(log_iters):
                 bdld.run(args.log_stride)
                 print_stats((i + i) * args.log_stride, bdld)
@@ -162,7 +162,7 @@ def main() -> None:
             passed_steps = (log_iters + i) * args.log_stride
             print_stats(passed_steps, bdld)
         remaining_steps = args.num_steps - passed_steps
-        for i in range(int(remaining_steps / args.log_stride)):
+        for i in range(remaining_steps // args.log_stride):
             bdld.run(args.log_stride)
             print_stats((i + 1) * args.log_stride + passed_steps, bdld)
         bdld.run(remaining_steps % args.log_stride)
