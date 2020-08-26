@@ -26,19 +26,30 @@ def walker_density(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
     :param float bw: bandwidth parameter of kernel
     :return numpy.ndarray kernel: kernel value matrix
     """
+    """Variant with scipy's pdist that actually works in higher dimensions"""
     if len(pos) <= 10000:  # pdist matrix with maximum 10e8 float64 values
-        dist = pdist(pos, "sqeuclidean")
-        gauss = (
-            1
-            / (2 * np.pi * bw ** 2) ** (pos.shape[1] / 2)
-            * np.exp(-dist / (2 * bw ** 2))
-        )
-        return np.mean(squareform(gauss), axis=0)
+        n_dim = pos.shape[1]
+        if n_dim == 1:  # faster version for 1d, otherwise identical
+            dist = pdist(pos, "sqeuclidean")
+            gauss = 1 / (np.sqrt(2 * np.pi) * bw[0]) * np.exp(-dist / (2 * bw[0] ** 2))
+            return np.mean(squareform(gauss), axis=0)
+        else:
+            n_part = pos.shape[0]
+            gauss_per_dim = np.empty(
+                (n_dim, (n_part * (n_part - 1)) // 2), dtype=np.double
+            )
+            for i in range(n_dim):
+                dist = pdist(pos, "sqeuclidean")
+                gauss_per_dim[i] = (
+                    1 / (np.sqrt(2 * np.pi) * bw[i]) * np.exp(-dist / (2 * bw[i] ** 2))
+                )
+            gauss = np.prod(gauss_per_dim, axis=0)
+            return np.mean(squareform(gauss), axis=0)
     else:
         density = np.empty((len(pos)))
         for i in range(len(pos)):
             dist = np.fromiter(
-                (sqeuclidean(pos[i], pos[j]) for j in range(len(pos)) if j != i),
+                ((pos[i] - pos[j]) ** 2 for j in range(len(pos)) if j != i),
                 np.float64,
                 len(pos) - 1,
             )
