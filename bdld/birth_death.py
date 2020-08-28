@@ -4,19 +4,83 @@ import copy
 from typing import List, Optional, Union, Tuple
 
 import numpy as np
-from scipy.stats import gaussian_kde
 
 from bdld.bussi_parinello_ld import BpldParticle
 
 
-def walker_density(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
-    """Calculate the local density at each walker via KDE from scipy
+def walker_density(pos: np.ndarray, bw: np.ndarray, kde: bool = False) -> np.ndarray:
+    """Calculate the local density at each walker (average kernel value)
 
+    This is done by a Kernel density estimate with gaussian kernels.
+    The current implementation only works in 1d, because the distance is calculated
+    as euclidean for all directions without weighting but would need to take the
+    individual bandwidths into account.
+
+    For less than 10000 walkers a spare pdist matrix is calculated and averaged.
+    Because the matrix size scales exponentially with the number of walkers,
+    for more than 10,000 a walker-wise calculation is done that requires less memory
+    but calculates each distance twice.
+
+    :param numpy.ndarray pos: positions of particles
+    :param float bw: bandwidth parameter of kernel
+    :return numpy.ndarray kernel: kernel value matrix
     """
+    if kde:
+        return walker_density_kde(pos, bw)
+
+    from scipy.spatial.distance import pdist, squareform
+
+    if len(pos) <= 10000:  # pdist matrix with maximum 10e8 float64 values
+        n_dim = pos.shape[1]
+        if n_dim == 1:  # faster version for 1d, otherwise identical
+            dist = pdist(pos, "sqeuclidean")
+            gauss = 1 / (np.sqrt(2 * np.pi) * bw[0]) * np.exp(-dist / (2 * bw[0] ** 2))
+            return np.mean(squareform(gauss), axis=0)
+        else:
+            n_part = pos.shape[0]
+            gauss_per_dim = np.empty(
+                (n_dim, (n_part * (n_part - 1)) // 2), dtype=np.double
+            )
+            for i in range(n_dim):
+                dist = pdist(pos, "sqeuclidean")
+                gauss_per_dim[i] = (
+                    1 / (np.sqrt(2 * np.pi) * bw[i]) * np.exp(-dist / (2 * bw[i] ** 2))
+                )
+            gauss = np.prod(gauss_per_dim, axis=0)
+            return np.mean(squareform(gauss), axis=0)
+    else:
+        density = np.empty((len(pos)))
+        for i in range(len(pos)):
+            dist = np.fromiter(
+                ((pos[i] - pos[j]) ** 2 for j in range(len(pos)) if j != i),
+                np.float64,
+                len(pos) - 1,
+            )
+            gauss_dist = (
+                1
+                / (2 * np.pi * bw ** 2) ** (pos.ndim / 2)
+                * np.exp(-dist / (2 * bw) ** 2)
+            )
+            density[i] = np.mean(gauss_dist)
+        return density
+
+
+def walker_density_kde(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
+    """Calculate the local density at each walker via KDE from statsmodels"""
     if pos.shape[1] == 1:
-        pos = pos.reshape(pos.shape[0])
-    kde = gaussian_kde(pos)
-    return kde.pdf(pos)
+        from statsmodels.nonparametric.kde import KDEUnivariate
+
+        kde = KDEUnivariate(pos)
+        kde.fit(bw=bw)
+        return kde.evaluate(pos.T)
+    else:
+        # if I understand the code correctly the multivariate form is just doing exactly what
+        # I manually tested: just calculate all gaussian distances manually and _not_ in batches
+        from statsmodels.nonparametric.kernel_density import KDEMultivariate
+
+        var_type = "c" * pos.shape[1]  # continuous variables
+        kde = KDEMultivariate(pos, var_type, bw=bw)
+        return kde.pdf()
 
 
 class BirthDeath:
@@ -30,6 +94,7 @@ class BirthDeath:
         kt: float,
         seed: Optional[int] = None,
         logging: bool = False,
+        kde: bool = False,
     ) -> None:
         """Set arguments
 
@@ -45,6 +110,7 @@ class BirthDeath:
         self.inv_kt: float = 1 / kt
         self.rng: np.random.Generator = np.random.default_rng(seed)
         self.logging: bool = logging
+        self.kde: bool = kde
         print(
             f"Setting up birth/death scheme\n"
             f"Parameters:\n"
@@ -93,7 +159,7 @@ class BirthDeath:
         kill_list = []
         with np.errstate(divide="ignore"):
             # density can be zero and make beta -inf. Filter when averaging in next step
-            beta = np.log(walker_density(pos, self.bw)) + ene * self.inv_kt
+            beta = np.log(walker_density(pos, self.bw, self.kde)) + ene * self.inv_kt
         beta -= np.mean(beta[beta != -np.inf])
         if self.logging:  # get number of attempts from betas
             curr_kill_attempts = np.count_nonzero(beta > 0)

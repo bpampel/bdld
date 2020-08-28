@@ -9,7 +9,7 @@ class Particle:
     :param numpy.array pos: position
     :param numpy.array mom: momentum
     :param float mass: mass of particle
-   """
+    """
 
     def __init__(self, pos, mom=None, mass=1.0):
         """Initializes particle with given parameters

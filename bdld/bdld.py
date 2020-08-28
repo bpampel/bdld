@@ -30,6 +30,7 @@ class BirthDeathLangevinDynamics:
         bd_stride: int = 0,
         bd_bw: List[float] = [0.0],
         bd_seed: Optional[int] = None,
+        kde: bool = False,
     ) -> None:
         """Generate needed varables and the birth/death instance from arguments"""
         self.ld: BussiParinelloLD = ld
@@ -42,6 +43,7 @@ class BirthDeathLangevinDynamics:
         self.steps_since_bd: int = 0
         self.histo: Optional[Histogram] = None
         self.histo_stride: int = 0
+        self.kde: bool = kde
         self.setup()
 
     def setup(self) -> None:
@@ -66,6 +68,7 @@ class BirthDeathLangevinDynamics:
                 self.ld.kt,
                 self.bd_seed,
                 True,
+                self.kde,
             )
 
     def init_histogram(
