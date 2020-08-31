@@ -120,6 +120,8 @@ class BirthDeath:
         )
         if seed:
             print(f"  seed = {seed}")
+        if kde:
+            print(f"  using KDE to calculate kernels")
         print()
         if self.logging:
             self.dup_count = 0
