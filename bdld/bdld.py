@@ -117,7 +117,7 @@ class BirthDeathLangevinDynamics:
         steps and then saves the positions of the particles to the trajectories.
 
         The num_steps argument takes the previous steps into account for the
-        birth/death stride. For example having a bd_stride of 10 and first
+        birth/death stride. For example, having a bd_stride of 10 and first
         running for 6 and then 7 steps will perform a birth/death step on the
         4th step of the second run.
 
@@ -125,7 +125,7 @@ class BirthDeathLangevinDynamics:
         """
         for i in range(self.steps_since_bd + 1, self.steps_since_bd + 1 + num_steps):
             self.ld.step()
-            if self.bd:
+            if self.bd and i % self.bd_stride == 0:
                 self.bd.step()
             for j, p in enumerate(self.ld.particles):
                 self.traj[j].append(np.copy(p.pos))

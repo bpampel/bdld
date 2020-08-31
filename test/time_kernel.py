@@ -54,11 +54,24 @@ bw = np.array([0.1])
 pos = np.random.random_sample((n_particles, n_dim))
 '''
 
-time_pdist = timeit.Timer(stmt="walker_density_pdist(pos, bw)", setup=setup).repeat(10, 100)
-print(f"Time for pdist (min, min, max): {min(time_pdist)}, {np.mean(time_pdist)}, {max(time_pdist)}", flush=True)
+time_pdist = timeit.Timer(stmt="walker_density_pdist(pos, bw)", setup=setup).repeat(
+    10, 100
+)
+print(
+    f"Time for pdist (min, min, max): {min(time_pdist)}, {np.mean(time_pdist)}, {max(time_pdist)}",
+    flush=True,
+)
 
-time_rowwise = timeit.Timer(stmt="walker_density_rowwise(pos, bw)", setup=setup).repeat(10, 100)
-print(f"Time for row-wise (min, min, max): {min(time_rowwise)}, {np.mean(time_rowwise)}, {max(time_rowwise)}")
+time_rowwise = timeit.Timer(stmt="walker_density_rowwise(pos, bw)", setup=setup).repeat(
+    10, 100
+)
+print(
+    f"Time for row-wise (min, min, max): {min(time_rowwise)}, {np.mean(time_rowwise)}, {max(time_rowwise)}"
+)
 
-time_manual = timeit.Timer(stmt="walker_density_manual(pos, bw)", setup=setup).repeat(10, 100)
-print(f"Time for manual (min, min, max): {min(time_manual)}, {np.mean(time_manual)}, {max(time_manual)}")
+time_manual = timeit.Timer(stmt="walker_density_manual(pos, bw)", setup=setup).repeat(
+    10, 100
+)
+print(
+    f"Time for manual (min, min, max): {min(time_manual)}, {np.mean(time_manual)}, {max(time_manual)}"
+)

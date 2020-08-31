@@ -100,6 +100,13 @@ def parse_cliargs() -> argparse.Namespace:
         help="Print information every n time steps",
     )
     parser.add_argument(
+        "--omit-initial",
+        type=int,
+        dest="omit_initial",
+        default=0,
+        help="Number of initial time steps to omit in Histogram",
+    )
+    parser.add_argument(
         "-kde",
         "--kernel-density-estimate",
         action='store_true',
@@ -107,6 +114,7 @@ def parse_cliargs() -> argparse.Namespace:
         default=False,
         help="Use KDE for density estimate",
     )
+
     args = parser.parse_args()
     if args.bd_stride != 0 and args.bw is None:
         raise ValueError(
@@ -141,21 +149,37 @@ def main() -> None:
         args.seed += 1000
     bdld = BirthDeathLangevinDynamics(ld, args.bd_stride, args.bw, args.seed, args.kde)
 
-    # add to histogram every 1000000 trajectory points
-    bdld.init_histogram([200], [(-2.5, 2.5)], 1000000 / args.num_walkers)
-
     print(
         f"Running for {args.num_steps} timesteps with a birth/death stride of {args.bd_stride}"
     )
-    if args.log_stride == 0 or args.bd_stride == 0:
-        bdld.run(args.num_steps)
+    if args.log_stride == 0:
+        bdld.run(args.omit_initial)  # might be 0 steps
+        init_histogram(bdld, True, args.num_walkers)
+        bdld.run(args.num_steps - args.omit_initial)
     else:
-        for i in range(int(args.num_steps / args.log_stride)):
+        if args.omit_initial <= args.log_stride:
+            bdld.run(args.omit_initial)
+            init_histogram(bdld, True, args.num_walkers)
+            # run until log_stride is met
+            bdld.run(args.log_stride - args.omit_initial)
+            print_stats(args.log_stride, bdld)
+            passed_steps = args.log_stride
+        else:
+            log_iters = args.omit_initial // args.log_stride
+            for i in range(log_iters):
+                bdld.run(args.log_stride)
+                print_stats((i + i) * args.log_stride, bdld)
+            bdld.run(args.omit_initial % args.log_stride)
+            init_histogram(bdld, True, args.num_walkers)
+            # run until log stride is met
+            bdld.run(args.log_stride - (args.omit_initial % args.log_stride))
+            passed_steps = (log_iters + i) * args.log_stride
+            print_stats(passed_steps, bdld)
+        remaining_steps = args.num_steps - passed_steps
+        for i in range(remaining_steps // args.log_stride):
             bdld.run(args.log_stride)
-            print(f"After {(i+1) * args.log_stride} time steps:")
-            bdld.bd.print_stats()
-            print("", flush=True)
-        bdld.run(args.num_steps % args.log_stride)
+            print_stats((i + 1) * args.log_stride + passed_steps, bdld)
+        bdld.run(remaining_steps % args.log_stride)
 
     print("\nFinished simulation")
     if args.bd_stride != 0:
@@ -185,5 +209,21 @@ def main() -> None:
     print(f"Delta F: {delta_f:.4} (ref: {delta_f_ref:.4})")
 
 
+def print_stats(step: int, bdld: BirthDeathLangevinDynamics) -> None:
+    if bdld.bd:
+        print(f"After {step} time steps:")
+        bdld.bd.print_stats()
+        print("", flush=True)
+
+
+def init_histogram(
+    bdld: BirthDeathLangevinDynamics, clear_traj: bool = False, num_walkers: int = 0
+) -> None:
+    if clear_traj:
+        bdld.traj = [[] for i in range(num_walkers)]
+    bdld.init_histogram([200], [(-2.5, 2.5)])
+
+
 if __name__ == "__main__":
     main()
+
