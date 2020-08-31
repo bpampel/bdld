@@ -3,7 +3,7 @@
 import timeit
 import numpy as np
 
-setup = '''
+setup = """
 import numpy as np
 from bdld.bussi_parinello_ld import BussiParinelloLD
 from bdld.potential import Potential
@@ -20,7 +20,7 @@ for _ in range(n_particles // 2):
     ld.add_particle([extrema[0]])
 for _ in range(n_particles // 2):
     ld.add_particle([extrema[2]])
-'''
+"""
 
 time = timeit.Timer(stmt="ld.step()", setup=setup).repeat(10, 100)
 print(
