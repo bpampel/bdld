@@ -11,62 +11,52 @@ from bdld.bussi_parinello_ld import BpldParticle
 def walker_density(pos: np.ndarray, bw: np.ndarray, kde: bool = False) -> np.ndarray:
     """Calculate the local density at each walker (average kernel value)
 
-    This is done by a Kernel density estimate with gaussian kernels.
-    The current implementation only works in 1d, because the distance is calculated
-    as euclidean for all directions without weighting but would need to take the
-    individual bandwidths into account.
-
-    For less than 10000 walkers a spare pdist matrix is calculated and averaged.
-    Because the matrix size scales exponentially with the number of walkers,
-    for more than 10,000 a walker-wise calculation is done that requires less memory
-    but calculates each distance twice.
+    The actual calculations are done by the different _walker_density functions
+    depending on the number of walkers and the kde switch.
 
     :param numpy.ndarray pos: positions of particles
     :param float bw: bandwidth parameter of kernel
     :return numpy.ndarray kernel: kernel value matrix
     """
     if kde:
-        return walker_density_kde(pos, bw)
-
-    from scipy.spatial.distance import pdist, squareform
-
-    if len(pos) <= 10000:  # pdist matrix with maximum 10e8 float64 values
-        n_dim = pos.shape[1]
-        if n_dim == 1:  # faster version for 1d, otherwise identical
-            dist = pdist(pos, "sqeuclidean")
-            gauss = 1 / (np.sqrt(2 * np.pi) * bw[0]) * np.exp(-dist / (2 * bw[0] ** 2))
-            return np.mean(squareform(gauss), axis=0)
-        else:
-            n_part = pos.shape[0]
-            gauss_per_dim = np.empty(
-                (n_dim, (n_part * (n_part - 1)) // 2), dtype=np.double
-            )
-            for i in range(n_dim):
-                dist = pdist(pos, "sqeuclidean")
-                gauss_per_dim[i] = (
-                    1 / (np.sqrt(2 * np.pi) * bw[i]) * np.exp(-dist / (2 * bw[i] ** 2))
-                )
-            gauss = np.prod(gauss_per_dim, axis=0)
-            return np.mean(squareform(gauss), axis=0)
+        return _walker_density_kde(pos, bw)
+    elif len(pos) <= 10000:  # pdist matrix with maximum 10e8 float64 values
+        return _walker_density_pdist(pos, bw)
     else:
-        density = np.empty((len(pos)))
-        for i in range(len(pos)):
-            dist = np.fromiter(
-                ((pos[i] - pos[j]) ** 2 for j in range(len(pos)) if j != i),
-                np.float64,
-                len(pos) - 1,
-            )
-            gauss_dist = (
-                1
-                / (2 * np.pi * bw ** 2) ** (pos.ndim / 2)
-                * np.exp(-dist / (2 * bw) ** 2)
-            )
-            density[i] = np.mean(gauss_dist)
-        return density
+        return _walker_density_manual(pos, bw)
 
 
-def walker_density_kde(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
-    """Calculate the local density at each walker via KDE from statsmodels"""
+def _walker_density_manual(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
+    """Calculate the local density at each walker manually for each walker
+
+    This should be slower than the other variants but requires less memory
+    because it is done on a per-walker basis
+
+    :param pos: positions of particles
+    :param bw: bandwidth parameter of kernel
+    :return density: estimated density at each walker
+    """
+    density = np.empty((len(pos)))
+    for i in range(len(pos)):
+        dist = np.fromiter(
+            ((pos[i] - pos[j]) ** 2 for j in range(len(pos)) if j != i),
+            np.float64,
+            len(pos) - 1,
+        )
+        gauss_dist = (
+            1 / (2 * np.pi * bw ** 2) ** (pos.ndim / 2) * np.exp(-dist / (2 * bw) ** 2)
+        )
+        density[i] = np.mean(gauss_dist)
+    return density
+
+
+def _walker_density_kde(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
+    """Calculate the local density at each walker via KDE from statsmodels
+
+    :param pos: positions of particles
+    :param bw: bandwidth parameter of kernel
+    :return density: estimated density at each walker
+    """
     if pos.shape[1] == 1:
         from statsmodels.nonparametric.kde import KDEUnivariate
 
@@ -81,6 +71,37 @@ def walker_density_kde(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
         var_type = "c" * pos.shape[1]  # continuous variables
         kde = KDEMultivariate(pos, var_type, bw=bw)
         return kde.pdf()
+
+
+def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
+    """Calculate the local density at each walker via scipy's pdist
+
+    Uses scipy to calculate a spare distance matrix between all walkers.
+    Returns the sum over the Gaussian contributions at each walker.
+    Note that the distance matrix becomes very large for many walkers,
+    so this is only recommended for up to around 10,000 walkers.
+
+    :param pos: positions of particles
+    :param bw: bandwidth parameter of kernel
+    :return density: estimated density at each walker
+    """
+    from scipy.spatial.distance import pdist, squareform
+
+    n_dim = pos.shape[1]
+    if n_dim == 1:  # faster version for 1d, otherwise identical
+        dist = pdist(pos, "sqeuclidean")
+        gauss = 1 / (np.sqrt(2 * np.pi) * bw[0]) * np.exp(-dist / (2 * bw[0] ** 2))
+        return np.mean(squareform(gauss), axis=0)
+    else:
+        n_part = pos.shape[0]
+        gauss_per_dim = np.empty((n_dim, (n_part * (n_part - 1)) // 2), dtype=np.double)
+        for i in range(n_dim):
+            dist = pdist(pos, "sqeuclidean")
+            gauss_per_dim[i] = (
+                1 / (np.sqrt(2 * np.pi) * bw[i]) * np.exp(-dist / (2 * bw[i] ** 2))
+            )
+        gauss = np.prod(gauss_per_dim, axis=0)
+        return np.mean(squareform(gauss), axis=0)
 
 
 class BirthDeath:
@@ -169,30 +190,35 @@ class BirthDeath:
         # does it matter?
         prob = 1 - np.exp(-np.abs(beta) * self.dt)
         rand = self.rng.random(num_part)
-        for i in np.where(rand <= prob)[0]:
+        event_particles = np.where(rand <= prob)[0]
+        self.rng.shuffle(event_particles)
+        for i in event_particles:
             if i not in kill_list:
                 if beta[i] > 0:
                     kill_list.append(i)
-                    dup_list.append(self.random_particle(num_part, [i]))
+                    dup_list.append(self.random_particle(num_part, i))
                     if self.logging:
                         self.kill_count += 1
                 elif beta[i] < 0:
                     dup_list.append(i)
                     # prevent killing twice
-                    kill_list.append(self.random_particle(num_part, [i]))
+                    kill_list.append(self.random_particle(num_part, i))
                     if self.logging:
                         self.dup_count += 1
 
         return list(zip(dup_list, kill_list))
 
-    def random_particle(self, num_part: int, excl: List[int]) -> int:
-        """Select random particle while excluding list
+    def random_particle(self, num_part: int, excl: int) -> int:
+        """Select random particle while excluding current one
 
         :param num_part: total number of particles
-        :param excl: particles to exclude
+        :param excl: particle to exclude
         :return num: random particle
         """
-        return self.rng.choice([i for i in range(num_part) if i not in excl])
+        num = self.rng.integers(num_part - 1)
+        if num >= excl:
+            num += 1
+        return num
 
     def prob_density_grid(self, grid: np.ndarray, energy: np.ndarray) -> np.ndarray:
         """Calculate the density of walkers (kernel density) on a grid
