@@ -44,7 +44,7 @@ def _walker_density_manual(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
             len(pos) - 1,
         )
         gauss_dist = (
-            1 / (2 * np.pi * bw ** 2) ** (pos.ndim / 2) * np.exp(-dist / (2 * bw) ** 2)
+            1 / (2 * np.pi * bw ** 2) ** (pos.ndim / 2) * np.exp(-dist / (2 * bw ** 2))
         )
         density[i] = np.mean(gauss_dist)
     return density
