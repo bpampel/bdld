@@ -162,6 +162,7 @@ def plot_multiple(
     for d in data:
         ax.plot(d[1], d[2], label=d[0])
     ax.legend(title=title)
+    ax.set_xlim(-2.6, 2.6)
     if filename is not None:
         fig.savefig(filename)
     else:
