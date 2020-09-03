@@ -59,14 +59,14 @@ def main() -> None:
     if convolution_file is not None:
         header = PlmdHeader(
             [
-                "FIELDS pos, log(K*π/π), K*π",
+                "FIELDS pos log(K*π/π) K*π",
                 f"SET kt {kt}",
                 f"SET bw {bw}",
             ]
         )
         np.savetxt(
             args.convolution_file,
-            np.vstack((grid_conv, log_conv, conv)),
+            np.c_[grid_conv, log_conv, conv],
             fmt="%14.9f",
             header=str(header),
             comments="",
