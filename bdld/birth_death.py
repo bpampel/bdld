@@ -113,6 +113,7 @@ class BirthDeath:
         dt: float,
         bw: Union[List[float], np.ndarray],
         kt: float,
+        prob_density: np.ndarray,
         seed: Optional[int] = None,
         logging: bool = False,
         kde: bool = False,
@@ -120,10 +121,13 @@ class BirthDeath:
         """Set arguments
 
         :param particles: list of Particles shared with MD
-        :param float dt: timestep of MD
+        :param dt: timestep of MD
         :param bw: bandwidth for gaussian kernels per direction
-        :param float kt: thermal energy of system
-        :param int seed: Seed for rng (optional)
+        :param kt: thermal energy of system
+        :param seed: Seed for rng (optional)
+        :param logging: Collect statistics
+        :param kde: Use KDE from statsmodels to estimate walker density
+        :param prob_density: Equilibrium probability density of system.
         """
         self.particles: List[BpldParticle] = particles
         self.dt: float = dt
@@ -144,6 +148,7 @@ class BirthDeath:
         if kde:
             print(f"  using KDE to calculate kernels")
         print()
+        self.ratio_correction: np.ndarray = ratio_correction(prob_density, bw)
         if self.logging:
             self.reset_stats()
 

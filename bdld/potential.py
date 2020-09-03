@@ -1,6 +1,6 @@
 """Potential class to be evaluated with md"""
 
-from typing import Any, List, Union, Tuple
+from typing import List, Optional, Union, Tuple
 import numpy as np
 
 poly = np.polynomial.polynomial
@@ -9,21 +9,31 @@ poly = np.polynomial.polynomial
 class Potential:
     """Simple class holding a polynomial potential
 
-    :param numpy.array coeffs: Coefficients of polynomial potential
-    :param list of numpy.array der: Coefficients of derivative of potential per direction
-    :param int dimension: Dimensions of potential
+    :param coeffs: Coefficients of polynomial potential
+    :param der: Coefficients of derivative of potential per direction
+    :param dimension: Dimensions of potential
+    :param ranges: (min, max) values of potential (optional)
     """
 
-    def __init__(self, coeffs: Union[List[float], np.ndarray]) -> None:
+    def __init__(
+        self,
+        coeffs: Union[List[float], np.ndarray],
+        ranges: List[Tuple[float, float]] = None,
+    ) -> None:
         """Set up from given coefficients
 
         :param coeffs: The coefficient i,j,k has to be given in coeffs[i,j,k]
-        :type coeffs: list (1D) or numpy.array with coefficients (2D,3D).
         """
-        self.coeffs = np.array(coeffs)
-        self.n_dim = self.coeffs.ndim
+        self.coeffs: np.ndarray = np.array(coeffs)
+        self.n_dim: int = self.coeffs.ndim
         # note: the derivative matrices are larger than needed. Implement trim_zeros for multiple dimensions?
-        self.der = [poly.polyder(self.coeffs, axis=d) for d in range(self.n_dim)]
+        self.der: List[np.ndarray] = [
+            poly.polyder(self.coeffs, axis=d) for d in range(self.n_dim)
+        ]
+        # the ranges are at the moment not actually checked when evaluating but needed for the birth/death
+        if ranges is None:
+            ranges = []  # mutable default arguments are bad
+        self.ranges: List[Tuple[float, float]] = ranges
 
     def __str__(self) -> str:
         """Give out coefficients"""
@@ -59,3 +69,17 @@ class Potential:
         if mintozero:
             fes -= np.min(fes)
         return fes
+
+    def calculate_probability_density(
+        self, grid: Union[List[float], np.ndarray], kt: float
+    ) -> np.ndarray:
+        """Calculate the probability density associated with the potential on a grid
+
+        :param grid: Positions to calculate density. Needs to be uniformly spaced for correct normalization
+        :param kt: Thermal energy of system
+        """
+        fes = self.calculate_reference(grid)
+        prob = np.exp(-fes / kt)
+        # normalize by assuming grid is uniformly spaced
+        prob /= np.sum(prob) * (grid[1] - grid[0])
+        return prob

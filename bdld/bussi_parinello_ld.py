@@ -40,7 +40,7 @@ class BussiParinelloLD:
 
     def __init__(
         self,
-        potential: Potential,
+        pot: Potential,
         dt: float,
         friction: float,
         kt: float,
@@ -48,13 +48,13 @@ class BussiParinelloLD:
     ) -> None:
         """Creates Langevin dynamics instance
 
-        :param potential: potential to use
-        :param dt: timestep of MD
+        :param pot: potential to use
+        :param dt: timestep between particle moves
         :param friction: friction parameter of langevin dynamics thermostat
         :param kt: thermal energy in units of kt
         :param seed: seed for rng, optional
         """
-        self.pot: Potential = potential
+        self.pot: Potential = pot
         self.particles: List[BpldParticle] = []  # list of particles
         self.dt: float = dt
         self.kt: float = kt

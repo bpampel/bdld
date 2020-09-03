@@ -22,6 +22,9 @@ class BirthDeathLangevinDynamics:
     :param bd_bw: bandwidth for gaussian kernels per direction used in birth/death
     :param traj: trajectories of all particles
     :param steps_since_bd: counts the passed steps since the last execution of the birth/death algorithm
+    :param histo: optional histogram to bin the trajectory values
+    :param histo_stride: stride between binning to the histogram
+    :param kde: use KDE from statsmodels to estimate walker density
     """
 
     def __init__(
@@ -61,6 +64,14 @@ class BirthDeathLangevinDynamics:
     def setup_bd(self) -> None:
         """Set up birth death from parameters"""
         if self.bd_stride != 0:
+            # the setup of the probability grid is here explicitely for 1d --> needs to be changed later
+            grid_min, grid_max = self.ld.pot.ranges[0]
+            # take larger part of potential as allowed (due to convolution): doesn't make sense in general!
+            grid_min -= 5 * self.bd_bw[0]
+            grid_max += 5 * self.bd_bw[0]
+            grid_spacing = 0.005 if self.bd_bw[0] * 0.5 >= 0.005 else self.bd_bw[0] * 0.5
+            prob_grid = np.arange(grid_min, grid_max + grid_spacing, grid_spacing)
+            prob_density = self.ld.pot.calculate_probability_density(prob_grid, self.ld.kt)
             self.bd = BirthDeath(
                 self.ld.particles,
                 self.bd_time_step,
