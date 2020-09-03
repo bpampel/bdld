@@ -48,6 +48,7 @@ def main() -> None:
     # also throw away outer of prob and calculate the log
     prob = prob[cutoff_conv:-cutoff_conv] if cutoff_conv != 0 else prob
     log_conv = np.log(conv / prob)
+    integral = np.trapz(log_conv*prob, grid_conv)
     if show_image or log_conv_image:
         plot_data = [
             ("log(π)", grid_conv, np.log(prob)),
@@ -62,6 +63,7 @@ def main() -> None:
                 "FIELDS pos log(K*π/π) K*π",
                 f"SET kt {kt}",
                 f"SET bw {bw}",
+                f"VALUE np.trapz(log(K*π/π)*π) {integral}",
             ]
         )
         np.savetxt(
