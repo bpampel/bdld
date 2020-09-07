@@ -62,16 +62,9 @@ class BirthDeathLangevinDynamics:
         self.traj = [[np.copy(p.pos)] for p in self.ld.particles]
 
     def setup_bd(self) -> None:
-        """Set up birth death from parameters"""
+        """Set up BirthDeath from parameters"""
         if self.bd_stride != 0:
-            # the setup of the probability grid is here explicitely for 1d --> needs to be changed later
-            grid_min, grid_max = self.ld.pot.ranges[0]
-            # take larger part of potential as allowed (due to convolution): doesn't make sense in general!
-            grid_min -= 5 * self.bd_bw[0]
-            grid_max += 5 * self.bd_bw[0]
-            grid_spacing = 0.005 if self.bd_bw[0] * 0.5 >= 0.005 else self.bd_bw[0] * 0.5
-            prob_grid = np.arange(grid_min, grid_max + grid_spacing, grid_spacing)
-            prob_density = self.ld.pot.calculate_probability_density(prob_grid, self.ld.kt)
+            prob_density = self.bd_prob_density()
             self.bd = BirthDeath(
                 self.ld.particles,
                 self.bd_time_step,
@@ -81,6 +74,24 @@ class BirthDeathLangevinDynamics:
                 True,
                 self.kde,
             )
+
+    def bd_prob_density(self) -> np.ndarray:
+        """Return probability density grid needed for BirthDeath
+
+        This is somewhat hacky at the moment:
+        To avoid edge effects in the convolution the grid area is chosen such that
+        cutting off after convolution yields exactly the potential range, so a larger
+        than the intrinsic range of the potential is used which usually couldn't be done
+        """
+        # the setup of the probability grid is here explicitely for 1d --> needs to be changed later
+        grid_min, grid_max = self.ld.pot.ranges[0]
+        grid_min -= 5 * self.bd_bw[0]  # enlarge by area affected by edge effects
+        grid_max += 5 * self.bd_bw[0]
+        # spacing such that at least 20 points of gaussian within 5 sigma
+        grid_spacing = 0.005 if self.bd_bw[0] * 0.5 >= 0.005 else self.bd_bw[0] * 0.5
+        prob_grid = np.arange(grid_min, grid_max + grid_spacing, grid_spacing)
+        prob_density = self.ld.pot.calculate_probability_density(prob_grid, self.ld.kt)
+        return prob_density
 
     def init_histogram(
         self, n_bins: List[int], ranges: List[Tuple[float, float]], stride=None

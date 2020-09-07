@@ -8,6 +8,39 @@ import numpy as np
 from bdld.bussi_parinello_ld import BpldParticle
 
 
+def prob_correction_kernel(
+    eq_density: Tuple[np.ndarray, np.ndarray], bw: float
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Correction for the probabilites due to the Gaussian Kernel
+
+    Calculates the following two terms from the Kernel K and equilibrium walker distribution pi
+    .. :math::
+        -log((K(x) * \pi(x)) / \pi(x)) + \int (log((K(x) * \pi(x)) / \pi(x))) \pi \mathrm{d}x
+
+    Due to the convolution the returned grid is smaller than the original to avoid edge effects
+
+    :param eq_density: (grid, values) of equilibrium walker distribution
+    :param bw: bandwidth of the kernel (sigma)
+    :return (corr_grid, correction): grid and corresponding correction values
+    """
+    grid = eq_density[0]
+    dens = eq_density[1]
+
+    grid_spacing = grid[1] - grid[0]
+    gauss_max = 5 * bw  # cutoff at 5 sigma
+    grid_gauss = np.arange(-gauss_max, gauss_max + grid_spacing, grid_spacing)
+    gauss = 1 / (np.sqrt(2 * np.pi) * bw) * np.exp(-(grid_gauss ** 2) / (2 * bw ** 2))
+    conv = np.convolve(dens, gauss, mode="valid") * grid_spacing
+    # manually cut off edges to match convolution
+    cutoff_conv = (len(dens) - len(conv)) // 2
+    grid_conv = grid[cutoff_conv:-cutoff_conv] if cutoff_conv != 0 else grid
+    dens = dens[cutoff_conv:-cutoff_conv] if cutoff_conv != 0 else dens
+
+    log_conv = np.log(conv / dens)
+    integral = np.trapz(log_conv * dens, grid_conv)
+    return (grid_conv, -log_conv + integral)
+
+
 def walker_density(pos: np.ndarray, bw: np.ndarray, kde: bool = False) -> np.ndarray:
     """Calculate the local density at each walker (average kernel value)
 
@@ -113,7 +146,7 @@ class BirthDeath:
         dt: float,
         bw: Union[List[float], np.ndarray],
         kt: float,
-        prob_density: np.ndarray,
+        eq_density: Tuple[np.ndarray, np.ndarray],
         seed: Optional[int] = None,
         logging: bool = False,
         kde: bool = False,
@@ -124,10 +157,10 @@ class BirthDeath:
         :param dt: timestep of MD
         :param bw: bandwidth for gaussian kernels per direction
         :param kt: thermal energy of system
+        :param eq_density: Equilibrium probability density of system, (grid, values)
         :param seed: Seed for rng (optional)
         :param logging: Collect statistics
         :param kde: Use KDE from statsmodels to estimate walker density
-        :param prob_density: Equilibrium probability density of system.
         """
         self.particles: List[BpldParticle] = particles
         self.dt: float = dt
@@ -148,7 +181,9 @@ class BirthDeath:
         if kde:
             print(f"  using KDE to calculate kernels")
         print()
-        self.ratio_correction: np.ndarray = ratio_correction(prob_density, bw)
+        self.prob_correction_kernel: Tuple[
+            np.ndarray, np.ndarray
+        ] = prob_correction_kernel(eq_density, self.bw)
         if self.logging:
             self.reset_stats()
 
@@ -225,8 +260,8 @@ class BirthDeath:
             num += 1
         return num
 
-    def prob_density_grid(self, grid: np.ndarray, energy: np.ndarray) -> np.ndarray:
-        """Calculate the density of walkers (kernel density) on a grid
+    def walker_density_grid(self, grid: np.ndarray, energy: np.ndarray) -> np.ndarray:
+        """Calculate the density of walkers and bd-probabilities on a grid
 
         :param grid: positions to calculate the kernel values
         :param grid: energies of the grid values
