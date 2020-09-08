@@ -222,12 +222,12 @@ class BirthDeath:
         dup_list = []
         kill_list = []
         with np.errstate(divide="ignore"):
-            # density can be zero and make beta -inf. Filter when averaging in later step
+            # density can be zero and make beta -inf. Filter when averaging in next step
             beta = np.log(walker_density(pos, self.bw, self.kde)) + ene * self.inv_kt
+        beta -= np.mean(beta[beta != -np.inf])
         beta += interpolate.griddata(
             self.prob_correction_kernel[0], self.prob_correction_kernel[1], pos
         ).reshape(len(pos))
-        beta -= np.mean(beta[beta != -np.inf])
         if self.logging:  # get number of attempts from betas
             curr_kill_attempts = np.count_nonzero(beta > 0)
             self.kill_attempts += curr_kill_attempts
