@@ -169,7 +169,7 @@ class BirthDeathLangevinDynamics:
         if not self.bd:
             raise ValueError("No birth/death to analize")
         ana_ene = [self.ld.pot.evaluate(p)[0] for p in grid]
-        ana_values = self.bd.prob_density_grid(grid, ana_ene)
+        ana_values = self.bd.walker_density_grid(grid, ana_ene)
         header = self.generate_fileheader(["pos", "rho", "beta"])
         np.savetxt(
             filename,
