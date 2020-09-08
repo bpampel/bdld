@@ -70,6 +70,7 @@ class BirthDeathLangevinDynamics:
                 self.bd_time_step,
                 self.bd_bw,
                 self.ld.kt,
+                prob_density,
                 self.bd_seed,
                 True,
                 self.kde,
@@ -89,9 +90,9 @@ class BirthDeathLangevinDynamics:
         grid_max += 5 * self.bd_bw[0]
         # spacing such that at least 20 points of gaussian within 5 sigma
         grid_spacing = 0.005 if self.bd_bw[0] * 0.5 >= 0.005 else self.bd_bw[0] * 0.5
-        prob_grid = np.arange(grid_min, grid_max + grid_spacing, grid_spacing)
-        prob_density = self.ld.pot.calculate_probability_density(prob_grid, self.ld.kt)
-        return prob_density
+        grid = np.arange(grid_min, grid_max + grid_spacing, grid_spacing)
+        prob = self.ld.pot.calculate_probability_density(grid, self.ld.kt)
+        return (grid, prob)
 
     def init_histogram(
         self, n_bins: List[int], ranges: List[Tuple[float, float]], stride=None

@@ -4,6 +4,7 @@ import copy
 from typing import List, Optional, Union, Tuple
 
 import numpy as np
+from scipy import interpolate
 
 from bdld.bussi_parinello_ld import BpldParticle
 
@@ -28,7 +29,10 @@ def prob_correction_kernel(
 
     grid_spacing = grid[1] - grid[0]
     gauss_max = 5 * bw  # cutoff at 5 sigma
-    grid_gauss = np.arange(-gauss_max, gauss_max + grid_spacing, grid_spacing)
+    gauss_n_points = int(2 * (gauss_max / grid_spacing) + 1)
+    grid_gauss = np.linspace(-gauss_max, gauss_max, gauss_n_points).reshape(
+        gauss_n_points
+    )
     gauss = 1 / (np.sqrt(2 * np.pi) * bw) * np.exp(-(grid_gauss ** 2) / (2 * bw ** 2))
     conv = np.convolve(dens, gauss, mode="valid") * grid_spacing
     # manually cut off edges to match convolution
@@ -220,9 +224,9 @@ class BirthDeath:
         with np.errstate(divide="ignore"):
             # density can be zero and make beta -inf. Filter when averaging in later step
             beta = np.log(walker_density(pos, self.bw, self.kde)) + ene * self.inv_kt
-        beta += np.interp(
-            pos, xp=self.prob_correction_kernel[0], fp=self.prob_correction_kernel[1]
-        )
+        beta += interpolate.griddata(
+            self.prob_correction_kernel[0], self.prob_correction_kernel[1], pos
+        ).reshape(len(pos))
         beta -= np.mean(beta[beta != -np.inf])
         if self.logging:  # get number of attempts from betas
             curr_kill_attempts = np.count_nonzero(beta > 0)
