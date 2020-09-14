@@ -297,8 +297,8 @@ class BirthDeath:
         if self.logging:
             kill_perc = 100 * self.kill_count / self.kill_attempts
             dup_perc = 100 * self.dup_count / self.dup_attempts
-            ratio_succ = self.kill_count / self.dup_count
-            ratio_attempts = self.kill_attempts / self.dup_attempts
+            ratio_succ = self.dup_count / self.kill_count
+            ratio_attempts = self.dup_attempts / self.kill_attempts
             print(
                 f"Succesful birth events: {self.dup_count}/{self.dup_attempts} ({dup_perc:.4}%)"
             )
