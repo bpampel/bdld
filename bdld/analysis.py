@@ -58,7 +58,7 @@ def save_fig_interactive(fig):
         except ValueError as e:
             print(e)
             continue
-        if filename is None:
+        if not filename:
             break
         try:
             fig.savefig(filename)

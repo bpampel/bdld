@@ -132,7 +132,9 @@ class BirthDeathLangevinDynamics:
         :param filenames: list filenames per particle
         """
         if len(filenames) != len(self.ld.particles):
-            raise ValueError("Number of trajectory files does not match number of particles")
+            raise ValueError(
+                "Number of trajectory files does not match number of particles"
+            )
         for i, name in enumerate(filenames):
             header = self.generate_fileheader([f"traj.{i}"])
             with open(name, "w") as f:
@@ -148,9 +150,7 @@ class BirthDeathLangevinDynamics:
             raise ValueError("Histogram was not initialized yet")
         comb_traj = np.vstack([pos for part in self.traj for pos in part])
         self.histo.add(comb_traj)
-        if self.traj_filenames:
-            self.save_traj()
-        self.traj = [[] for i in range(len(self.ld.particles))]
+        self.save_traj(clear=True)
 
     def run(self, num_steps: int) -> None:
         """Run the simulation for given number of steps
@@ -200,15 +200,18 @@ class BirthDeathLangevinDynamics:
             newline="\n",
         )
 
-    def save_traj(self) -> None:
+    def save_traj(self, clear: bool) -> None:
         """Save all trajectories to files (append)
 
+        This also empties the traj held in memory.
         Files need to be initialized with init_traj_files() before
         """
         # loops over nothing if no files initialized
         for i, name in enumerate(self.traj_filenames):
             with open(name, "ab") as f:
                 np.savetxt(f, self.traj[i], delimiter=" ", newline="\n")
+        if clear:
+            self.traj = [[] for i in range(len(self.ld.particles))]
 
     def save_fes(self, filename: str) -> None:
         """Calculate FES and save to text file
