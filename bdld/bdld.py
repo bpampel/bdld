@@ -21,6 +21,7 @@ class BirthDeathLangevinDynamics:
     :param bd_seed: seed for the RNG of the birth/death algorithm
     :param bd_bw: bandwidth for gaussian kernels per direction used in birth/death
     :param traj: trajectories of all particles
+    :param traj_filenames: filenames to save trajectories to
     :param steps_since_bd: counts the passed steps since the last execution of the birth/death algorithm
     :param histo: optional histogram to bin the trajectory values
     :param histo_stride: stride between binning to the histogram
@@ -43,6 +44,7 @@ class BirthDeathLangevinDynamics:
         self.bd_seed: Optional[int] = bd_seed
         self.bd_bw: List[float] = bd_bw
         self.traj: List[List[np.ndarray]] = []
+        self.traj_filenames: List[str] = []
         self.steps_since_bd: int = 0
         self.histo: Optional[Histogram] = None
         self.histo_stride: int = 0
@@ -94,7 +96,7 @@ class BirthDeathLangevinDynamics:
         prob = self.ld.pot.calculate_probability_density(grid, self.ld.kt)
         return (grid, prob)
 
-    def init_histogram(
+    def init_histo(
         self, n_bins: List[int], ranges: List[Tuple[float, float]], stride=None
     ) -> None:
         """Initialize a histogram for the trajectories
@@ -119,9 +121,25 @@ class BirthDeathLangevinDynamics:
         self.histo_stride = stride
         if self.histo_stride is None:
             # add to histogram every 1,000,000 trajectory points by default
-            self.histo_stride = 1000000 / len(self.ld.particles)
+            self.histo_stride = 1000000 // len(self.ld.particles)
 
-    def add_trajectory_to_histogram(self, clear_traj: bool) -> None:
+    def init_traj_files(self, filenames: List[str]) -> None:
+        """Initialize files to save trajectories to
+
+        This writes the headers to the specified files so they
+        can be filled by the 'save_trajectories()' function
+
+        :param filenames: list filenames per particle
+        """
+        if len(filenames) != len(self.ld.particles):
+            raise ValueError("Number of trajectory files does not match number of particles")
+        for i, name in enumerate(filenames):
+            header = self.generate_fileheader([f"traj.{i}"])
+            with open(name, "w") as f:
+                f.write(str(header))
+        self.traj_filenames = filenames
+
+    def add_traj_to_histo(self) -> None:
         """Add trajectory data to histogram
 
         :param bool clear_traj: delete the trajectory data after adding to histogram
@@ -130,8 +148,9 @@ class BirthDeathLangevinDynamics:
             raise ValueError("Histogram was not initialized yet")
         comb_traj = np.vstack([pos for part in self.traj for pos in part])
         self.histo.add(comb_traj)
-        if clear_traj:
-            self.traj = [[] for i in range(len(self.ld.particles))]
+        if self.traj_filenames:
+            self.save_traj()
+        self.traj = [[] for i in range(len(self.ld.particles))]
 
     def run(self, num_steps: int) -> None:
         """Run the simulation for given number of steps
@@ -153,7 +172,7 @@ class BirthDeathLangevinDynamics:
             for j, p in enumerate(self.ld.particles):
                 self.traj[j].append(np.copy(p.pos))
             if self.histo and i % self.histo_stride == 0:
-                self.add_trajectory_to_histogram(True)
+                self.add_traj_to_histo()
         # increase counter only once
         if self.bd:
             self.steps_since_bd = (self.steps_since_bd + num_steps) % self.bd_stride
@@ -181,21 +200,15 @@ class BirthDeathLangevinDynamics:
             newline="\n",
         )
 
-    def save_trajectories(self, filename: str) -> None:
-        """Save all trajectories to files
+    def save_traj(self) -> None:
+        """Save all trajectories to files (append)
 
-        :param filename: basename for files, is appended by '.i' for the individual files
+        Files need to be initialized with init_traj_files() before
         """
-        for i, t in enumerate(self.traj):
-            header = self.generate_fileheader([f"traj.{i}"])
-            np.savetxt(
-                filename + "." + str(i),
-                t,
-                header=str(header),
-                comments="",
-                delimiter=" ",
-                newline="\n",
-            )
+        # loops over nothing if no files initialized
+        for i, name in enumerate(self.traj_filenames):
+            with open(name, "ab") as f:
+                np.savetxt(f, self.traj[i], delimiter=" ", newline="\n")
 
     def save_fes(self, filename: str) -> None:
         """Calculate FES and save to text file
@@ -207,7 +220,7 @@ class BirthDeathLangevinDynamics:
         if not self.histo:
             raise ValueError("Histogram for FES needs to be initialized first")
         if any(t for t in self.traj):
-            self.add_trajectory_to_histogram(True)
+            self.add_traj_to_histo()
         fes, pos = self.histo.calculate_fes(self.ld.kt)
         header = self.generate_fileheader(["pos fes"])
         data = np.vstack((pos, fes)).T
@@ -230,7 +243,7 @@ class BirthDeathLangevinDynamics:
         if not self.histo:
             raise ValueError("Histogram for FES needs to be initialized first")
         if any(t for t in self.traj):
-            self.add_trajectory_to_histogram(True)
+            self.add_traj_to_histo()
         if self.histo.fes is None:
             self.histo.calculate_fes(self.ld.kt)
         analysis.plot_fes(
