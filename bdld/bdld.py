@@ -274,7 +274,7 @@ class BirthDeathLangevinDynamics:
             ]
         )
         if self.bd_stride != 0:
-            header.append(
+            header.append_lines(
                 [
                     f"SET bd_stride {self.bd_stride}",
                     f"SET bd_bandwidth {self.bd_bw}",
