@@ -193,7 +193,7 @@ def main() -> None:
         bdld.bd.print_stats()
 
     if args.fes_file:
-        print(f"Saving fes data to: {args.fes_image}")
+        print(f"Saving fes data to: {args.fes_file}")
         bdld.save_fes(args.fes_file)
     if args.fes_image:
         print(f"Saving fes image to: {args.fes_image}")
