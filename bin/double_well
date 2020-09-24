@@ -154,10 +154,11 @@ def main() -> None:
     print(
         f"Running for {args.num_steps} timesteps with a birth/death stride of {args.bd_stride}"
     )
-    print(f"Saving trajectories to: {args.traj_files}.i")
-    init_histo_and_traj_files(
-        bdld, False, [args.traj_files + "." + str(i) for i in range(args.num_walkers)]
-    )
+    if args.traj_files:
+        print(f"Saving trajectories to: {args.traj_files}.i")
+        init_histo_and_traj_files(
+            bdld, False, [args.traj_files + "." + str(i) for i in range(args.num_walkers)]
+        )
     if args.log_stride == 0:
         bdld.run(args.omit_initial)  # might be 0 steps
         init_histo_and_traj_files(bdld, True)  # init histo again to overwrite previous

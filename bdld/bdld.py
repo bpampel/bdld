@@ -270,11 +270,14 @@ class BirthDeathLangevinDynamics:
                 " ".join(["FIELDS"] + fields),
                 f"SET dt {self.ld.dt}",
                 f"SET kt {self.ld.kt}",
-                f"SET friction {self.ld.friction}"])
-        if self.bd_stride != 0:
-            header.append([
-                f"SET bd_stride {self.bd_stride}",
-                f"SET bd_bandwidth {self.bd_bw}",
+                f"SET friction {self.ld.friction}",
             ]
         )
+        if self.bd_stride != 0:
+            header.append(
+                [
+                    f"SET bd_stride {self.bd_stride}",
+                    f"SET bd_bandwidth {self.bd_bw}",
+                ]
+            )
         return header
