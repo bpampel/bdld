@@ -146,6 +146,7 @@ def main() -> None:
         ld.add_particle([extrema[0]])
     for _ in range(int(args.num_walkers * (1 - args.walkers_frac))):
         ld.add_particle([extrema[2]])
+    print(f"Added {args.num_walkers} walkers with a distribution ratio of {args.walkers_frac}")
 
     if args.seed is not None:
         args.seed += 1000

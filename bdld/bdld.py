@@ -22,7 +22,7 @@ class BirthDeathLangevinDynamics:
     :param bd_bw: bandwidth for gaussian kernels per direction used in birth/death
     :param traj: trajectories of all particles
     :param traj_filenames: filenames to save trajectories to
-    :param steps_since_bd: counts the passed steps since the last execution of the birth/death algorithm
+    :param total_steps: counts the total passed steps
     :param histo: optional histogram to bin the trajectory values
     :param histo_stride: stride between binning to the histogram
     :param kde: use KDE from statsmodels to estimate walker density
@@ -45,7 +45,7 @@ class BirthDeathLangevinDynamics:
         self.bd_bw: List[float] = bd_bw
         self.traj: List[List[np.ndarray]] = []
         self.traj_filenames: List[str] = []
-        self.steps_since_bd: int = 0
+        self.total_steps: int = 0
         self.histo: Optional[Histogram] = None
         self.histo_stride: int = 0
         self.kde: bool = kde
@@ -165,7 +165,7 @@ class BirthDeathLangevinDynamics:
 
         :param int num_steps: Number of steps to run
         """
-        for i in range(self.steps_since_bd + 1, self.steps_since_bd + 1 + num_steps):
+        for i in range(self.total_steps + 1, self.total_steps + 1 + num_steps):
             self.ld.step()
             if self.bd and i % self.bd_stride == 0:
                 self.bd.step()
@@ -173,9 +173,7 @@ class BirthDeathLangevinDynamics:
                 self.traj[j].append(np.copy(p.pos))
             if self.histo and i % self.histo_stride == 0:
                 self.add_traj_to_histo()
-        # increase counter only once
-        if self.bd:
-            self.steps_since_bd = (self.steps_since_bd + num_steps) % self.bd_stride
+        self.total_steps += num_steps
 
     def save_analysis_grid(
         self, filename: str, grid: Union[List[np.ndarray], np.ndarray]
@@ -207,11 +205,13 @@ class BirthDeathLangevinDynamics:
         Files need to be initialized with init_traj_files() before
         """
         # loops over nothing if no files initialized
+        print(f"before histo: length of traj_0: {len(self.traj[0])}")
         for i, name in enumerate(self.traj_filenames):
             with open(name, "ab") as f:
                 np.savetxt(f, self.traj[i], delimiter=" ", newline="\n")
         if clear:
             self.traj = [[] for i in range(len(self.ld.particles))]
+        print(f"after histo: length of traj_0: {len(self.traj[0])}")
 
     def save_fes(self, filename: str) -> None:
         """Calculate FES and save to text file
