@@ -205,13 +205,11 @@ class BirthDeathLangevinDynamics:
         Files need to be initialized with init_traj_files() before
         """
         # loops over nothing if no files initialized
-        print(f"before histo: length of traj_0: {len(self.traj[0])}")
         for i, name in enumerate(self.traj_filenames):
             with open(name, "ab") as f:
                 np.savetxt(f, self.traj[i], delimiter=" ", newline="\n")
         if clear:
             self.traj = [[] for i in range(len(self.ld.particles))]
-        print(f"after histo: length of traj_0: {len(self.traj[0])}")
 
     def save_fes(self, filename: str) -> None:
         """Calculate FES and save to text file
