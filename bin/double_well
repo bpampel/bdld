@@ -199,7 +199,7 @@ def main() -> None:
         bdld.save_fes(args.fes_file)
     if args.fes_image:
         print(f"Saving fes image to: {args.fes_image}")
-    plot_title = "bw " + str(args.bw[0]) if args.bd_stride != 0 else None
+    plot_title = "bw " + str(args.bw[0]) if args.bd_stride != 0 else "Pure LD"
     bdld.plot_fes(args.fes_image, plot_domain=(-0.5, 8.0), plot_title=plot_title)
 
     # simply divide states by the 0 line for deltaF analysis
