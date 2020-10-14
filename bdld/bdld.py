@@ -52,8 +52,13 @@ class BirthDeathLangevinDynamics:
         self.setup()
 
     def setup(self) -> None:
-        """Set up bd and initialize trajectory lists"""
+        """Perform parameter checks, set up bd and initialize trajectory lists"""
         if self.bd_stride != 0:
+            if self.ld.pot.n_dim != len(self.bd_bw):
+                raise ValueError(
+                    "Dimensions of potential and birth/death kernel bandwidths do not match"
+                    f"({self.ld.pot.n_dim} vs {len(self.bd_bw)}"
+                )
             if any(bw <= 0 for bw in self.bd_bw):
                 raise ValueError(
                     f"The bandwidth of the Gaussian kernels needs"
@@ -85,14 +90,20 @@ class BirthDeathLangevinDynamics:
         To avoid edge effects in the convolution the grid area is chosen such that
         cutting off after convolution yields exactly the potential range, so a larger
         than the intrinsic range of the potential is used which usually couldn't be done
+
+        Also this is usually a unknown quantity, so this has to be replaced by an estimate
+        in the future. E.g. enforce usage of the histogram and use that as estimate at
+        current time with iterative updates
         """
-        # the setup of the probability grid is here explicitely for 1d --> needs to be changed later
-        grid_min, grid_max = self.ld.pot.ranges[0]
-        grid_min -= 5 * self.bd_bw[0]  # enlarge by area affected by edge effects
-        grid_max += 5 * self.bd_bw[0]
-        # spacing such that at least 20 points of gaussian within 5 sigma
-        grid_spacing = 0.005 if self.bd_bw[0] * 0.5 >= 0.005 else self.bd_bw[0] * 0.5
-        grid = np.arange(grid_min, grid_max + grid_spacing, grid_spacing)
+        grid_per_dim = []
+        for dim in range(self.ld.pot.n_dim):
+            grid_min, grid_max = self.ld.pot.ranges[dim]
+            grid_min -= 5 * self.bd_bw[dim]  # enlarge by area affected by edge effects
+            grid_max += 5 * self.bd_bw[dim]
+            # spacing such that at least 20 points of gaussian within 5 sigma
+            grid_spacing = 0.005 if self.bd_bw[dim] * 0.5 >= 0.005 else self.bd_bw[dim] * 0.5
+            grid_per_dim.append(np.arange(grid_min, grid_max + grid_spacing, grid_spacing))
+        grid = np.meshgrid(*grid_per_dim)
         prob = self.ld.pot.calculate_probability_density(grid, self.ld.kt)
         return (grid, prob)
 
