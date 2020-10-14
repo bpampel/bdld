@@ -60,7 +60,7 @@ class Potential:
             raise ValueError("No polyval function for more than 3 dimensions")
 
     def evaluate(
-        self, pos: Union[float, List[float], np.ndarray]
+        self, pos: Union[List[float], np.ndarray]
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Get potential energy and forces at position
 
@@ -86,15 +86,34 @@ class Potential:
         return fes
 
     def calculate_probability_density(
-        self, grid: Union[List[float], np.ndarray], kt: float
-    ) -> np.ndarray:
+        self,
+        kt: float,
+        ranges: List[Tuple[float, float]],
+        grid_points: List[int],
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Calculate the probability density associated with the potential on a grid
 
-        :param grid: Positions to calculate density. Needs to be uniformly spaced for correct normalization
         :param kt: Thermal energy of system
+        :param ranges: List of ranges of the grid per dimension (min, max)
+        :param grid_points: number of points per dimension
+        :return grid: meshgrid with the positions of the points
+        :return prob: normalized probablities at the grid points
         """
-        fes = self.calculate_reference(grid)
+        if len(ranges) != self.n_dim:
+            raise ValueError("Dimension of ranges do not match potential")
+        if len(grid_points) != self.n_dim:
+            raise ValueError("Dimension of grid_points do not match potential")
+        axes, stepsizes = zip(
+            *(
+                np.linspace(*ranges[i], grid_points[i], retstep=True)
+                for i in range(self.n_dim)
+            )
+        )
+        grid = np.meshgrid(*axes)
+        # reshape to have array of positions
+        pos = np.array(grid).T.reshape(np.prod(grid_points), self.n_dim)
+        fes = self.calculate_reference(pos)
         prob = np.exp(-fes / kt)
-        # normalize by assuming grid is uniformly spaced
-        prob /= np.sum(prob) * (grid[1] - grid[0])
-        return prob
+        # normalize with volume element from stepsizes
+        prob /= np.sum(prob) * np.prod(stepsizes)
+        return grid, prob

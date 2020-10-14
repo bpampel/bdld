@@ -83,7 +83,7 @@ class BirthDeathLangevinDynamics:
                 self.kde,
             )
 
-    def bd_prob_density(self) -> np.ndarray:
+    def bd_prob_density(self) -> Tuple[np.ndarray, np.ndarray]:
         """Return probability density grid needed for BirthDeath
 
         This is somewhat hacky at the moment:
@@ -94,17 +94,21 @@ class BirthDeathLangevinDynamics:
         Also this is usually a unknown quantity, so this has to be replaced by an estimate
         in the future. E.g. enforce usage of the histogram and use that as estimate at
         current time with iterative updates
+
+        :return grid: Grid of the density points
+        :return prob: Probability values
         """
-        grid_per_dim = []
-        for dim in range(self.ld.pot.n_dim):
+        ranges = []
+        grid_points = []
+        for dim in range(self.ld.pot.n_dim): # this is usually not possible
             grid_min, grid_max = self.ld.pot.ranges[dim]
             grid_min -= 5 * self.bd_bw[dim]  # enlarge by area affected by edge effects
             grid_max += 5 * self.bd_bw[dim]
-            # spacing such that at least 20 points of gaussian within 5 sigma
-            grid_spacing = 0.005 if self.bd_bw[dim] * 0.5 >= 0.005 else self.bd_bw[dim] * 0.5
-            grid_per_dim.append(np.arange(grid_min, grid_max + grid_spacing, grid_spacing))
-        grid = np.meshgrid(*grid_per_dim)
-        prob = self.ld.pot.calculate_probability_density(grid, self.ld.kt)
+            ranges.append((grid_min, grid_max))
+            # have at least 20 points of gaussian within 5 sigma
+            min_points_gaussian = int(np.ceil((grid_max - grid_min) / (0.5 * self.bd_bw[dim])))
+            grid_points.append(max(1001, min_points_gaussian))
+        grid, prob = self.ld.pot.calculate_probability_density(self.ld.kt, ranges, grid_points)
         return (grid, prob)
 
     def init_histo(
