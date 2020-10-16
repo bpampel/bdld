@@ -1,7 +1,9 @@
 """Potential class to be evaluated with md"""
 
-from typing import Callable, List, Optional, Union, Tuple
+from typing import Callable, List, Union, Tuple
 import numpy as np
+
+from bdld import grid
 
 poly = np.polynomial.polynomial
 
@@ -67,9 +69,16 @@ class Potential:
         :param pos: position to be evaluated
         :return: (energy, forces)
         """
-        energy = self.polyval(*pos, self.coeffs)
         forces = np.array([-self.polyval(*pos, self.der[d]) for d in range(self.n_dim)])
-        return (energy, forces)
+        return (self.energy(pos), forces)
+
+    def energy(self, pos: Union[List[float], np.ndarray]) -> float:
+        """Get energy at position
+
+        :param pos: position to be evaluated (given as list or array even in 1d)
+        :return: energy
+        """
+        return self.polyval(*pos, self.coeffs)
 
     def calculate_reference(
         self, pos: Union[List[float], np.ndarray], mintozero: bool = True
@@ -80,7 +89,7 @@ class Potential:
         :param bool mintozero: shift fes minimum to zero
         :return fes: list numpy array with fes values at positions
         """
-        fes = np.fromiter((self.evaluate(p)[0] for p in pos), np.float64, len(pos))
+        fes = np.fromiter((self.energy(p) for p in pos), np.float64, len(pos))
         if mintozero:
             fes -= np.min(fes)
         return fes
@@ -90,7 +99,7 @@ class Potential:
         kt: float,
         ranges: List[Tuple[float, float]],
         grid_points: List[int],
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> grid.Grid:
         """Calculate the probability density associated with the potential on a grid
 
         :param kt: Thermal energy of system
@@ -103,17 +112,10 @@ class Potential:
             raise ValueError("Dimension of ranges do not match potential")
         if len(grid_points) != self.n_dim:
             raise ValueError("Dimension of grid_points do not match potential")
-        axes, stepsizes = zip(
-            *(
-                np.linspace(*ranges[i], grid_points[i], retstep=True)
-                for i in range(self.n_dim)
-            )
-        )
-        grid = np.meshgrid(*axes)
-        # reshape to have array of positions
-        pos = np.array(grid).T.reshape(np.prod(grid_points), self.n_dim)
-        fes = self.calculate_reference(pos)
+        prob_grid = grid.from_npoints(ranges, grid_points)
+        fes = self.calculate_reference(prob_grid.points())
         prob = np.exp(-fes / kt)
         # normalize with volume element from stepsizes
-        prob /= np.sum(prob) * np.prod(stepsizes)
-        return grid, prob
+        prob /= np.sum(prob) * np.prod(prob_grid.stepsizes)
+        prob_grid.data = prob
+        return prob_grid
