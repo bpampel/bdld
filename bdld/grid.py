@@ -4,6 +4,7 @@ from typing import Any, Callable, List, Union, Tuple
 import operator
 import numpy as np
 from scipy import signal
+from scipy import interpolate as sp_interpolate
 
 
 class Grid:
@@ -23,8 +24,8 @@ class Grid:
         self.stepsizes: List[float] = []
         self.n_dim: int = 0
 
+    # allow arithmetic operators to manipulate data directly
     def __add__(self, other):
-        """Return new grid instance with sum in data"""
         return self._perform_arithmetic_operation(other, operator.add)
 
     def __radd__(self, other):
@@ -53,11 +54,6 @@ class Grid:
     def __pow__(self, other):
         return self._perform_arithmetic_operation(other, operator.pow)
 
-    def log(self):
-        new_grid = self.copy_empty()
-        new_grid.data = np.log(self.data)
-        return new_grid
-
     def _perform_arithmetic_operation(
         self, other: Union[float, int, np.ndarray], oper: Callable[..., Any]
     ):  # -> Grid::
@@ -76,6 +72,20 @@ class Grid:
             raise ValueError(
                 f"Performing math operations with grid and {type(other)} is not supported"
             )
+        return new_grid
+
+    # exp and log implementations allow usage of e.g. np.exp(my_grid)
+    def exp(self):
+        """Exponentiation of data, relies on numpy"""
+        return self._perform_math_on_self(np.exp)
+
+    def log(self):
+        """Logarithm of data, relies on numpy"""
+        return self._perform_math_on_self(np.log)
+
+    def _perform_math_on_self(self, oper: Callable[..., Any]):  # -> Grid:
+        new_grid = self.copy_empty()
+        new_grid.data = oper(self.data)
         return new_grid
 
     def axes(self) -> List[np.ndarray]:
@@ -103,6 +113,18 @@ class Grid:
     def copy_empty(self):
         """Get a new grid instance with the same points but without data"""
         return from_npoints(self.ranges, self.n_points)
+
+    def interpolate(
+        self, points: Union[np.ndarray, Tuple[np.ndarray, ...]], method: str = "linear"
+    ) -> np.ndarray:
+        """Interpolate grid data at the given points
+
+        The interpolation is done via scipy.interpolate.griddata, see there for details
+
+        :param points: the desired points
+        :param method: interpolation method to use, defaults to linear
+        """
+        return sp_interpolate.griddata(self.points(), self.data, points, method)
 
 
 def convolve(g1: Grid, g2: Grid, mode: str = "valid") -> Grid:
@@ -189,7 +211,6 @@ def from_stepsizes(
     grid.stepsizes = stepsizes
     for i, r in enumerate(ranges):
         n_points_tmp = int(np.ceil((r[1] - r[0]) / stepsizes[i])) + 1 - int(shrink)
-        r = (r[0], r[0] + stepsizes[i] * n_points_tmp)
+        grid.ranges.append((r[0], r[0] + stepsizes[i] * n_points_tmp))
         grid.n_points.append(n_points_tmp)
-    grid.ranges = ranges
     return grid
