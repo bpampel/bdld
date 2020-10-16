@@ -4,14 +4,14 @@ import copy
 from typing import List, Optional, Union, Tuple
 
 import numpy as np
-from scipy import interpolate
 
 from bdld.bussi_parinello_ld import BpldParticle
+from bdld import grid
 
 
-def prob_correction_kernel(
-    eq_density: Tuple[np.ndarray, np.ndarray], bw: float
-) -> Tuple[np.ndarray, np.ndarray]:
+def calc_prob_correction_kernel(
+    eq_density: grid.Grid, bw: np.ndarray
+) -> grid.Grid:
     """Correction for the probabilites due to the Gaussian Kernel
 
     Calculates the following two terms from the Kernel K and equilibrium walker distribution pi
@@ -21,28 +21,21 @@ def prob_correction_kernel(
     Due to the convolution the returned grid is smaller than the original to avoid edge effects
 
     :param eq_density: (grid, values) of equilibrium walker distribution
-    :param bw: bandwidth of the kernel (sigma)
+    :param bw: bandwidths of the kernel (sigma)
     :return (corr_grid, correction): grid and corresponding correction values
     """
-    grid = eq_density[0]
-    dens = eq_density[1]
-
-    grid_spacing = grid[1] - grid[0]
+    # setup kernel grid
     gauss_max = 5 * bw  # cutoff at 5 sigma
-    gauss_n_points = int(2 * (gauss_max / grid_spacing) + 1)
-    grid_gauss = np.linspace(-gauss_max, gauss_max, gauss_n_points).reshape(
-        gauss_n_points
-    )
-    gauss = 1 / (np.sqrt(2 * np.pi) * bw) * np.exp(-(grid_gauss ** 2) / (2 * bw ** 2))
-    conv = np.convolve(dens, gauss, mode="valid") * grid_spacing
-    # manually cut off edges to match convolution
-    cutoff_conv = (len(dens) - len(conv)) // 2
-    grid_conv = grid[cutoff_conv:-cutoff_conv] if cutoff_conv != 0 else grid
-    dens = dens[cutoff_conv:-cutoff_conv] if cutoff_conv != 0 else dens
-
-    log_conv = np.log(conv / dens)
-    integral = np.trapz(log_conv * dens, grid_conv)
-    return (grid_conv, -log_conv + integral)
+    gauss_n_points = int(2 * (gauss_max / eq_density.stepsizes) + 1)
+    gauss_ranges = [(-x, x) for x in gauss_max]
+    gauss = grid.from_npoints(gauss_ranges, gauss_n_points)
+    gauss.data = 1 / (np.sqrt(2 * np.pi) * bw) * np.exp(-(gauss.points() ** 2) / (2 * bw ** 2))
+    # perform convolution and calculate both terms
+    conv = np.convolve(eq_density, gauss, mode="valid")
+    log_term = np.log(conv / eq_density)
+    integral_term = np.trapz(log_term.data * eq_density.data, conv.points())
+    conv.data = -log_term + integral_term
+    return conv
 
 
 def walker_density(pos: np.ndarray, bw: np.ndarray, kde: bool = False) -> np.ndarray:
@@ -150,7 +143,7 @@ class BirthDeath:
         dt: float,
         bw: Union[List[float], np.ndarray],
         kt: float,
-        eq_density: Tuple[np.ndarray, np.ndarray],
+        eq_density: grid.Grid,
         seed: Optional[int] = None,
         logging: bool = False,
         kde: bool = False,
@@ -185,9 +178,7 @@ class BirthDeath:
         if kde:
             print(f"  using KDE to calculate kernels")
         print()
-        self.prob_correction_kernel: Tuple[
-            np.ndarray, np.ndarray
-        ] = prob_correction_kernel(eq_density, self.bw)
+        self.prob_correction_kernel: grid.Grid = calc_prob_correction_kernel(eq_density, self.bw)
         if self.logging:
             self.reset_stats()
 
@@ -225,9 +216,7 @@ class BirthDeath:
             # density can be zero and make beta -inf. Filter when averaging in next step
             beta = np.log(walker_density(pos, self.bw, self.kde)) + ene * self.inv_kt
         beta -= np.mean(beta[beta != -np.inf])
-        beta += interpolate.griddata(
-            self.prob_correction_kernel[0], self.prob_correction_kernel[1], pos
-        ).reshape(len(pos))
+        beta += self.prob_correction_kernel.interpolate(pos, 'linear').reshape(len(pos))
         if self.logging:  # get number of attempts from betas
             curr_kill_attempts = np.count_nonzero(beta > 0)
             self.kill_attempts += curr_kill_attempts

@@ -25,37 +25,42 @@ class Grid:
 
     def __add__(self, other):
         """Return new grid instance with sum in data"""
-        return self._perform_math_operation(other, operator.add)
+        return self._perform_arithmetic_operation(other, operator.add)
 
     def __radd__(self, other):
         return self.__add__(other)
 
     def __sub__(self, other):
-        return self._perform_math_operation(other, operator.sub)
+        return self._perform_arithmetic_operation(other, operator.sub)
 
     # no __rsub__ or __rdiv__ as that is ambiguous
 
     def __mul__(self, other):
-        return self._perform_math_operation(other, operator.mul)
+        return self._perform_arithmetic_operation(other, operator.mul)
 
     def __rmul__(self, other):
         return self.__mul__(other)
 
     def __truediv__(self, other):
-        return self._perform_math_operation(other, operator.truediv)
+        return self._perform_arithmetic_operation(other, operator.truediv)
 
     def __floordiv__(self, other):
-        return self._perform_math_operation(other, operator.floordiv)
+        return self._perform_arithmetic_operation(other, operator.floordiv)
 
     def __mod__(self, other):
-        return self._perform_math_operation(other, operator.mod)
+        return self._perform_arithmetic_operation(other, operator.mod)
 
     def __pow__(self, other):
-        return self._perform_math_operation(other, operator.pow)
+        return self._perform_arithmetic_operation(other, operator.pow)
 
-    def _perform_math_operation(
+    def log(self):
+        new_grid = self.copy_empty()
+        new_grid.data = np.log(self.data)
+        return new_grid
+
+    def _perform_arithmetic_operation(
         self, other: Union[float, int, np.ndarray], oper: Callable[..., Any]
-    ):  # -> Grid:
+    ):  # -> Grid::
         new_grid = self.copy_empty()
         if isinstance(other, (float, int, np.ndarray)):
             new_grid.data = oper(self.data, other)
@@ -72,26 +77,6 @@ class Grid:
                 f"Performing math operations with grid and {type(other)} is not supported"
             )
         return new_grid
-
-    def _perform_imath_operation(
-        self, other: Union[float, int, np.ndarray], oper: Callable[..., Any]
-    ):  # -> Grid:
-        """Augmented operations like += change self.data instead of returning new grid"""
-        if isinstance(other, (float, int, np.ndarray)):
-            self.data = oper(self.data, other)
-        elif isinstance(other, Grid):
-            if not (self.n_points == other.n_points) or not (
-                self.ranges == other.ranges
-            ):
-                raise ValueError(
-                    "Performing math operations on grids with different points is ambiguous"
-                )
-            self.data = oper(self.data, other.data)
-        else:
-            raise ValueError(
-                f"Performing math operations with grid and {type(other)} is not supported"
-            )
-        return self
 
     def axes(self) -> List[np.ndarray]:
         """Return list of grid axes per dimension"""
@@ -196,7 +181,7 @@ def from_stepsizes(
     """
     grid = Grid()
     grid.n_dim = len(ranges)
-    if isinstance(stepsizes, float):
+    if isinstance(stepsizes, (float, int)):
         if grid.n_dim == 1:
             stepsizes = [stepsizes]
         else:  # expand to all dimensions
