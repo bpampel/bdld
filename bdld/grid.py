@@ -1,6 +1,7 @@
 """Custom grid class that holds also the data"""
 
-from typing import Callable, List, Union, Tuple
+from typing import Any, Callable, List, Union, Tuple
+import operator
 import numpy as np
 from scipy import signal
 
@@ -22,6 +23,76 @@ class Grid:
         self.stepsizes: List[float] = []
         self.n_dim: int = 0
 
+    def __add__(self, other):
+        """Return new grid instance with sum in data"""
+        return self._perform_math_operation(other, operator.add)
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        return self._perform_math_operation(other, operator.sub)
+
+    # no __rsub__ or __rdiv__ as that is ambiguous
+
+    def __mul__(self, other):
+        return self._perform_math_operation(other, operator.mul)
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __truediv__(self, other):
+        return self._perform_math_operation(other, operator.truediv)
+
+    def __floordiv__(self, other):
+        return self._perform_math_operation(other, operator.floordiv)
+
+    def __mod__(self, other):
+        return self._perform_math_operation(other, operator.mod)
+
+    def __pow__(self, other):
+        return self._perform_math_operation(other, operator.pow)
+
+    def _perform_math_operation(
+        self, other: Union[float, int, np.ndarray], oper: Callable[..., Any]
+    ):  # -> Grid:
+        new_grid = self.copy_empty()
+        if isinstance(other, (float, int, np.ndarray)):
+            new_grid.data = oper(self.data, other)
+        elif isinstance(other, Grid):
+            if not (self.n_points == other.n_points) or not (
+                self.ranges == other.ranges
+            ):
+                raise ValueError(
+                    "Performing math operations on grids with different points is ambiguous"
+                )
+            new_grid.data = oper(self.data, other.data)
+        else:
+            raise ValueError(
+                f"Performing math operations with grid and {type(other)} is not supported"
+            )
+        return new_grid
+
+    def _perform_imath_operation(
+        self, other: Union[float, int, np.ndarray], oper: Callable[..., Any]
+    ):  # -> Grid:
+        """Augmented operations like += change self.data instead of returning new grid"""
+        if isinstance(other, (float, int, np.ndarray)):
+            self.data = oper(self.data, other)
+        elif isinstance(other, Grid):
+            if not (self.n_points == other.n_points) or not (
+                self.ranges == other.ranges
+            ):
+                raise ValueError(
+                    "Performing math operations on grids with different points is ambiguous"
+                )
+            self.data = oper(self.data, other.data)
+        else:
+            raise ValueError(
+                f"Performing math operations with grid and {type(other)} is not supported"
+            )
+        return self
+
     def axes(self) -> List[np.ndarray]:
         """Return list of grid axes per dimension"""
         return [
@@ -41,7 +112,7 @@ class Grid:
     def set_from_func(self, func: Callable[..., float]) -> None:
         """Set data by applying function to all points
 
-        The function must accept the input in """
+        The function must accept the input in"""
         self.data = np.array([func(p) for p in self.points()])
 
     def copy_empty(self):
@@ -64,7 +135,9 @@ def convolve(g1: Grid, g2: Grid, mode: str = "valid") -> Grid:
     stepsizes = g1.stepsizes
     n_dim = g1.n_dim
     # to get the same values in the continuous limit: multiply by stepsizes
-    conv = signal.convolve(g1.as_array(), g2.as_array(), mode=mode) * np.prod(g1.stepsizes)
+    conv = signal.convolve(g1.as_array(), g2.as_array(), mode=mode) * np.prod(
+        g1.stepsizes
+    )
     # import pdb; pdb.set_trace()
     # also get the corresponding grid points depending on the method
     if mode == "same":  # easiest case, mirrors grid of first argument
@@ -73,7 +146,7 @@ def convolve(g1: Grid, g2: Grid, mode: str = "valid") -> Grid:
         n_points = []
         ranges = []
         # sort by points to find smaller grid (conv throws error if not in all dim)
-        gs, gl = sorted([g1, g2], key = lambda g: g.n_points)
+        gs, gl = sorted([g1, g2], key=lambda g: g.n_points)
         for dim in range(n_dim):
             n_points.append(gl.n_points[dim] - gs.n_points[dim] + 1)
             offset = (gs.n_points[dim] - 1) / 2 * stepsizes[dim]
@@ -83,7 +156,6 @@ def convolve(g1: Grid, g2: Grid, mode: str = "valid") -> Grid:
         raise ValueError("Currently not implemented")
     grid.data = conv
     return grid
-
 
 
 def from_npoints(
