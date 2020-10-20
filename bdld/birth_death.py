@@ -52,7 +52,7 @@ def _kernel_sq_dist(dist: np.ndarray, bw: np.ndarray) -> np.ndarray:
         1
         / (2 * np.pi) ** (len(bw) / 2)
         * np.prod(bw)
-        * np.exp(-np.sum(dist / (2 * bw ** 2)))
+        * np.exp(-np.sum(dist / (2 * bw ** 2), axis=1))
     )
 
 
