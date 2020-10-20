@@ -3,11 +3,16 @@
 from typing import List, Optional, Union, Tuple
 import numpy as np
 
+from bdld import grid
 
-class Histogram:
+
+class Histogram(grid.Grid):
     """Histogram data and calculate FES from the histogram
 
-    Enables histogramming over time, i.e. adding more data to the existing histogram
+    This uses the Grid class for underlying structure and only adds some histogram functions
+    Also explicitely stores the bin edges (as opposed to only the n_points of the Grid class)
+
+    Also allows histogramming over time, i.e. adding more data to the existing histogram
     """
 
     def __init__(
@@ -18,21 +23,22 @@ class Histogram:
         """Set up empty histogram instance
 
         :param n_bins: number of bins for histogramming per dimension
+                       this is set as n_points of the Grid class
         :param ranges: extent of histogram (min, max) per dimension
         :param bins: bin edges of the histogram per dimension
         :param histo: the histogram data (counts) corresponding to the bins
         :param fes: the free energy values corresponding to the histogram
         """
+        super().__init__()
         if not isinstance(n_bins, (list, np.ndarray)):  # single float
             n_bins = [n_bins]
-        self.n_bins: Union[np.ndarray, List[int]] = n_bins
-        self.ranges: List[Tuple[float, float]] = ranges
-        self.bins: List = []
-        self.histo: np.ndarray = np.empty(0)
+        self.n_points = n_bins
+        self.ranges = ranges
+        self.n_dim = len(ranges)
         self.fes: Optional[np.ndarray] = None
         # create bins from arbitrary value, there doesn't seem to be a function doing it
-        self.histo, self.bins = np.histogramdd(
-            np.zeros((1, len(n_bins))), bins=self.n_bins, range=self.ranges
+        self.data, self.bins = np.histogramdd(
+            np.zeros((1, len(self.n_points))), bins=self.n_points, range=self.ranges
         )
 
     def add(self, data: np.ndarray) -> None:
@@ -42,7 +48,7 @@ class Histogram:
         :type data: list (1d), list of lists or numpy.ndarrays (arbitrary dimensions)
         """
         tmp_histo, _ = np.histogramdd(data, bins=self.bins)
-        self.histo += tmp_histo
+        self.data += tmp_histo
 
     def bin_centers(self):
         """Calculate the centers of the histogram bins from the bin edges
@@ -57,6 +63,12 @@ class Histogram:
             for bins_x in self.bins
         ]
 
+    def axes(self):
+        """Overwrite function from base class: Axes should return the bin centers
+
+        The base function would return them with points at the borders"""
+        return self.bin_centers()
+
     def calculate_fes(self, kt, mintozero=True):
         """Calculate free energy surface from histogram
 
@@ -70,7 +82,7 @@ class Histogram:
         :return pos: list of numpy arrays with the positions corresponding to the FES values
         """
         fes = np.where(
-            self.histo == 0, np.inf, -kt * np.log(self.histo, where=(self.histo != 0))
+            self.data == 0, np.inf, -kt * np.log(self.data, where=(self.data != 0))
         )
         if mintozero:
             fes -= np.min(fes)

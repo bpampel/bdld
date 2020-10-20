@@ -9,6 +9,7 @@ from bdld import analysis
 from bdld.birth_death import BirthDeath
 from bdld.bussi_parinello_ld import BussiParinelloLD
 from bdld.histogram import Histogram
+from bdld.grid import Grid
 
 
 class BirthDeathLangevinDynamics:
@@ -83,7 +84,7 @@ class BirthDeathLangevinDynamics:
                 self.kde,
             )
 
-    def bd_prob_density(self) -> Tuple[np.ndarray, np.ndarray]:
+    def bd_prob_density(self) -> Grid:
         """Return probability density grid needed for BirthDeath
 
         This is somewhat hacky at the moment:
@@ -108,8 +109,7 @@ class BirthDeathLangevinDynamics:
             # have at least 20 points of gaussian within 5 sigma
             min_points_gaussian = int(np.ceil((grid_max - grid_min) / (0.5 * self.bd_bw[dim])))
             grid_points.append(max(1001, min_points_gaussian))
-        grid, prob = self.ld.pot.calculate_probability_density(self.ld.kt, ranges, grid_points)
-        return (grid, prob)
+        return self.ld.pot.calculate_probability_density(self.ld.kt, ranges, grid_points)
 
     def init_histo(
         self, n_bins: List[int], ranges: List[Tuple[float, float]], stride=None
@@ -200,7 +200,7 @@ class BirthDeathLangevinDynamics:
         """
         if not self.bd:
             raise ValueError("No birth/death to analize")
-        ana_ene = [self.ld.pot.evaluate(p)[0] for p in grid]
+        ana_ene = [self.ld.pot.energy(p) for p in grid]
         ana_values = self.bd.walker_density_grid(grid, ana_ene)
         header = self.generate_fileheader(["pos", "rho", "beta"])
         np.savetxt(

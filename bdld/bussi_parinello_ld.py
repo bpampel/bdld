@@ -18,7 +18,7 @@ class BpldParticle(Particle):
 
     def __init__(self, *args) -> None:
         """Creates particle from base class with additional attributes"""
-        super(BpldParticle, self).__init__(*args)
+        super().__init__(*args)
         self.forces: np.array = []
         self.energy: float = 0.0
         self.c2: float = 0.0  # second thermostat constant depends on mass

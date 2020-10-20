@@ -10,7 +10,7 @@ from scipy import interpolate as sp_interpolate
 class Grid:
     """Rectangular grid with evenly distributed points
 
-    :param data: Values at the grid points
+    :param _data: Values at the grid points
     :param ranges: (min, max) of the grid points per dimension
     :param stepsizes: stepsizes between grid points per dimension
     :param n_points: number of points per dimension
@@ -18,41 +18,77 @@ class Grid:
 
     def __init__(self) -> None:
         """Create empty, uninitialized class. Should usually not invoked directly"""
-        self.data: np.array = None
+        self._data: np.array = np.empty(0)
         self.ranges: List[Tuple[float, float]] = []
         self.n_points: List[int] = []
         self.stepsizes: List[float] = []
         self.n_dim: int = 0
 
+    @property
+    def data(self):
+        """Data values of the grid as numpy array
+
+        Setting data broadcasts the values to the shape given by n_points
+        """
+        return self._data
+
+    @data.setter
+    def data(self, value):
+        """Setter checks if given values match grid points"""
+        try:
+            self._data = value.reshape(self.n_points)
+        except ValueError as e:
+            raise ValueError("Data does not fit into grid points") from e
+
+    def __pos__(self):
+        return self._perform_math_on_self(operator.pos)
+
+    def __neg__(self):
+        return self._perform_math_on_self(operator.neg)
+
     # allow arithmetic operators to manipulate data directly
-    def __add__(self, other):
+    def __add__(self, other: Union[float, int, np.ndarray]):
         return self._perform_arithmetic_operation(other, operator.add)
 
-    def __radd__(self, other):
+    def __radd__(self, other: Union[float, int, np.ndarray]):
         return self.__add__(other)
 
-    def __sub__(self, other):
+    def __sub__(self, other: Union[float, int, np.ndarray]):
         return self._perform_arithmetic_operation(other, operator.sub)
 
     # no __rsub__ or __rdiv__ as that is ambiguous
 
-    def __mul__(self, other):
+    def __mul__(self, other: Union[float, int, np.ndarray]):
         return self._perform_arithmetic_operation(other, operator.mul)
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: Union[float, int, np.ndarray]):
         return self.__mul__(other)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: Union[float, int, np.ndarray]):
         return self._perform_arithmetic_operation(other, operator.truediv)
 
-    def __floordiv__(self, other):
+    def __floordiv__(self, other: Union[float, int, np.ndarray]):
         return self._perform_arithmetic_operation(other, operator.floordiv)
 
-    def __mod__(self, other):
+    def __mod__(self, other: Union[float, int, np.ndarray]):
         return self._perform_arithmetic_operation(other, operator.mod)
 
-    def __pow__(self, other):
+    def __pow__(self, other: Union[float, int, np.ndarray]):
         return self._perform_arithmetic_operation(other, operator.pow)
+
+    # exp and log implementations allow usage of e.g. np.exp(my_grid)
+    def exp(self):
+        """Exponentiation of data, relies on numpy"""
+        return self._perform_math_on_self(np.exp)
+
+    def log(self):
+        """Logarithm of data, relies on numpy"""
+        return self._perform_math_on_self(np.log)
+
+    def _perform_math_on_self(self, oper: Callable[..., Any]):  # -> Grid:
+        new_grid = self.copy_empty()
+        new_grid.data = oper(self.data)
+        return new_grid
 
     def _perform_arithmetic_operation(
         self, other: Union[float, int, np.ndarray], oper: Callable[..., Any]
@@ -74,20 +110,6 @@ class Grid:
             )
         return new_grid
 
-    # exp and log implementations allow usage of e.g. np.exp(my_grid)
-    def exp(self):
-        """Exponentiation of data, relies on numpy"""
-        return self._perform_math_on_self(np.exp)
-
-    def log(self):
-        """Logarithm of data, relies on numpy"""
-        return self._perform_math_on_self(np.log)
-
-    def _perform_math_on_self(self, oper: Callable[..., Any]):  # -> Grid:
-        new_grid = self.copy_empty()
-        new_grid.data = oper(self.data)
-        return new_grid
-
     def axes(self) -> List[np.ndarray]:
         """Return list of grid axes per dimension"""
         return [
@@ -99,10 +121,6 @@ class Grid:
         return np.array(np.meshgrid(*self.axes())).T.reshape(
             np.prod(self.n_points), self.n_dim
         )
-
-    def as_array(self) -> np.ndarray:
-        """Return data as structured array in row-major order """
-        return self.data.reshape(self.n_points)
 
     def set_from_func(self, func: Callable[..., float]) -> None:
         """Set data by applying function to all points
@@ -124,7 +142,7 @@ class Grid:
         :param points: the desired points
         :param method: interpolation method to use, defaults to linear
         """
-        return sp_interpolate.griddata(self.points(), self.data, points, method)
+        return sp_interpolate.griddata(self.points(), self.data.flatten(), points, method)
 
 
 def convolve(g1: Grid, g2: Grid, mode: str = "valid") -> Grid:
@@ -142,10 +160,7 @@ def convolve(g1: Grid, g2: Grid, mode: str = "valid") -> Grid:
     stepsizes = g1.stepsizes
     n_dim = g1.n_dim
     # to get the same values in the continuous limit: multiply by stepsizes
-    conv = signal.convolve(g1.as_array(), g2.as_array(), mode=mode) * np.prod(
-        g1.stepsizes
-    )
-    # import pdb; pdb.set_trace()
+    conv = signal.convolve(g1, g2, mode=mode) * np.prod(g1.stepsizes)
     # also get the corresponding grid points depending on the method
     if mode == "same":  # easiest case, mirrors grid of first argument
         grid = g1.copy_empty()
@@ -211,6 +226,6 @@ def from_stepsizes(
     grid.stepsizes = stepsizes
     for i, r in enumerate(ranges):
         n_points_tmp = int(np.ceil((r[1] - r[0]) / stepsizes[i])) + 1 - int(shrink)
-        grid.ranges.append((r[0], r[0] + stepsizes[i] * n_points_tmp))
+        grid.ranges.append((float(r[0]), r[0] + stepsizes[i] * (n_points_tmp - 1)))
         grid.n_points.append(n_points_tmp)
     return grid
