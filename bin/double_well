@@ -209,7 +209,7 @@ def main() -> None:
     ]
     delta_f = analysis.calculate_delta_f(bdld.histo.fes, args.kt, delta_f_masks)[0]
     delta_f_ref = analysis.calculate_delta_f(
-        ld.pot.calculate_reference(bdld.histo.bin_centers()[0]), args.kt, delta_f_masks
+        ld.pot.calculate_reference(bdld.histo.points()), args.kt, delta_f_masks
     )[0]
     print(f"Delta F: {delta_f:.4} (ref: {delta_f_ref:.4})")
 

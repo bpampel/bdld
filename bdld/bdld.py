@@ -266,7 +266,7 @@ class BirthDeathLangevinDynamics:
             self.histo.fes,
             self.histo.bin_centers(),
             # temporary fix, needs to be changed for more than 1d
-            ref=self.ld.pot.calculate_reference(self.histo.bin_centers()[0]),
+            ref=self.ld.pot.calculate_reference(self.histo.points()),
             plot_domain=plot_domain,
             filename=filename,
             title=plot_title,
