@@ -25,21 +25,20 @@ def calc_prob_correction_kernel(eq_density: grid.Grid, bw: np.ndarray) -> grid.G
     :return (corr_grid, correction): grid and corresponding correction values
     """
     # setup kernel grid
-    kernel_max = 5 * bw  # cutoff at 5 sigma
-    kernel_ranges = [(-x, x) for x in kernel_max]
+    kernel_ranges = [(-x, x) for x in 5 * bw]  # cutoff at 5 sigma
     kernel = grid.from_stepsizes(kernel_ranges, eq_density.stepsizes)
-    kernel.data = _kernel_sq_dist(kernel.points()**2, bw)
+    kernel.data = kernel_sq_dist(kernel.points() ** 2, bw)
     # perform convolution and calculate both terms
     conv = grid.convolve(eq_density, kernel, mode="valid")
-    dens_smaller = conv.copy_empty()
-    dens_smaller.data = eq_density.interpolate(dens_smaller.points()).flatten()
+    dens_smaller = conv.copy_empty()  # "valid" convolution shrinks grid
+    dens_smaller.data = eq_density.interpolate(dens_smaller.points())
     log_term = np.log(conv / dens_smaller)
-    integral_term = np.trapz(log_term.data * dens_smaller.data, conv.points().flatten())
+    integral_term = nd_trapz(log_term.data * dens_smaller.data, conv.stepsizes)
     conv = -log_term + integral_term
     return conv
 
 
-def _kernel_sq_dist(dist: np.ndarray, bw: np.ndarray) -> np.ndarray:
+def kernel_sq_dist(dist: np.ndarray, bw: np.ndarray) -> np.ndarray:
     """Return kernel values from the squared distances to center
 
     Currently directly returns Gaussian kernel
@@ -54,6 +53,22 @@ def _kernel_sq_dist(dist: np.ndarray, bw: np.ndarray) -> np.ndarray:
         * np.prod(bw)
         * np.exp(-np.sum(dist / (2 * bw ** 2), axis=1))
     )
+
+
+def nd_trapz(data: np.ndarray, dx: Union[List[float], float]) -> float:
+    """Calculate a multidimensional integral via recursive usage of the trapezoidal rule
+
+    :param data: values to integrate
+    :param dx: distances between datapoints per dimension
+    :return integral: integral value
+    """
+    if isinstance(dx, list):
+        if dx:  # list not empty
+            return nd_trapz(nd_trapz(data, dx=dx[-1]), dx[:-1])
+        else:  # innermost iteration gives empty list
+            return data
+    else:
+        return np.trapz(data, dx=dx)
 
 
 def walker_density(pos: np.ndarray, bw: np.ndarray, kde: bool = False) -> np.ndarray:
@@ -91,7 +106,7 @@ def _walker_density_manual(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
             np.float64,
             (len(pos) - 1, pos.shape[1]),
         )
-        kernel_values = _kernel_sq_dist(dist, bw)
+        kernel_values = kernel_sq_dist(dist, bw)
         density[i] = np.mean(kernel_values)
     return density
 
@@ -141,7 +156,9 @@ def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
     else:
         n_part = pos.shape[0]
         gauss_per_dim = np.empty((n_dim, (n_part * (n_part - 1)) // 2), dtype=np.double)
-        for i in range(n_dim):  # significantly faster variant than calling the kernel function
+        for i in range(
+            n_dim
+        ):  # significantly faster variant than calling the kernel function
             dist = pdist(pos, "sqeuclidean")
             gauss_per_dim[i] = (
                 1 / (np.sqrt(2 * np.pi) * bw[i]) * np.exp(-dist / (2 * bw[i] ** 2))

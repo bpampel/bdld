@@ -46,7 +46,12 @@ class Potential:
 
     def __str__(self) -> str:
         """Give out coefficients"""
-        return "polynomial with coefficients " + list(self.coeffs).__str__()
+        string = "polynomial with coefficients"
+        if self.coeffs.ndim == 1:
+            string += f" {self.coeffs}"
+        else:  # print array in new line
+            string += f"\n{np.array(self.coeffs)}\n"
+        return string
 
     def choose_polyval(
         self,
@@ -112,10 +117,9 @@ class Potential:
             raise ValueError("Dimension of ranges do not match potential")
         if len(grid_points) != self.n_dim:
             raise ValueError("Dimension of grid_points do not match potential")
-        prob_grid = grid.from_npoints(ranges, grid_points)
-        fes = self.calculate_reference(prob_grid.points())
+        fes = grid.from_npoints(ranges, grid_points)
+        fes.set_from_func(self.energy)
         prob = np.exp(-fes / kt)
         # normalize with volume element from stepsizes
-        prob /= np.sum(prob) * np.prod(prob_grid.stepsizes)
-        prob_grid.data = prob
-        return prob_grid
+        prob /= np.sum(prob.data) * np.prod(prob.stepsizes)
+        return prob

@@ -101,15 +101,19 @@ class BirthDeathLangevinDynamics:
         """
         ranges = []
         grid_points = []
-        for dim in range(self.ld.pot.n_dim): # this is usually not possible
+        for dim in range(self.ld.pot.n_dim):  # this is usually not possible
             grid_min, grid_max = self.ld.pot.ranges[dim]
             grid_min -= 5 * self.bd_bw[dim]  # enlarge by area affected by edge effects
             grid_max += 5 * self.bd_bw[dim]
             ranges.append((grid_min, grid_max))
             # have at least 20 points of gaussian within 5 sigma
-            min_points_gaussian = int(np.ceil((grid_max - grid_min) / (0.5 * self.bd_bw[dim])))
+            min_points_gaussian = int(
+                np.ceil((grid_max - grid_min) / (0.5 * self.bd_bw[dim]))
+            )
             grid_points.append(max(1001, min_points_gaussian))
-        return self.ld.pot.calculate_probability_density(self.ld.kt, ranges, grid_points)
+        return self.ld.pot.calculate_probability_density(
+            self.ld.kt, ranges, grid_points
+        )
 
     def init_histo(
         self, n_bins: List[int], ranges: List[Tuple[float, float]], stride=None
@@ -167,6 +171,7 @@ class BirthDeathLangevinDynamics:
         self.histo.add(comb_traj)
         self.save_traj(clear=True)
 
+    @profile
     def run(self, num_steps: int) -> None:
         """Run the simulation for given number of steps
 

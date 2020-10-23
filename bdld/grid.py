@@ -142,7 +142,9 @@ class Grid:
         :param points: the desired points
         :param method: interpolation method to use, defaults to linear
         """
-        return sp_interpolate.griddata(self.points(), self.data.flatten(), points, method)
+        return sp_interpolate.griddata(
+            self.points(), self.data.flatten(), points, method
+        )
 
 
 def convolve(g1: Grid, g2: Grid, mode: str = "valid") -> Grid:

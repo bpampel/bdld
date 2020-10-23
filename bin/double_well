@@ -146,7 +146,9 @@ def main() -> None:
         ld.add_particle([extrema[0]])
     for _ in range(int(args.num_walkers * (1 - args.walkers_frac))):
         ld.add_particle([extrema[2]])
-    print(f"Added {args.num_walkers} walkers with a distribution ratio of {args.walkers_frac}")
+    print(
+        f"Added {args.num_walkers} walkers with a distribution ratio of {args.walkers_frac}"
+    )
     print()
 
     if args.seed is not None:
@@ -159,7 +161,9 @@ def main() -> None:
     if args.traj_files:
         print(f"Saving trajectories to: {args.traj_files}.i")
         init_histo_and_traj_files(
-            bdld, False, [args.traj_files + "." + str(i) for i in range(args.num_walkers)]
+            bdld,
+            False,
+            [args.traj_files + "." + str(i) for i in range(args.num_walkers)],
         )
     if args.log_stride == 0:
         bdld.run(args.omit_initial)  # might be 0 steps
@@ -203,13 +207,12 @@ def main() -> None:
     bdld.plot_fes(args.fes_image, plot_domain=(-0.5, 8.0), plot_title=plot_title)
 
     # simply divide states by the 0 line for deltaF analysis
-    delta_f_masks = [
-        np.where(bdld.histo.bin_centers()[0] < 0, True, False),
-        np.where(bdld.histo.bin_centers()[0] > 0, True, False),
-    ]
+    delta_f_masks = [bdld.histo.bin_centers()[0] < 0, bdld.histo.bin_centers()[0] > 0]
     delta_f = analysis.calculate_delta_f(bdld.histo.fes, args.kt, delta_f_masks)[0]
     delta_f_ref = analysis.calculate_delta_f(
-        ld.pot.calculate_reference(bdld.histo.points()), args.kt, delta_f_masks
+        ld.pot.calculate_reference(bdld.histo.points()),
+        args.kt,
+        delta_f_masks,
     )[0]
     print(f"Delta F: {delta_f:.4} (ref: {delta_f_ref:.4})")
 

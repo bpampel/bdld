@@ -2,8 +2,8 @@
 """Run bdld simulation on a 1d double-well potential"""
 
 import argparse
-import numpy as np
 from typing import List
+import numpy as np
 
 from bdld import analysis
 from bdld.bdld import BirthDeathLangevinDynamics
@@ -184,6 +184,7 @@ def main() -> None:
             bdld.run(args.omit_initial)
             init_histo_and_traj_files(bdld, True)
             # run until log_stride is met
+
             bdld.run(args.log_stride - args.omit_initial)
             print_stats(args.log_stride, bdld)
             passed_steps = args.log_stride
@@ -216,14 +217,11 @@ def main() -> None:
     plot_title = "bw " + str(args.bw[0]) if args.bd_stride != 0 else "Only LD"
     bdld.plot_fes(args.fes_image, plot_domain=(-0.5, 8.0), plot_title=plot_title)
 
-    # simply divide states by the 0 line for deltaF analysis
-    delta_f_masks = [
-        np.where(bdld.histo.bin_centers()[0] < 0, True, False),
-        np.where(bdld.histo.bin_centers()[0] > 0, True, False),
-    ]
-    delta_f = analysis.calculate_delta_f(bdld.histo.fes, args.kt, delta_f_masks)[0]
+    # simply divide states by the y = 0 line for deltaF analysis
+    delta_f_masks = [bdld.histo.points()[:, 1] < 0, bdld.histo.points()[:, 1] > 0]
+    delta_f = analysis.calculate_delta_f(bdld.histo.fes.flatten(), args.kt, delta_f_masks)[0]
     delta_f_ref = analysis.calculate_delta_f(
-        ld.pot.calculate_reference(bdld.histo.bin_centers()[0]), args.kt, delta_f_masks
+        ld.pot.calculate_reference(bdld.histo.points()), args.kt, delta_f_masks
     )[0]
     print(f"Delta F: {delta_f:.4} (ref: {delta_f_ref:.4})")
 
