@@ -340,8 +340,14 @@ class BirthDeath:
                 dup_perc = 100 * self.dup_count / self.dup_attempts
             except ValueError:
                 dup_perc = np.nan
-            ratio_succ = self.dup_count / self.kill_count
-            ratio_attempts = self.dup_attempts / self.kill_attempts
+            try:
+                ratio_succ = self.dup_count / self.kill_count
+            except ValueError:
+                ratio_succ = np.nan
+            try:
+                ratio_attempts = self.dup_attempts / self.kill_attempts
+            except ValueError:
+                ratio_attempts = np.nan
             print(
                 f"Succesful birth events: {self.dup_count}/{self.dup_attempts} ({dup_perc:.4}%)"
             )
