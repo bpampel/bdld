@@ -8,6 +8,8 @@ import numpy as np
 from bdld.bussi_parinello_ld import BpldParticle
 from bdld import grid
 
+from bdld.helpers.misc import write_2d_sliced_to_file
+
 
 def calc_prob_correction_kernel(eq_density: grid.Grid, bw: np.ndarray) -> grid.Grid:
     """Correction for the probabilites due to the Gaussian Kernel
@@ -31,7 +33,7 @@ def calc_prob_correction_kernel(eq_density: grid.Grid, bw: np.ndarray) -> grid.G
     # perform convolution and calculate both terms
     conv = grid.convolve(eq_density, kernel, mode="valid")
     dens_smaller = conv.copy_empty()  # "valid" convolution shrinks grid
-    dens_smaller.data = eq_density.interpolate(dens_smaller.points())
+    dens_smaller.data = eq_density.interpolate(dens_smaller.points(), "linear")
     log_term = np.log(conv / dens_smaller)
     integral_term = nd_trapz(log_term.data * dens_smaller.data, conv.stepsizes)
     conv = -log_term + integral_term
@@ -251,7 +253,9 @@ class BirthDeath:
             # density can be zero and make beta -inf. Filter when averaging in next step
             beta = np.log(walker_density(pos, self.bw, self.kde)) + ene * self.inv_kt
         beta -= np.mean(beta[beta != -np.inf])
-        beta += self.prob_correction_kernel.interpolate(pos, "linear").reshape(len(pos))
+        beta += self.prob_correction_kernel.interpolate(pos, "nearest").reshape(
+            len(pos)
+        )
         if self.logging:  # get number of attempts from betas
             curr_kill_attempts = np.count_nonzero(beta > 0)
             self.kill_attempts += curr_kill_attempts

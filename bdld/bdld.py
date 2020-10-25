@@ -171,7 +171,6 @@ class BirthDeathLangevinDynamics:
         self.histo.add(comb_traj)
         self.save_traj(clear=True)
 
-    @profile
     def run(self, num_steps: int) -> None:
         """Run the simulation for given number of steps
 
