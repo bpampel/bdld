@@ -37,6 +37,15 @@ def calc_prob_correction_kernel(eq_density: grid.Grid, bw: np.ndarray) -> grid.G
     log_term = np.log(conv / dens_smaller)
     integral_term = nd_trapz(log_term.data * dens_smaller.data, conv.stepsizes)
     conv = -log_term + integral_term
+    write_2d_sliced_to_file(
+        "conv_grid",
+        np.concatenate(
+            (conv.points(), conv.data.reshape((np.prod(conv.n_points), 1))), axis=1
+        ),
+        conv.n_points,
+        header="# FIELDS x y conv_grid",
+    )
+
     return conv
 
 
@@ -323,8 +332,14 @@ class BirthDeath:
     def print_stats(self, reset: bool = False) -> None:
         """Print birth/death probabilities to screen"""
         if self.logging:
-            kill_perc = 100 * self.kill_count / self.kill_attempts
-            dup_perc = 100 * self.dup_count / self.dup_attempts
+            try:
+                kill_perc = 100 * self.kill_count / self.kill_attempts
+            except ValueError:
+                kill_perc = np.nan
+            try:
+                dup_perc = 100 * self.dup_count / self.dup_attempts
+            except ValueError:
+                dup_perc = np.nan
             ratio_succ = self.dup_count / self.kill_count
             ratio_attempts = self.dup_attempts / self.kill_attempts
             print(
