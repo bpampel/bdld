@@ -173,7 +173,10 @@ def main() -> None:
 
     if args.kernel_correction_file:
         print(f"Saving correction grid due to kernel to: {args.kernel_correction_file}")
-        bdld.bd.prob_correction_kernel.write_to_file(args.kernel_correction_file)
+        header = bdld.generate_fileheader(["pos_x", "pos_y", "correction"])
+        bdld.bd.prob_correction_kernel.write_to_file(
+            args.kernel_correction_file, header=str(header)
+        )
 
     print(
         f"Running for {args.num_steps} timesteps with a birth/death stride of {args.bd_stride}"

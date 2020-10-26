@@ -163,7 +163,7 @@ class Grid:
         if self.n_dim == 1:
             np.savetxt(
                 filename,
-                np.concatenate((self.axes()[0], self.data)),
+                np.c_[self.axes()[0], self.data],
                 fmt=fmt,
                 header=header,
             )
