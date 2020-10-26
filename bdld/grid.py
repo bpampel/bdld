@@ -6,6 +6,8 @@ import numpy as np
 from scipy import signal
 from scipy import interpolate as sp_interpolate
 
+from bdld.helpers.misc import write_2d_sliced_to_file
+
 
 class Grid:
     """Rectangular grid with evenly distributed points
@@ -145,6 +147,37 @@ class Grid:
         return sp_interpolate.griddata(
             self.points(), self.data.flatten(), points, method
         )
+
+    def write_to_file(
+        self, filename: str, fmt: str = "%.18e", header: str = ''
+    ) -> None:
+        """Write the grid to file via numpy.savetxt
+
+        For 2d this will write the data in "plumed style", i.e. in C-order with emtpy lines
+        between the rows
+
+        :param filename: Path to write to
+        :param fmt: format of the data, see np.savetxt
+        :param header: String for the header, must start with the appropriate comment char
+        """
+        if self.n_dim == 1:
+            np.savetxt(
+                filename,
+                np.concatenate((self.axes()[0], self.data)),
+                fmt=fmt,
+                header=header,
+            )
+        elif self.n_dim == 2:
+            write_2d_sliced_to_file(
+                filename,
+                np.concatenate(
+                    (self.points(), self.data.reshape((np.prod(self.n_points), 1))),
+                    axis=1,
+                ),
+                self.n_points,
+                fmt,
+                header,
+            )
 
 
 def convolve(g1: Grid, g2: Grid, mode: str = "valid") -> Grid:

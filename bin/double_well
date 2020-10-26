@@ -116,6 +116,12 @@ def parse_cliargs() -> argparse.Namespace:
         default=False,
         help="Use KDE for density estimate",
     )
+    parser.add_argument(
+        "--kernel-correction-file",
+        type=str,
+        dest="kernel_correction_file",
+        help="Save the probability correction grid due to the gaussian kernels to the given path",
+    )
 
     args = parser.parse_args()
     if args.bd_stride != 0 and args.bw is None:
@@ -154,6 +160,10 @@ def main() -> None:
     if args.seed is not None:
         args.seed += 1000
     bdld = BirthDeathLangevinDynamics(ld, args.bd_stride, args.bw, args.seed, args.kde)
+
+    if args.kernel_correction_file:
+        print(f"Saving correction grid due to kernel to: {args.kernel_correction_file}")
+        bdld.bd.prob_correction_kernel.write_to_file(args.kernel_correction_file)
 
     print(
         f"Running for {args.num_steps} timesteps with a birth/death stride of {args.bd_stride}"

@@ -241,12 +241,13 @@ class BirthDeathLangevinDynamics:
             raise ValueError("Histogram for FES needs to be initialized first")
         if any(t for t in self.traj):
             self.add_traj_to_histo()
-        fes, pos = self.histo.calculate_fes(self.ld.kt)
-        header = self.generate_fileheader(["pos fes"])
-        data = np.vstack((pos, fes)).T
-        np.savetxt(
-            filename, data, header=str(header), comments="", delimiter=" ", newline="\n"
-        )
+        fes = self.histo.calculate_fes(self.ld.kt)
+        if fes.n_dim == 1:
+            header = self.generate_fileheader(["pos fes"])
+        elif fes.n_dim == 2:
+            header = self.generate_fileheader(["pos_x pos_y fes"])
+        fes.write_to_file(filename, header=str(header))
+
 
     def plot_fes(
         self,
@@ -269,7 +270,6 @@ class BirthDeathLangevinDynamics:
         analysis.plot_fes(
             self.histo.fes,
             self.histo.bin_centers(),
-            # temporary fix, needs to be changed for more than 1d
             ref=self.ld.pot.calculate_reference(self.histo.points()),
             plot_domain=plot_domain,
             filename=filename,

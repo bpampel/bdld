@@ -8,8 +8,6 @@ import numpy as np
 from bdld.bussi_parinello_ld import BpldParticle
 from bdld import grid
 
-from bdld.helpers.misc import write_2d_sliced_to_file
-
 
 def calc_prob_correction_kernel(eq_density: grid.Grid, bw: np.ndarray) -> grid.Grid:
     """Correction for the probabilites due to the Gaussian Kernel
@@ -37,15 +35,6 @@ def calc_prob_correction_kernel(eq_density: grid.Grid, bw: np.ndarray) -> grid.G
     log_term = np.log(conv / dens_smaller)
     integral_term = nd_trapz(log_term.data * dens_smaller.data, conv.stepsizes)
     conv = -log_term + integral_term
-    write_2d_sliced_to_file(
-        "conv_grid",
-        np.concatenate(
-            (conv.points(), conv.data.reshape((np.prod(conv.n_points), 1))), axis=1
-        ),
-        conv.n_points,
-        header="# FIELDS x y conv_grid",
-    )
-
     return conv
 
 

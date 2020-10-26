@@ -116,6 +116,12 @@ def parse_cliargs() -> argparse.Namespace:
         default=False,
         help="Use KDE for density estimate",
     )
+    parser.add_argument(
+        "--kernel-correction-file",
+        type=str,
+        dest="kernel_correction_file",
+        help="Save the probability correction grid due to the gaussian kernels to the given path",
+    )
 
     args = parser.parse_args()
     if args.bd_stride != 0 and args.bw is None:
@@ -165,6 +171,10 @@ def main() -> None:
         args.seed += 1000
     bdld = BirthDeathLangevinDynamics(ld, args.bd_stride, args.bw, args.seed, args.kde)
 
+    if args.kernel_correction_file:
+        print(f"Saving correction grid due to kernel to: {args.kernel_correction_file}")
+        bdld.bd.prob_correction_kernel.write_to_file(args.kernel_correction_file)
+
     print(
         f"Running for {args.num_steps} timesteps with a birth/death stride of {args.bd_stride}"
     )
@@ -184,7 +194,6 @@ def main() -> None:
             bdld.run(args.omit_initial)
             init_histo_and_traj_files(bdld, True)
             # run until log_stride is met
-
             bdld.run(args.log_stride - args.omit_initial)
             print_stats(args.log_stride, bdld)
             passed_steps = args.log_stride
@@ -219,7 +228,9 @@ def main() -> None:
 
     # simply divide states by the y = 0 line for deltaF analysis
     delta_f_masks = [bdld.histo.points()[:, 1] < 0, bdld.histo.points()[:, 1] > 0]
-    delta_f = analysis.calculate_delta_f(bdld.histo.fes.flatten(), args.kt, delta_f_masks)[0]
+    delta_f = analysis.calculate_delta_f(
+        bdld.histo.fes.flatten(), args.kt, delta_f_masks
+    )[0]
     delta_f_ref = analysis.calculate_delta_f(
         ld.pot.calculate_reference(bdld.histo.points()), args.kt, delta_f_masks
     )[0]

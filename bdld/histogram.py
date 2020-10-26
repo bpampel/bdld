@@ -69,7 +69,7 @@ class Histogram(grid.Grid):
         The base function would return them with points at the borders"""
         return self.bin_centers()
 
-    def calculate_fes(self, kt, mintozero=True):
+    def calculate_fes(self, kt: float, mintozero: bool = True) -> grid.Grid:
         """Calculate free energy surface from histogram
 
         Overwrites the fes attribute from the class instance and returns the data
@@ -78,8 +78,7 @@ class Histogram(grid.Grid):
         :param float kt: thermal energy of the system
         :param bool mintozero: shift FES to have minimum at zero
 
-        :return fes: numpy array with free energy values
-        :return pos: list of numpy arrays with the positions corresponding to the FES values
+        :return fes: Grid with the fes values as data
         """
         fes = np.where(
             self.data == 0, np.inf, -kt * np.log(self.data, where=(self.data != 0))
@@ -87,4 +86,6 @@ class Histogram(grid.Grid):
         if mintozero:
             fes -= np.min(fes)
         self.fes = fes
-        return fes, self.bin_centers()
+        new_grid = self.copy_empty()
+        new_grid.data = fes
+        return new_grid
