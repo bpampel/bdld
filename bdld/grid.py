@@ -180,7 +180,7 @@ class Grid:
             )
 
 
-def convolve(g1: Grid, g2: Grid, mode: str = "valid") -> Grid:
+def convolve(g1: Grid, g2: Grid, mode: str = "valid", method: str = "auto") -> Grid:
     """Perform convolution between two grids via scipy.signal.convolve
 
     Grids must have same dimensions and stepsizes.
@@ -195,7 +195,7 @@ def convolve(g1: Grid, g2: Grid, mode: str = "valid") -> Grid:
     stepsizes = g1.stepsizes
     n_dim = g1.n_dim
     # to get the same values in the continuous limit: multiply by stepsizes
-    conv = signal.convolve(g1.data, g2.data, mode=mode) * np.prod(g1.stepsizes)
+    conv = signal.convolve(g1.data, g2.data, mode=mode, method=method) * np.prod(g1.stepsizes)
     # also get the corresponding grid points depending on the method
     if mode == "same":  # easiest case, mirrors grid of first argument
         grid = g1.copy_empty()

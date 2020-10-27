@@ -29,7 +29,8 @@ def calc_prob_correction_kernel(eq_density: grid.Grid, bw: np.ndarray) -> grid.G
     kernel = grid.from_stepsizes(kernel_ranges, eq_density.stepsizes)
     kernel.data = kernel_sq_dist(kernel.points() ** 2, bw)
     # perform convolution and calculate both terms
-    conv = grid.convolve(eq_density, kernel, mode="valid")
+    # direct method is needed to avoid getting negative values instead of really small ones
+    conv = grid.convolve(eq_density, kernel, mode="valid", method="direct")
     dens_smaller = conv.copy_empty()  # "valid" convolution shrinks grid
     dens_smaller.data = eq_density.interpolate(dens_smaller.points(), "linear")
     log_term = np.log(conv / dens_smaller)
@@ -49,8 +50,7 @@ def kernel_sq_dist(dist: np.ndarray, bw: np.ndarray) -> np.ndarray:
     """
     return (
         1
-        / (2 * np.pi) ** (len(bw) / 2)
-        * np.prod(bw)
+        / ((2 * np.pi) ** (len(bw) / 2) * np.prod(bw))
         * np.exp(-np.sum(dist / (2 * bw ** 2), axis=1))
     )
 
@@ -251,9 +251,7 @@ class BirthDeath:
             # density can be zero and make beta -inf. Filter when averaging in next step
             beta = np.log(walker_density(pos, self.bw, self.kde)) + ene * self.inv_kt
         beta -= np.mean(beta[beta != -np.inf])
-        beta += self.prob_correction_kernel.interpolate(pos, "nearest").reshape(
-            len(pos)
-        )
+        beta += self.prob_correction_kernel.interpolate(pos, "linear").reshape(len(pos))
         if self.logging:  # get number of attempts from betas
             curr_kill_attempts = np.count_nonzero(beta > 0)
             self.kill_attempts += curr_kill_attempts

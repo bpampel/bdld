@@ -32,10 +32,17 @@ def plot_fes(fes, axes, ref=None, plot_domain=None, filename=None, title=None):
             ylim = np.where(np.isinf(fes), 0, fes).max()  # find max that is not inf
             ax.set_ylim([-0.05 * ylim, 1.05 * ylim])  # crop unused parts
     elif len(fes.shape) == 2:
+        try:
+            vmin, vmax = plot_domain
+        except TypeError:  # can't unpack if not set
+            vmin = None
+            vmax = None
         img = ax.imshow(
             fes,
             origin="lower",
             extent=(axes[0][0], axes[0][-1], axes[-1][0], axes[-1][-1]),
+            vmin=vmin,
+            vmax=vmax,
         )
         fig.colorbar(img, ax=ax)
     if filename:

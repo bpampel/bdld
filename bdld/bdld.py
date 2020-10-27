@@ -110,7 +110,7 @@ class BirthDeathLangevinDynamics:
             min_points_gaussian = int(
                 np.ceil((grid_max - grid_min) / (0.5 * self.bd_bw[dim]))
             )
-            grid_points.append(max(1001, min_points_gaussian))
+            grid_points.append(max(201, min_points_gaussian))
         return self.ld.pot.calculate_probability_density(
             self.ld.kt, ranges, grid_points
         )
