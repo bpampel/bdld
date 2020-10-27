@@ -36,6 +36,11 @@ def calc_prob_correction_kernel(eq_density: grid.Grid, bw: np.ndarray) -> grid.G
     log_term = np.log(conv / dens_smaller)
     integral_term = nd_trapz(log_term.data * dens_smaller.data, conv.stepsizes)
     conv = -log_term + integral_term
+    if any(n > 101 for n in conv.n_points):  # make less dense grid to speed up performance
+        sparse_n_points = [n if n <= 101 else 101 for n in conv.n_points]
+        sparse_conv = grid.from_npoints(conv.ranges, sparse_n_points)
+        sparse_conv.data = conv.interpolate(sparse_conv.points(), "linear")
+        conv = sparse_conv
     return conv
 
 
