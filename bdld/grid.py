@@ -166,6 +166,9 @@ class Grid:
                 np.c_[self.axes()[0], self.data],
                 fmt=fmt,
                 header=header,
+                delimiter=' ',
+                newline='\n',
+                comments='',
             )
         elif self.n_dim == 2:
             write_2d_sliced_to_file(
