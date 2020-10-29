@@ -157,7 +157,7 @@ class BirthDeathLangevinDynamics:
         for i, name in enumerate(filenames):
             header = self.generate_fileheader([f"traj.{i}"])
             with open(name, "w") as f:
-                f.write(str(header))
+                f.write(str(header) + '\n')
         self.traj_filenames = filenames
 
     def add_traj_to_histo(self) -> None:

@@ -194,7 +194,7 @@ def main() -> None:
             log_iters = args.omit_initial // args.log_stride
             for i in range(log_iters):
                 bdld.run(args.log_stride)
-                print_stats((i + i) * args.log_stride, bdld)
+                print_stats((i + 1) * args.log_stride, bdld)
             bdld.run(args.omit_initial % args.log_stride)
             init_histo_and_traj_files(bdld, True)
             # run until log stride is met
