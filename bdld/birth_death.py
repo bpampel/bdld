@@ -36,7 +36,7 @@ def calc_prob_correction_kernel(eq_density: grid.Grid, bw: np.ndarray) -> grid.G
     log_term = np.log(conv / dens_smaller)
     integral_term = nd_trapz(log_term.data * dens_smaller.data, conv.stepsizes)
     conv = -log_term + integral_term
-    if any(n > 101 for n in conv.n_points):  # make less dense grid to speed up performance
+    if any(n > 101 for n in conv.n_points):  # sparsify grid to speed up performance
         sparse_n_points = [n if n <= 101 else 101 for n in conv.n_points]
         sparse_conv = grid.from_npoints(conv.ranges, sparse_n_points)
         sparse_conv.data = conv.interpolate(sparse_conv.points(), "linear")
@@ -62,6 +62,8 @@ def kernel_sq_dist(dist: np.ndarray, bw: np.ndarray) -> np.ndarray:
 
 def nd_trapz(data: np.ndarray, dx: Union[List[float], float]) -> float:
     """Calculate a multidimensional integral via recursive usage of the trapezoidal rule
+
+    Uses numpy's trapz for the 1d integrals
 
     :param data: values to integrate
     :param dx: distances between datapoints per dimension
@@ -104,13 +106,10 @@ def _walker_density_manual(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
     :param bw: bandwidth parameter of kernel
     :return density: estimated density at each walker
     """
-    density = np.empty((len(pos)))
-    for i in range(len(pos)):
-        dist = np.fromiter(
-            ((pos[i] - pos[j]) ** 2 for j in range(len(pos)) if j != i),
-            np.float64,
-            (len(pos) - 1, pos.shape[1]),
-        )
+    n_part = len(pos)
+    density = np.empty((n_part))
+    for i in range(n_part):
+        dist = np.array([(pos[i] - pos[j]) ** 2 for j in range(n_part) if j != i])
         kernel_values = kernel_sq_dist(dist, bw)
         density[i] = np.mean(kernel_values)
     return density
@@ -250,8 +249,8 @@ class BirthDeath:
         :return bd_events: list of tuples with particles to duplicate and kill per event
         """
         num_part = len(pos)
-        dup_list = []
-        kill_list = []
+        dup_list: List[int] = []
+        kill_list: List[int] = []
         with np.errstate(divide="ignore"):
             # density can be zero and make beta -inf. Filter when averaging in next step
             beta = np.log(walker_density(pos, self.bw, self.kde)) + ene * self.inv_kt

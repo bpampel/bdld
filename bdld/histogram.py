@@ -17,7 +17,7 @@ class Histogram(grid.Grid):
 
     def __init__(
         self,
-        n_bins: Union[np.ndarray, List[int], int],
+        n_bins: Union[List[int], int],
         ranges: List[Tuple[float, float]],
     ):
         """Set up empty histogram instance
@@ -30,7 +30,7 @@ class Histogram(grid.Grid):
         :param fes: the free energy values corresponding to the histogram
         """
         super().__init__()
-        if not isinstance(n_bins, (list, np.ndarray)):  # single float
+        if not isinstance(n_bins, list):  # single float
             n_bins = [n_bins]
         self.n_points = n_bins
         self.ranges = ranges

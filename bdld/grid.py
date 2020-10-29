@@ -20,7 +20,7 @@ class Grid:
 
     def __init__(self) -> None:
         """Create empty, uninitialized class. Should usually not invoked directly"""
-        self._data: np.array = np.empty(0)
+        self._data: np.ndarray = np.empty(0)
         self.ranges: List[Tuple[float, float]] = []
         self.n_points: List[int] = []
         self.stepsizes: List[float] = []
@@ -149,7 +149,7 @@ class Grid:
         )
 
     def write_to_file(
-        self, filename: str, fmt: str = "%.18e", header: str = ''
+        self, filename: str, fmt: str = "%.18e", header: str = ""
     ) -> None:
         """Write the grid to file via numpy.savetxt
 
@@ -166,9 +166,9 @@ class Grid:
                 np.c_[self.axes()[0], self.data],
                 fmt=fmt,
                 header=header,
-                delimiter=' ',
-                newline='\n',
-                comments='',
+                delimiter=" ",
+                newline="\n",
+                comments="",
             )
         elif self.n_dim == 2:
             write_2d_sliced_to_file(
@@ -193,12 +193,14 @@ def convolve(g1: Grid, g2: Grid, mode: str = "valid", method: str = "auto") -> G
     :param mode: convolution mode, see scipy.signal.convolve for details
     :return grid: New grid containing the convolutin
     """
-    if not np.all(g1.stepsizes == g2.stepsizes):
+    if not g1.stepsizes == g2.stepsizes:
         raise ValueError("Spacing of grids does not match")
     stepsizes = g1.stepsizes
     n_dim = g1.n_dim
     # to get the same values in the continuous limit: multiply by stepsizes
-    conv = signal.convolve(g1.data, g2.data, mode=mode, method=method) * np.prod(g1.stepsizes)
+    conv = signal.convolve(g1.data, g2.data, mode=mode, method=method) * np.prod(
+        g1.stepsizes
+    )
     # also get the corresponding grid points depending on the method
     if mode == "same":  # easiest case, mirrors grid of first argument
         grid = g1.copy_empty()

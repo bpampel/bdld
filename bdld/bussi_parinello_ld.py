@@ -10,17 +10,16 @@ from bdld.potential import Potential
 class BpldParticle(Particle):
     """Derived Particle class that additionally stores MD related variables
 
-    :param list of float rand: storage for one random number per dimension
-    :param float energy: stores last energy evaluation
-    :param list of float forces: stores last force evaluation
+    :param energy: stores last energy evaluation
+    :param forces: stores last force evaluation per dimension
     :param float c2: constant for the MD thermostat (mass dependent)
     """
 
     def __init__(self, *args) -> None:
         """Creates particle from base class with additional attributes"""
         super().__init__(*args)
-        self.forces: np.array = []
         self.energy: float = 0.0
+        self.forces: np.ndarray = np.empty(0)
         self.c2: float = 0.0  # second thermostat constant depends on mass
 
 

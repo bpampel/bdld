@@ -1,5 +1,7 @@
 """Misc analysis functions"""
 
+from typing import List, Tuple
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -10,7 +12,7 @@ def plot_fes(fes, axes, ref=None, plot_domain=None, filename=None, title=None):
     :param fes: the fes to plot
     :param axes: axes of plot
     :param ref: optional reference FES to plot (makes only sense for 1d fes)
-    :param plot_domain: optional list with minimum and maximum value to show
+    :param plot_domain: optional Tuple with minimum and maximum value to show
     :param filename: optional filename to save figure to
     :param title: optional title for the legend
     """
@@ -95,17 +97,20 @@ def calculate_delta_f(fes, kt, masks):
     return delta_f
 
 
-def count_particles_per_state(particles, ranges):
+def count_particles_per_state(
+    particles: List[np.ndarray], ranges: List[List[Tuple[float, float]]]
+) -> List[int]:
     """Return the number of particles in each state
 
-    currently for 1d only
+    This assumes rectangular states
 
     :param particles: list with all Particles
-    :param ranges: list with [min, max] ranges for each state
+    :param ranges: list with list of [(min_x, max_x), (min_y, max_y), ...] ranges for each state
     """
     counts = [0] * len(ranges)
     for p in particles:
-        for i, ra in enumerate(ranges):
-            if ra[0] < p.pos < ra[1]:
+        for i, state in enumerate(ranges):
+            # check if inside in all dimensions
+            if all([x_min <= p.pos <= x_max for (x_min, x_max) in state]):
                 counts[i] += 1
     return counts

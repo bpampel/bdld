@@ -66,9 +66,7 @@ class Potential:
         else:
             raise ValueError("No polyval function for more than 3 dimensions")
 
-    def evaluate(
-        self, pos: Union[List[float], np.ndarray]
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    def evaluate(self, pos: Union[List[float], np.ndarray]) -> Tuple[float, np.ndarray]:
         """Get potential energy and forces at position
 
         :param pos: position to be evaluated
@@ -86,7 +84,7 @@ class Potential:
         return self.polyval(*pos, self.coeffs)
 
     def calculate_reference(
-        self, pos: Union[List[float], np.ndarray], mintozero: bool = True
+        self, pos: Union[List[np.ndarray], np.ndarray], mintozero: bool = True
     ) -> np.ndarray:
         """Calculate reference from potential at given positions
 

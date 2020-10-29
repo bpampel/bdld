@@ -232,11 +232,12 @@ def main() -> None:
 
 def print_stats(step: int, bdld: BirthDeathLangevinDynamics) -> None:
     """Print stats from specified bdld)"""
+    print(f"After {step} time steps:")
     if bdld.bd:
-        print(f"After {step} time steps:")
         bdld.bd.print_stats()
-        print("", flush=True)
-
+    counts = analysis.count_particles_per_state(bdld.ld.particles, [[(-2.5,0)],[(0,2.5)]])
+    print(f"Current walker distribution: {counts[0]} | {counts[1]}")
+    print("", flush=True)
 
 def init_histo_and_traj_files(
     bdld: BirthDeathLangevinDynamics,

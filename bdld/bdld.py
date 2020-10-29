@@ -248,7 +248,6 @@ class BirthDeathLangevinDynamics:
             header = self.generate_fileheader(["pos_x pos_y fes"])
         fes.write_to_file(filename, header=str(header))
 
-
     def plot_fes(
         self,
         filename: Optional[str] = None,
