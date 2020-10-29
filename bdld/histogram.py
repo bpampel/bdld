@@ -13,6 +13,12 @@ class Histogram(grid.Grid):
     Also explicitely stores the bin edges (as opposed to only the n_points of the Grid class)
 
     Also allows histogramming over time, i.e. adding more data to the existing histogram
+
+    :param n_points: number of bins for histogramming per dimension
+    :param ranges: extent of histogram (min, max) per dimension
+    :param bins: bin edges of the histogram per dimension
+    :param data: histogram data
+    :param fes: the free energy values corresponding to the histogram stored in data
     """
 
     def __init__(
@@ -23,16 +29,13 @@ class Histogram(grid.Grid):
         """Set up empty histogram instance
 
         :param n_bins: number of bins for histogramming per dimension
-                       this is set as n_points of the Grid class
         :param ranges: extent of histogram (min, max) per dimension
-        :param bins: bin edges of the histogram per dimension
-        :param histo: the histogram data (counts) corresponding to the bins
-        :param fes: the free energy values corresponding to the histogram
         """
         super().__init__()
         if not isinstance(n_bins, list):  # single float
             n_bins = [n_bins]
         self.n_points = n_bins
+        self.stepsizes = grid.stepsizes_from_npoints(ranges, n_bins)
         self.ranges = ranges
         self.n_dim = len(ranges)
         self.fes: Optional[np.ndarray] = None
@@ -86,6 +89,11 @@ class Histogram(grid.Grid):
         if mintozero:
             fes -= np.min(fes)
         self.fes = fes
-        new_grid = self.copy_empty()
+        new_grid = self.grid_from_histo()
         new_grid.data = fes
         return new_grid
+
+    def grid_from_histo(self) -> grid.Grid:
+        """Return grid with the same points instead of bins"""
+        ranges = [(a[0], a[-1]) for a in self.axes()]
+        return grid.from_npoints(ranges, self.n_points)

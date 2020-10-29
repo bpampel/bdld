@@ -220,6 +220,15 @@ def convolve(g1: Grid, g2: Grid, mode: str = "valid", method: str = "auto") -> G
     return grid
 
 
+def stepsizes_from_npoints(ranges: List[Tuple[float,float]], n_points: List[int]) -> List[float]:
+    """Calculate the stepsizes from the number of points and ranges
+
+    :param ranges: Ranges of the grid
+    :param n_points: number of points per dimension
+    """
+    return [(r[1] - r[0]) / (n_points[i] - 1) for i, r in enumerate(ranges)]
+
+
 def from_npoints(
     ranges: List[Tuple[float, float]], n_points: Union[List[int], int]
 ) -> Grid:
@@ -238,7 +247,7 @@ def from_npoints(
     if len(n_points) != grid.n_dim:
         raise ValueError("Dimensions of ranges and number of points do not match")
     grid.n_points = n_points
-    grid.stepsizes = [(r[1] - r[0]) / (n_points[i] - 1) for i, r in enumerate(ranges)]
+    grid.stepsizes = stepsizes_from_npoints(ranges, n_points)
     grid.ranges = ranges
     return grid
 
