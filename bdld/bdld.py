@@ -148,7 +148,7 @@ class BirthDeathLangevinDynamics:
         for i, name in enumerate(filenames):
             header = self.generate_fileheader([f"traj.{i}"])
             with open(name, "w") as f:
-                f.write(str(header))
+                f.write(str(header) + '\n')
         self.traj_filenames = filenames
 
     def add_traj_to_histo(self) -> None:
@@ -163,7 +163,7 @@ class BirthDeathLangevinDynamics:
         self.save_traj()
         #  if stride was not matched exactly skip first elements next time
         self._histo_add_first = self.histo_stride - ((len(self.traj[0]) - self._histo_add_first) % self.histo_stride)
-        
+
 
     def run(self, num_steps: int) -> None:
         """Run the simulation for given number of steps
