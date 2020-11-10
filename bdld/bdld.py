@@ -87,32 +87,28 @@ class BirthDeathLangevinDynamics:
     def bd_prob_density(self) -> Grid:
         """Return probability density grid needed for BirthDeath
 
-        This is somewhat hacky at the moment:
-        To avoid edge effects in the convolution the grid area is chosen such that
-        cutting off after convolution yields exactly the potential range, so a larger
-        than the intrinsic range of the potential is used which usually couldn't be done
-
-        Also this is usually a unknown quantity, so this has to be replaced by an estimate
+        This is usually a unknown quantity, so this has to be replaced by an estimate
         in the future. E.g. enforce usage of the histogram and use that as estimate at
         current time with iterative updates
+
+        Because of the current free choice of points, we use rather a lot and make
+        sure the Kernel grid will have at least 20 points per dimension within 5 sigma
 
         :return grid: Grid of the density points
         :return prob: Probability values
         """
-        ranges = []
-        grid_points = []
-        for dim in range(self.ld.pot.n_dim):  # this is usually not possible
-            grid_min, grid_max = self.ld.pot.ranges[dim]
-            grid_min -= 5 * self.bd_bw[dim]  # enlarge by area affected by edge effects
-            grid_max += 5 * self.bd_bw[dim]
-            ranges.append((grid_min, grid_max))
-            # have at least 20 points of gaussian within 5 sigma
-            min_points_gaussian = int(
-                np.ceil((grid_max - grid_min) / (0.5 * self.bd_bw[dim]))
-            )
-            grid_points.append(max(201, min_points_gaussian))
+        ranges = self.ld.pot.ranges
+        n_grid_points = []
+        for dim, r in enumerate(ranges):
+            # check minimal number of points for 20 points within 5 sigma
+            min_points_gaussian = int(np.ceil((r[1] - r[0]) / (0.5 * self.bd_bw[dim])))
+            # the large number of points is only used to calculate the correction once
+            tmp_grid_points = max(501, min_points_gaussian)
+            if tmp_grid_points % 2 == 0:
+                tmp_grid_points += 1  # odd number is better for convolution
+            n_grid_points.append(tmp_grid_points)
         return self.ld.pot.calculate_probability_density(
-            self.ld.kt, ranges, grid_points
+            self.ld.kt, ranges, n_grid_points
         )
 
     def init_histo(
@@ -157,7 +153,7 @@ class BirthDeathLangevinDynamics:
         for i, name in enumerate(filenames):
             header = self.generate_fileheader([f"traj.{i}"])
             with open(name, "w") as f:
-                f.write(str(header) + '\n')
+                f.write(str(header) + "\n")
         self.traj_filenames = filenames
 
     def add_traj_to_histo(self) -> None:

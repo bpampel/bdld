@@ -9,39 +9,50 @@ from bdld.bussi_parinello_ld import BpldParticle
 from bdld import grid
 
 
-def calc_prob_correction_kernel(eq_density: grid.Grid, bw: np.ndarray) -> grid.Grid:
+def calc_prob_correction_kernel(
+    eq_density: grid.Grid, bw: np.ndarray, conv_mode: str = "same"
+) -> grid.Grid:
     """Correction for the probabilites due to the Gaussian Kernel
 
     Calculates the following two terms from the Kernel K and equilibrium walker distribution pi
     .. :math::
         -log((K(x) * \pi(x)) / \pi(x)) + \int (log((K(x) * \pi(x)) / \pi(x))) \pi \mathrm{d}x
 
-    Due to the convolution the returned grid is smaller than the original to avoid edge effects
+    If the "valid" conv_mode is used the returned grid is smaller than the original one.
+    The "same" mode will return a grid with the same ranges, but might have issues
+    due to edge effects from the convolution
 
-    Alternatively: use the 'same' method for convolution, that also avoids
-
-    :param eq_density: (grid, values) of equilibrium walker distribution
+    :param eq_density: grid with equilibrium probability density of system
     :param bw: bandwidths of the kernel (sigma)
-    :return (corr_grid, correction): grid and corresponding correction values
+    :param conv_mode: convolution mode to use (affects output size).
+                      If 'valid' (default) the resulting correction grid will have a
+                      smaller domain than the original eq_density one.
+                      If 'same' it will use exactly the ranges of the original grid.
+    :return correction: grid wih the correction values
     """
     # setup kernel grid
     kernel_ranges = [(-x, x) for x in 5 * bw]  # cutoff at 5 sigma
     kernel = grid.from_stepsizes(kernel_ranges, eq_density.stepsizes)
     kernel.data = kernel_sq_dist(kernel.points() ** 2, bw)
-    # perform convolution and calculate both terms
     # direct method is needed to avoid getting negative values instead of really small ones
-    conv = grid.convolve(eq_density, kernel, mode="valid", method="direct")
-    dens_smaller = conv.copy_empty()  # "valid" convolution shrinks grid
-    dens_smaller.data = eq_density.interpolate(dens_smaller.points(), "linear")
-    log_term = np.log(conv / dens_smaller)
-    integral_term = nd_trapz(log_term.data * dens_smaller.data, conv.stepsizes)
-    conv = -log_term + integral_term
-    if any(n > 101 for n in conv.n_points):  # sparsify grid to speed up performance
-        sparse_n_points = [n if n <= 101 else 101 for n in conv.n_points]
-        sparse_conv = grid.from_npoints(conv.ranges, sparse_n_points)
-        sparse_conv.data = conv.interpolate(sparse_conv.points(), "linear")
-        conv = sparse_conv
-    return conv
+    conv = grid.convolve(eq_density, kernel, mode=conv_mode, method="direct")
+    if conv_mode == "valid":
+        # "valid" convolution shrinks grid --> shrink density as well
+        dens_smaller = conv.copy_empty()
+        dens_smaller.data = eq_density.interpolate(dens_smaller.points(), "linear")
+        eq_density = dens_smaller
+    log_term = np.log(conv / eq_density)
+    integral_term = nd_trapz(log_term.data * eq_density.data, conv.stepsizes)
+    correction = -log_term + integral_term
+    if any(n > 101 for n in correction.n_points):
+        # sparsify grid to speed up performance
+        sparse_n_points = [n if n <= 101 else 101 for n in correction.n_points]
+        sparse_correction = grid.from_npoints(correction.ranges, sparse_n_points)
+        sparse_correction.data = correction.interpolate(
+            sparse_correction.points(), "linear"
+        )
+        correction = sparse_correction
+    return correction
 
 
 def kernel_sq_dist(dist: np.ndarray, bw: np.ndarray) -> np.ndarray:
@@ -216,7 +227,7 @@ class BirthDeath:
             print(f"  using KDE to calculate kernels")
         print()
         self.prob_correction_kernel: grid.Grid = calc_prob_correction_kernel(
-            eq_density, self.bw
+            eq_density, self.bw, "same"
         )
         if self.logging:
             self.reset_stats()

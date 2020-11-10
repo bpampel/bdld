@@ -220,7 +220,9 @@ def convolve(g1: Grid, g2: Grid, mode: str = "valid", method: str = "auto") -> G
     return grid
 
 
-def stepsizes_from_npoints(ranges: List[Tuple[float,float]], n_points: List[int]) -> List[float]:
+def stepsizes_from_npoints(
+    ranges: List[Tuple[float, float]], n_points: List[int]
+) -> List[float]:
     """Calculate the stepsizes from the number of points and ranges
 
     :param ranges: Ranges of the grid
