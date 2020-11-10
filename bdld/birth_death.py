@@ -42,6 +42,7 @@ def prob_correction_kernel(
 
     log_conv = np.log(conv / dens)
     integral = np.trapz(log_conv * dens, grid_conv)
+    np.savetxt("correction", np.c_[grid_conv, -log_conv + integral])
     return (grid_conv, -log_conv + integral)
 
 
