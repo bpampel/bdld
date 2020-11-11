@@ -52,7 +52,7 @@ class BirthDeathLangevinDynamics:
         self.histo: Optional[Histogram] = None
         self.histo_stride: int = 0
         self.kde: bool = kde
-        self.correction_variant: Optional[str] = correction_variant,
+        self.correction_variant: Optional[str] = correction_variant
         self.setup()
 
     def setup(self) -> None:

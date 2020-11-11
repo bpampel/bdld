@@ -117,16 +117,16 @@ def parse_cliargs() -> argparse.Namespace:
         help="Use KDE for density estimate",
     )
     parser.add_argument(
-        "--kernel-correction-file",
-        type=str,
-        dest="kernel_correction_file",
-        help="Save the probability correction grid due to the gaussian kernels to the given path",
-    )
-    parser.add_argument(
         "--correction-variant",
         type=str,
         dest="correction_variant",
         help="Variant of the correction to use for the birth/death algorithm. Can be 'additive', 'multiplicative' or None",
+    )
+    parser.add_argument(
+        "--correction-file",
+        type=str,
+        dest="correction_file",
+        help="Save the correction grid of the birth/death algorithm to the given path",
     )
 
     args = parser.parse_args()
@@ -167,11 +167,11 @@ def main() -> None:
         args.seed += 1000
     bdld = BirthDeathLangevinDynamics(ld, args.bd_stride, args.bw, args.seed, args.kde, args.correction_variant)
 
-    if args.kernel_correction_file:
-        print(f"Saving correction grid due to kernel to: {args.kernel_correction_file}")
+    if args.correction_file:
+        print(f"Saving correction grid due to kernel to: {args.correction_file}")
         header = bdld.generate_fileheader(["pos", "correction"])
-        bdld.bd.prob_correction_kernel.write_to_file(
-            args.kernel_correction_file, header=str(header)
+        bdld.bd.correction.write_to_file(
+            args.correction_file, header=str(header)
         )
 
     print(
