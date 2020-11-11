@@ -9,14 +9,8 @@ from bdld.bussi_parinello_ld import BpldParticle
 from bdld import grid
 
 
-def calc_prob_correction_kernel(
-    eq_density: grid.Grid, bw: np.ndarray, conv_mode: str = "same"
-) -> grid.Grid:
-    """Correction for the probabilites due to the Gaussian Kernel
-
-    Calculates the following two terms from the Kernel K and equilibrium walker distribution pi
-    .. :math::
-        -log((K(x) * \pi(x)) / \pi(x)) + \int (log((K(x) * \pi(x)) / \pi(x))) \pi \mathrm{d}x
+def dens_kernel_convolution(eq_density: grid.Grid, bw: np.ndarray, conv_mode: str) -> grid.Grid:
+    """Return convolution of the equilibrium probability density with the kernel
 
     If the "valid" conv_mode is used the returned grid is smaller than the original one.
     The "same" mode will return a grid with the same ranges, but might have issues
@@ -25,17 +19,34 @@ def calc_prob_correction_kernel(
     :param eq_density: grid with equilibrium probability density of system
     :param bw: bandwidths of the kernel (sigma)
     :param conv_mode: convolution mode to use (affects output size).
-                      If 'valid' (default) the resulting correction grid will have a
+                      If 'valid' the resulting correction grid will have a
                       smaller domain than the original eq_density one.
                       If 'same' it will use exactly the ranges of the original grid.
-    :return correction: grid wih the correction values
+    :return conv: grid holding the convolution values
     """
-    # setup kernel grid
     kernel_ranges = [(-x, x) for x in 5 * bw]  # cutoff at 5 sigma
     kernel = grid.from_stepsizes(kernel_ranges, eq_density.stepsizes)
     kernel.data = kernel_sq_dist(kernel.points() ** 2, bw)
     # direct method is needed to avoid getting negative values instead of really small ones
-    conv = grid.convolve(eq_density, kernel, mode=conv_mode, method="direct")
+    return grid.convolve(eq_density, kernel, mode=conv_mode, method="direct")
+
+
+def calc_prob_correction_kernel(
+    eq_density: grid.Grid, bw: np.ndarray, conv_mode: str = "same"
+) -> grid.Grid:
+    """Additive correction for the probabilites due to the Gaussian Kernel
+
+    Calculates the following two terms from the Kernel K and equilibrium walker distribution pi
+    .. :math::
+        -log((K(x) * \pi(x)) / \pi(x)) + \int (log((K(x) * \pi(x)) / \pi(x))) \pi \mathrm{d}x
+
+    :param eq_density: grid with equilibrium probability density of system
+    :param bw: bandwidths of the kernel (sigma)
+    :param conv_mode: convolution mode to use. See dens_kernel_convolution() for details.
+    :return correction: grid wih the correction values
+    """
+    # setup kernel grid
+    conv = dens_kernel_convolution(eq_density, bw, conv_mode)
     if conv_mode == "valid":
         # "valid" convolution shrinks grid --> shrink density as well
         dens_smaller = conv.copy_empty()
@@ -45,13 +56,7 @@ def calc_prob_correction_kernel(
     integral_term = nd_trapz(log_term.data * eq_density.data, conv.stepsizes)
     correction = -log_term + integral_term
     if any(n > 101 for n in correction.n_points):
-        # sparsify grid to speed up performance
-        sparse_n_points = [n if n <= 101 else 101 for n in correction.n_points]
-        sparse_correction = grid.from_npoints(correction.ranges, sparse_n_points)
-        sparse_correction.data = correction.interpolate(
-            sparse_correction.points(), "linear"
-        )
-        correction = sparse_correction
+        correction = grid.sparsify(correction, [101] * correction.n_dim, "linear")
     return correction
 
 
@@ -183,15 +188,18 @@ def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
 
 
 class BirthDeath:
-    """Birth death algorithm"""
+    """Birth death algorithm
 
+    :param correction: Grid holding the correction values
+    """
     def __init__(
         self,
         particles: List[BpldParticle],
         dt: float,
         bw: Union[List[float], np.ndarray],
         kt: float,
-        eq_density: grid.Grid,
+        correction_variant: Optional[str] = None,
+        eq_density: Optional[grid.Grid] = None,
         seed: Optional[int] = None,
         logging: bool = False,
         kde: bool = False,
@@ -202,6 +210,8 @@ class BirthDeath:
         :param dt: timestep of MD
         :param bw: bandwidth for gaussian kernels per direction
         :param kt: thermal energy of system
+        :param correction_variant: correction from original algorithm
+                                   can be "additive", "multiplicative" or None
         :param eq_density: Equilibrium probability density of system, (grid, values)
         :param seed: Seed for rng (optional)
         :param logging: Collect statistics
@@ -226,9 +236,12 @@ class BirthDeath:
         if kde:
             print(f"  using KDE to calculate kernels")
         print()
-        self.prob_correction_kernel: grid.Grid = calc_prob_correction_kernel(
-            eq_density, self.bw, "same"
-        )
+        self.correction_variant: Optional[str] = correction_variant
+        if correction_variant == "additive":
+            self.correction: grid.Grid = calc_prob_correction_kernel(eq_density, self.bw, "same")
+        elif correction_variant == "multiplicative":
+            conv = dens_kernel_convolution(eq_density, self.bw, "same")
+            self.correction = -np.log(grid.sparsify(conv, [101] * conv.n_dim, "linear"))
         if self.logging:
             self.reset_stats()
 
@@ -236,9 +249,7 @@ class BirthDeath:
         """Perform birth-death step on particles
 
         Returns list of succesful birth/death events"""
-        pos = np.array([p.pos for p in self.particles])
-        ene = np.array([p.energy for p in self.particles])
-        bd_events = self.calculate_birth_death(pos, ene)
+        bd_events = self.calculate_birth_death()
         for dup, kill in bd_events:
             self.particles[kill] = copy.deepcopy(self.particles[dup])
             # this copies all properties: is this desired?
@@ -247,26 +258,18 @@ class BirthDeath:
             # keep the old random number for the initial thermostat step or generate new?
         return bd_events
 
-    def calculate_birth_death(
-        self, pos: np.ndarray, ene: np.ndarray
-    ) -> List[Tuple[int, int]]:
+    def calculate_birth_death(self) -> List[Tuple[int, int]]:
         """Calculate which particles to kill and duplicate
 
         The returned tuples are ordered, so the first particle in the tuple
         should be replaced by a copy of the second one
 
-        :param pos: positions of all particles
-        :param ene: energy of all particles
         :return bd_events: list of tuples with particles to duplicate and kill per event
         """
-        num_part = len(pos)
+        num_part = len(self.particles)
         dup_list: List[int] = []
         kill_list: List[int] = []
-        with np.errstate(divide="ignore"):
-            # density can be zero and make beta -inf. Filter when averaging in next step
-            beta = np.log(walker_density(pos, self.bw, self.kde)) + ene * self.inv_kt
-        beta -= np.mean(beta[beta != -np.inf])
-        beta += self.prob_correction_kernel.interpolate(pos, "linear").reshape(len(pos))
+        beta = self.calc_betas()
         if self.logging:  # get number of attempts from betas
             curr_kill_attempts = np.count_nonzero(beta > 0)
             self.kill_attempts += curr_kill_attempts
@@ -293,6 +296,27 @@ class BirthDeath:
                         self.dup_count += 1
 
         return list(zip(dup_list, kill_list))
+
+    def calc_betas(self) -> np.ndarray:
+        """Calculate the birth/death rate for every particle"""
+
+        pos = np.array([p.pos for p in self.particles])
+        with np.errstate(divide="ignore"):
+            # density can be zero and make beta -inf. Filter when averaging in next step
+            beta = np.log(walker_density(pos, self.bw, self.kde))
+
+        if self.correction_variant == "additive" or not self.correction_variant:
+            ene = np.array([p.energy for p in self.particles])
+            beta += ene * self.inv_kt
+            beta -= np.mean(beta[beta != -np.inf])
+            if self.correction_variant == "additive":
+                beta += self.correction.interpolate(pos, "linear").reshape(len(pos))
+        elif self.correction_variant == "multiplicative":
+            # do not use actual energies, just add the smoothed density
+            beta += self.correction.interpolate(pos, "linear").reshape(len(pos))
+            beta -= np.mean(beta[beta != -np.inf])
+        return beta
+
 
     def random_particle(self, num_part: int, excl: int) -> int:
         """Select random particle while excluding current one

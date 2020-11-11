@@ -1,6 +1,7 @@
 """Custom grid class that holds also the data"""
 
 from typing import Any, Callable, List, Union, Tuple
+import copy
 import operator
 import numpy as np
 from scipy import signal
@@ -131,8 +132,8 @@ class Grid:
         self.data = np.array([func(p) for p in self.points()])
 
     def copy_empty(self):
-        """Get a new grid instance with the same points but without data"""
-        return from_npoints(self.ranges, self.n_points)
+        """Get a new independent grid instance with the same points but without data"""
+        return from_npoints(copy.deepcopy(self.ranges), copy.deepcopy(self.n_points))
 
     def interpolate(
         self, points: Union[np.ndarray, Tuple[np.ndarray, ...]], method: str = "linear"
@@ -248,9 +249,9 @@ def from_npoints(
             n_points = [n_points] * grid.n_dim
     if len(n_points) != grid.n_dim:
         raise ValueError("Dimensions of ranges and number of points do not match")
-    grid.n_points = n_points
+    grid.n_points = copy.deepcopy(n_points)
     grid.stepsizes = stepsizes_from_npoints(ranges, n_points)
-    grid.ranges = ranges
+    grid.ranges = copy.deepcopy(ranges)
     return grid
 
 
@@ -274,9 +275,26 @@ def from_stepsizes(
             stepsizes = [stepsizes]
         else:  # expand to all dimensions
             stepsizes = [stepsizes] * grid.n_dim
-    grid.stepsizes = stepsizes
+    grid.stepsizes = copy.deepcopy(stepsizes)
     for i, r in enumerate(ranges):
         n_points_tmp = int(np.ceil((r[1] - r[0]) / stepsizes[i])) + 1 - int(shrink)
         grid.ranges.append((float(r[0]), r[0] + stepsizes[i] * (n_points_tmp - 1)))
         grid.n_points.append(n_points_tmp)
     return grid
+
+
+def sparsify(g: Grid, max_points: List[int], method: str="linear") -> Grid:
+    """Return sparser version of grid (same range but fewer points)
+
+    If the specified number of points is larger than the datapoints
+    in the original grid, this will leave the number of points unchanged
+
+    :param g: grid to sparsify
+    :param max_points: desired number of points per dimension
+    :param method: interpolation method to use, default "linear"
+    :return sparse_grid: sparsified Grid instance
+    """
+    sparse_n_points = [n if n <= max_points[i] else max_points[i] for i, n in enumerate(g.n_points)]
+    sparse_grid = from_npoints(g.ranges, sparse_n_points)
+    sparse_grid.data = g.interpolate(sparse_grid.points(), method)
+    return sparse_grid

@@ -27,6 +27,7 @@ class BirthDeathLangevinDynamics:
     :param histo: optional histogram to bin the trajectory values
     :param histo_stride: stride between binning to the histogram
     :param kde: use KDE from statsmodels to estimate walker density
+    :param correction_variant: which correction to the birth/death algorithm to use
     """
 
     def __init__(
@@ -36,6 +37,7 @@ class BirthDeathLangevinDynamics:
         bd_bw: List[float] = [0.0],
         bd_seed: Optional[int] = None,
         kde: bool = False,
+        correction_variant: Optional[str] = None,
     ) -> None:
         """Generate needed varables and the birth/death instance from arguments"""
         self.ld: BussiParinelloLD = ld
@@ -50,6 +52,7 @@ class BirthDeathLangevinDynamics:
         self.histo: Optional[Histogram] = None
         self.histo_stride: int = 0
         self.kde: bool = kde
+        self.correction_variant: Optional[str] = correction_variant,
         self.setup()
 
     def setup(self) -> None:
@@ -72,12 +75,13 @@ class BirthDeathLangevinDynamics:
     def setup_bd(self) -> None:
         """Set up BirthDeath from parameters"""
         if self.bd_stride != 0:
-            prob_density = self.bd_prob_density()
+            prob_density = self.bd_prob_density() if self.correction_variant else None
             self.bd = BirthDeath(
                 self.ld.particles,
                 self.bd_time_step,
                 self.bd_bw,
                 self.ld.kt,
+                self.correction_variant,
                 prob_density,
                 self.bd_seed,
                 True,
