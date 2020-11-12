@@ -237,13 +237,18 @@ class BirthDeath:
             print(f"  using KDE to calculate kernels")
         print()
         self.correction_variant: Optional[str] = correction_variant
-        if self.correction_variant == "additive":
-            self.correction: grid.Grid = calc_prob_correction_kernel(eq_density, self.bw, "same")
-        elif self.correction_variant == "multiplicative":
-            conv = dens_kernel_convolution(eq_density, self.bw, "same")
-            self.correction = -np.log(grid.sparsify(conv, [101] * conv.n_dim, "linear"))
-        elif self.correction_variant:
-            raise ValueError(f"Specified correction variant {self.correction_variant} was not understood")
+        if self.correction_variant:
+            if not eq_density:
+                raise ValueError("No equilibrium density for the correction was passed")
+            if self.correction_variant == "additive":
+                print("  using the additive correction")
+                self.correction: grid.Grid = calc_prob_correction_kernel(eq_density, self.bw, "same")
+            elif self.correction_variant == "multiplicative":
+                print("  using the multiplicative correction")
+                conv = dens_kernel_convolution(eq_density, self.bw, "same")
+                self.correction = -np.log(grid.sparsify(conv, [101] * conv.n_dim, "linear"))
+            else:
+                raise ValueError(f"Specified correction variant {self.correction_variant} was not understood")
         if self.logging:
             self.reset_stats()
 
