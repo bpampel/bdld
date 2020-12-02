@@ -9,7 +9,9 @@ from bdld.bussi_parinello_ld import BpldParticle
 from bdld import grid
 
 
-def dens_kernel_convolution(eq_density: grid.Grid, bw: np.ndarray, conv_mode: str) -> grid.Grid:
+def dens_kernel_convolution(
+    eq_density: grid.Grid, bw: np.ndarray, conv_mode: str
+) -> grid.Grid:
     """Return convolution of the equilibrium probability density with the kernel
 
     If the "valid" conv_mode is used the returned grid is smaller than the original one.
@@ -192,6 +194,7 @@ class BirthDeath:
 
     :param correction: Grid holding the correction values
     """
+
     def __init__(
         self,
         particles: List[BpldParticle],
@@ -242,13 +245,19 @@ class BirthDeath:
                 raise ValueError("No equilibrium density for the correction was passed")
             if self.correction_variant == "additive":
                 print("  using the additive correction")
-                self.correction: grid.Grid = calc_prob_correction_kernel(eq_density, self.bw, "same")
+                self.correction: grid.Grid = calc_prob_correction_kernel(
+                    eq_density, self.bw, "same"
+                )
             elif self.correction_variant == "multiplicative":
                 print("  using the multiplicative correction")
                 conv = dens_kernel_convolution(eq_density, self.bw, "same")
-                self.correction = -np.log(grid.sparsify(conv, [101] * conv.n_dim, "linear"))
+                self.correction = -np.log(
+                    grid.sparsify(conv, [101] * conv.n_dim, "linear")
+                )
             else:
-                raise ValueError(f"Specified correction variant {self.correction_variant} was not understood")
+                raise ValueError(
+                    f"Specified correction variant {self.correction_variant} was not understood"
+                )
         if self.logging:
             self.reset_stats()
 
@@ -323,7 +332,6 @@ class BirthDeath:
             beta += self.correction.interpolate(pos, "linear").reshape(len(pos))
             beta -= np.mean(beta[beta != -np.inf])
         return beta
-
 
     def random_particle(self, num_part: int, excl: int) -> int:
         """Select random particle while excluding current one

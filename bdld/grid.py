@@ -283,7 +283,7 @@ def from_stepsizes(
     return grid
 
 
-def sparsify(g: Grid, max_points: List[int], method: str="linear") -> Grid:
+def sparsify(g: Grid, max_points: List[int], method: str = "linear") -> Grid:
     """Return sparser version of grid (same range but fewer points)
 
     If the specified number of points is larger than the datapoints
@@ -294,7 +294,9 @@ def sparsify(g: Grid, max_points: List[int], method: str="linear") -> Grid:
     :param method: interpolation method to use, default "linear"
     :return sparse_grid: sparsified Grid instance
     """
-    sparse_n_points = [n if n <= max_points[i] else max_points[i] for i, n in enumerate(g.n_points)]
+    sparse_n_points = [
+        n if n <= max_points[i] else max_points[i] for i, n in enumerate(g.n_points)
+    ]
     sparse_grid = from_npoints(g.ranges, sparse_n_points)
     sparse_grid.data = g.interpolate(sparse_grid.points(), method)
     return sparse_grid

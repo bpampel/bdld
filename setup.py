@@ -7,7 +7,5 @@ setup(
     author="Benjamin Pampel",
     packages=["bdld"],
     install_requires=["numpy<=1.19", "scipy<=1.5", "matplotlib<=3.3"],
-    extras_require = {
-        'kde-statsmodels':  ["statsmodels"]
-    }
+    extras_require={"kde-statsmodels": ["statsmodels"]},
 )

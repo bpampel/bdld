@@ -56,7 +56,7 @@ class BirthDeathLangevinDynamics:
         self.bd_bw: List[float] = bd_bw
         self.traj: List[List[np.ndarray]] = []
         self.traj_filenames: List[str] = []
-        self.traj_save_freq : int = 0
+        self.traj_save_freq: int = 0
         self.total_steps: int = 0
         self.histo: Optional[Histogram] = None
         self.histo_stride: int = 0
@@ -82,8 +82,7 @@ class BirthDeathLangevinDynamics:
         # initialize trajectory list
         self.traj = [[np.copy(p.pos)] for p in self.ld.particles]
         if self.traj_save_freq == 0:  # default: keep not more than 1,000,000 points
-            self.traj_save_freq= 1000000 // len(self.ld.particles)
-
+            self.traj_save_freq = 1000000 // len(self.ld.particles)
 
     def setup_bd(self) -> None:
         """Set up BirthDeath from parameters"""
@@ -177,12 +176,19 @@ class BirthDeathLangevinDynamics:
         """
         if not self.histo:
             raise ValueError("Histogram was not initialized yet")
-        comb_traj = np.vstack([pos for part in self.traj for pos in part[self._histo_add_first+1::self.histo_stride]])
+        comb_traj = np.vstack(
+            [
+                pos
+                for part in self.traj
+                for pos in part[self._histo_add_first + 1 :: self.histo_stride]
+            ]
+        )
         self.histo.add(comb_traj)
         self.save_traj()
         #  if stride was not matched exactly skip first elements next time
-        self._histo_add_first = self.histo_stride - ((len(self.traj[0]) - self._histo_add_first) % self.histo_stride)
-
+        self._histo_add_first = self.histo_stride - (
+            (len(self.traj[0]) - self._histo_add_first) % self.histo_stride
+        )
 
     def run(self, num_steps: int) -> None:
         """Run the simulation for given number of steps
