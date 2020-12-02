@@ -3,7 +3,7 @@
 
 import argparse
 import numpy as np
-from typing import List
+from typing import List, Union, Tuple
 
 from bdld import analysis
 from bdld.bdld import BirthDeathLangevinDynamics
@@ -166,6 +166,7 @@ def main() -> None:
     if args.seed is not None:
         args.seed += 1000
     bdld = BirthDeathLangevinDynamics(ld, args.bd_stride, args.bw, args.seed, args.kde, args.correction_variant)
+    bdld.traj_save_freq = args.log_stride
 
     if args.correction_file:
         print(f"Saving correction grid due to kernel to: {args.correction_file}")
@@ -226,13 +227,7 @@ def main() -> None:
     bdld.plot_fes(args.fes_image, plot_domain=(-0.5, 8.0), plot_title=plot_title)
 
     # simply divide states by the 0 line for deltaF analysis
-    delta_f_masks = [bdld.histo.bin_centers()[0] < 0, bdld.histo.bin_centers()[0] > 0]
-    delta_f = analysis.calculate_delta_f(bdld.histo.fes, args.kt, delta_f_masks)[0]
-    delta_f_ref = analysis.calculate_delta_f(
-        ld.pot.calculate_reference(bdld.histo.points()),
-        args.kt,
-        delta_f_masks,
-    )[0]
+    delta_f, delta_f_ref = calculate_delta_f(bdld, True)
     print(f"Delta F: {delta_f:.4} (ref: {delta_f_ref:.4})")
 
 
@@ -241,9 +236,18 @@ def print_stats(step: int, bdld: BirthDeathLangevinDynamics) -> None:
     print(f"After {step} time steps:")
     if bdld.bd:
         bdld.bd.print_stats()
+<<<<<<< HEAD
     counts = analysis.count_particles_per_state(bdld.ld.particles, [[(-2.5,0)],[(0,2.5)]])
     print(f"Current walker distribution: {counts[0]} | {counts[1]}")
     print("", flush=True)
+=======
+    counts = analysis.count_particles_per_state(bdld.ld.particles, [(-2.5,0),(0,2.5)])
+    print(f"Current walker distribution: {counts[0]} | {counts[1]}")
+    delta_f = calculate_delta_f(bdld)
+    print(f"Current delta F estimate: {delta_f}")
+    print("", flush=True)
+
+>>>>>>> traj_stride
 
 def init_histo_and_traj_files(
     bdld: BirthDeathLangevinDynamics,
@@ -256,6 +260,20 @@ def init_histo_and_traj_files(
     if clear_traj:
         bdld.save_traj(clear=True)
     bdld.init_histo([200], [(-2.5, 2.5)])
+
+
+def calculate_delta_f(bdld: BirthDeathLangevinDynamics, ref: bool = False) -> Union[float, Tuple[float,float]]:
+    bdld.histo.calculate_fes(bdld.ld.kt)  # update fes
+    fes_not_inf = np.where(bdld.histo.fes != np.inf, True, False)  # exclude parts that weren't yet sampled
+    masks = [
+        np.where(bdld.histo.bin_centers()[0] < 0, True, False) & fes_not_inf,
+        np.where(bdld.histo.bin_centers()[0] > 0, True, False) & fes_not_inf,
+    ]
+    delta_f = analysis.calculate_delta_f(bdld.histo.fes, bdld.ld.kt, masks)[0]
+    if ref:
+        delta_f_ref = analysis.calculate_delta_f(bdld.ld.pot.calculate_reference(bdld.histo.bin_centers()[0]), bdld.ld.kt, masks)[0]
+        return (delta_f, delta_f_ref)
+    return delta_f
 
 
 if __name__ == "__main__":
