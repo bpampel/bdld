@@ -13,7 +13,7 @@ package: venv
 
 venv: $(VIRTUAL_ENV)/bin/activate
 $(VIRTUAL_ENV)/bin/activate: requirements.txt
-	test -d .venv || python3 -m venv $(VIRTUAL_ENV)
+	test -d $(VIRTUAL_ENV) || python3 -m venv $(VIRTUAL_ENV)
 	$(PIP) install -U pip; $(PIP) install -Ur requirements.txt
 	@touch $(VIRTUAL_ENV)/bin/activate
 
