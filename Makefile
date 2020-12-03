@@ -1,4 +1,4 @@
-.PHONY: clean-build install package venv
+.PHONY: clean-build install package test venv
 
 VIRTUAL_ENV?=.venv
 PY=$(VIRTUAL_ENV)/bin/python3
@@ -16,6 +16,9 @@ $(VIRTUAL_ENV)/bin/activate: requirements.txt
 	test -d $(VIRTUAL_ENV) || python3 -m venv $(VIRTUAL_ENV)
 	$(PIP) install -U pip; $(PIP) install -Ur requirements.txt
 	@touch $(VIRTUAL_ENV)/bin/activate
+
+test:
+	python -m unittest discover
 
 clean-pyc:
 	find . -regex '^.*\(__pycache__\|\.py[co]\)' -delete

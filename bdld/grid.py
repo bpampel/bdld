@@ -43,6 +43,14 @@ class Grid:
         except ValueError as e:
             raise ValueError("Data does not fit into grid points") from e
 
+    def _same_points(self, other) -> bool:
+        return (self.n_points == other.n_points) and (self.ranges == other.ranges)
+
+    def __eq__(self, other):
+        if isinstance(other, Grid):
+            return self._same_points(other) and np.array_equal(self.data, other.data)
+        return NotImplemented
+
     def __pos__(self):
         return self._perform_math_on_self(operator.pos)
 
@@ -99,7 +107,7 @@ class Grid:
         new_grid = self.copy_empty()
         if isinstance(other, (float, int, np.ndarray)):
             new_grid.data = oper(self.data, other)
-        elif isinstance(other, Grid):
+        elif isinstance(other, self.__class__):
             if not (self.n_points == other.n_points) or not (
                 self.ranges == other.ranges
             ):
@@ -112,6 +120,7 @@ class Grid:
                 f"Performing math operations with grid and {type(other)} is not supported"
             )
         return new_grid
+
 
     def axes(self) -> List[np.ndarray]:
         """Return list of grid axes per dimension"""
