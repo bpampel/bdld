@@ -1,4 +1,4 @@
-.PHONY: clean-build install package test venv
+.PHONY: clean-build coverage install package test venv
 
 VIRTUAL_ENV?=.venv
 PY=$(VIRTUAL_ENV)/bin/python3
@@ -20,6 +20,10 @@ $(VIRTUAL_ENV)/bin/activate: requirements.txt
 test:
 	python -m unittest discover
 
+coverage: coverage_installed
+	@coverage run -m unittest discover > /dev/null
+	@coverage report
+
 clean-pyc:
 	find . -regex '^.*\(__pycache__\|\.py[co]\)' -delete
 
@@ -33,6 +37,10 @@ clean-venv:
 
 clean-all: clean-pyc clean-build clean-venv
 
-black-exists: ; @which black > /dev/null
-format: black-exists
+format: black_installed
 	black .
+
+# check if tool is installed
+tools_installed := black_installed coverage_installed
+$(tools_installed):
+	@which ${@:_installed=} > /dev/null
