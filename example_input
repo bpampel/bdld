@@ -1,0 +1,17 @@
+[DEFAULT]
+temperature: 1
+
+[ld]
+timestep: 1
+n_steps: 100
+friction: 0.1
+
+[potential]
+n_dim: 1
+coeffs: 0,1,2
+min: 0
+max: 1
+
+[particles]
+number: -1
+initial-distribution: random-global
