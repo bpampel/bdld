@@ -1,4 +1,9 @@
-from typing import List, Optional, Tuple
+"""Optional actions to use in the BirthDeathLangevinDynamics class
+
+These are actions that write to file and do analysis in periodic intervals
+Each of these needs to have a "run(step)" function that performs the action
+"""
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -15,7 +20,7 @@ class TrajectoryAction:
         ld: BussiParinelloLD,
         stride: int = 1,
         filename: str = "",
-        header: PlumedHeader = None,
+        header: Optional[PlumedHeader] = None,
         write_stride: int = 100,
         write_fmt: str = "%14.9",
     ) -> None:
@@ -127,6 +132,7 @@ class HistogramAction:
     :param histo: Histogram data
     :param update_stide: add trajectory data every n time steps
     """
+
     def __init__(
         self,
         traj_action: TrajectoryAction,
@@ -134,7 +140,7 @@ class HistogramAction:
         ranges: List[Tuple[float, float]],
         stride: int = 1,
         filename: str = "",
-        header: Optional[PlumedHeader] = None,
+        header: Optional[Union[PlumedHeader, str]] = None,
         write_stride: Optional[int] = None,
         write_fmt: str = "%14.9",
     ) -> None:
@@ -171,12 +177,13 @@ class HistogramAction:
         self.write_stride = write_stride
         if write_stride:
             if not filename:
-                raise ValueError("Specifying a write_stride but no filename makes no sense")
+                e = "Specifying a write_stride but no filename makes no sense"
+                raise ValueError(e)
             self.filename = filename
             if header:
                 self.header = header
             else:
-                self.header = ''
+                self.header = ""
             self.write_fmt = write_fmt
         self.update_stride = traj_action.stride
 
