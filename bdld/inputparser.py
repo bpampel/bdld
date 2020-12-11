@@ -1,4 +1,12 @@
-"""Input class and helpers to parse input from file"""
+"""Input class and helpers to parse input from file
+
+The configparser parses only simple items (str, float, int, bool), this was
+extended to also allow comma separated list of values. More complicated syntax
+like nested lists makes the writing and parsing of input files more error-prone.
+
+The downside is that some of the options might need transforming. This is not done
+directly but some helper functions to do it are provided in this file.
+"""
 
 import configparser
 from typing import (
@@ -7,8 +15,9 @@ from typing import (
     Dict,
     List,
     Optional,
-    Type,
     Union,
+    Tuple,
+    Type,
 )
 
 
@@ -88,8 +97,9 @@ class InputOption:
 class Input:
     """Class that parses the input file
 
-    Each section of the config is parsed in a seperate function defining the individual InputOption
-    objects. The parsed options are then stored in one dictionary per section.
+    Each section of the config is parsed in a seperate function defining the individual
+    InputOption objects. The parsed options are then stored in one dictionary per
+    section.
 
     :paam
     """
@@ -126,7 +136,7 @@ class Input:
 
         Does then launch the config for the individual sections
         """
-        # test that file can be opened -> raise FileNotFoundError if not
+        # test that file can be opened -> raises FileNotFoundError if not
         with open(self.filename) as _:
             pass
 
@@ -243,9 +253,10 @@ class Input:
     def parse_trajectories(self, section: configparser.SectionProxy) -> None:
         """Define and parse the options for trajectory output"""
         options = [
-            InputOption("filename", str, False, None),
+            InputOption("filename", str, False),
             InputOption("stride", int, True, Input.positive),
-            InputOption("save-stride", int, False, Input.positive),
+            InputOption("write-stride", int, False, Input.positive),
+            InputOption("fmt", str, False),
         ]
         self.trajectories = self.parse_section(section, options)
 
@@ -254,18 +265,19 @@ class Input:
         options = [
             InputOption("stride", int, True, Input.positive),
             InputOption("filename", str, False, None),
-            InputOption("save-stride", int, False, Input.positive),
+            InputOption("write-stride", int, False, Input.positive),
+            InputOption("fmt", str, False),
         ]
         if self.potential["n_dim"] == 1:
             options += [
-                InputOption("min", float, True, None),
-                InputOption("max", float, True, None),
+                InputOption("min", float, True),
+                InputOption("max", float, True),
                 InputOption("bins", int, True, Input.positive),
             ]
         else:
             options += [
-                InputOption("min", [float], True, None),
-                InputOption("max", [float], True, None),
+                InputOption("min", [float], True),
+                InputOption("max", [float], True),
                 InputOption("bins", [int], True, Input.all_positive),
             ]
         self.histogram = self.parse_section(section, options)
@@ -277,9 +289,10 @@ class Input:
         options = [
             InputOption("temperature", float, True, Input.positive),
             InputOption("stride", int, True, Input.positive),
-            InputOption("filename", str, False, None),
-            InputOption("plot", bool, False, None),
-            InputOption("plot-filename", str, False, None),
+            InputOption("filename", str, False),
+            InputOption("fmt", str, False),
+            InputOption("plot", bool, False),
+            InputOption("plot-filename", str, False),
         ]
         self.fes = self.parse_section(section, options)
 
@@ -290,8 +303,8 @@ class Input:
         options = [
             InputOption("stride", int, True, Input.positive),
         ]
-        n_states = self.get_number_of_options(section, "state", "-min")
-        if n_states == self.get_number_of_options(section, "state", "-max"):
+        n_states = len(get_all_numbered_values(section, "state", "-min"))
+        if n_states == len(get_number_of_options(section, "state", "-max")):
             raise InputError(
                 "The number of min and max options for the states doesn't match",
                 "statex-min",
@@ -299,8 +312,8 @@ class Input:
             )
         for i in range(n_states):
             options += [
-                InputOption("state" + str(i + 1) + "-min", float, True, None),
-                InputOption("state" + str(i + 1) + "-max", float, True, None),
+                InputOption("state" + str(i + 1) + "-min", float, True),
+                InputOption("state" + str(i + 1) + "-max", float, True),
             ]
         self.delta_f = self.parse_section(section, options)
 
@@ -309,8 +322,8 @@ class Input:
         options = [
             InputOption("stride", int, True, Input.positive),
         ]
-        n_states = self.get_number_of_options(section, "state", "-min")
-        if n_states == self.get_number_of_options(section, "state", "-max"):
+        n_states = len(get_all_numbered_values(section, "state", "-min"))
+        if n_states == len(get_all_numbered_values(section, "state", "-max")):
             raise InputError(
                 "The number of min and max options for the states doesn't match",
                 "statex-min",
@@ -318,12 +331,11 @@ class Input:
             )
         for i in range(n_states):
             options += [
-                InputOption("state" + str(i + 1) + "-min", float, True, None),
-                InputOption("state" + str(i + 1) + "-max", float, True, None),
+                InputOption("state" + str(i + 1) + "-min", float, True),
+                InputOption("state" + str(i + 1) + "-max", float, True),
             ]
         self.particle_statistics = self.parse_section(section, options)
 
-    # end of input section specifications, below are some helper functions
     @staticmethod
     def parse_section(
         section: configparser.SectionProxy, options: List[InputOption]
@@ -334,19 +346,41 @@ class Input:
             parsed_options[o.key] = o.parse(section)
         return parsed_options
 
-    @staticmethod
-    def get_number_of_options(
-        section: configparser.SectionProxy, prefix: str = "", suffix: str = ""
-    ) -> int:
-        """Check how many numbered options with the given name were specified in section
 
-        :param section: section to search through
-        :param prefix: prefix of option key (string before number)
-        :param suffix: suffix of option key (string after number)
-        """
-        counter = 0
-        while True:
-            if f"{prefix}{counter+1}{suffix}" in section.keys():
-                counter += 1
-            else:
-                return counter
+# helper functions to transform the options
+def get_all_numbered_values(
+    section: Union[configparser.SectionProxy, Dict[str, OptionType]],
+    prefix: str = "",
+    suffix: str = "",
+) -> List[OptionType]:
+    """Returns all numbered options with the given key name
+
+    :param section: section/dict to search
+    :param prefix: prefix of option key (string before number)
+    :param suffix: suffix of option key (string after number)
+    """
+    counter = 0
+    res: List[OptionType] = []
+    while True:
+        value = section[f"{prefix}{counter+1}{suffix}"]
+        if value:
+            res.append(value)
+            counter += 1
+        else:
+            return res
+
+
+def min_max_to_ranges(
+    min_list: List[float], max_list: List[float]
+) -> List[Tuple[float, float]]:
+    """Transform the max and min lists to a single list of tuples
+
+    The min_list and max_list have one point per entry, i.e. for more than 1D they are
+    also lists.
+
+    :param min_list: list with all minimum points of the intervals
+    :param max_list: list with all maximum points of the intervals
+    """
+    if len(min_list) != len(max_list):
+        raise ValueError("Not the same number of minimum and maximum points given")
+    return list(zip(min_list, max_list))
