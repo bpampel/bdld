@@ -254,7 +254,7 @@ class Input:
         """Define and parse the options for trajectory output"""
         options = [
             InputOption("filename", str, False),
-            InputOption("stride", int, True, Input.positive),
+            InputOption("stride", int, False, Input.positive),
             InputOption("write-stride", int, False, Input.positive),
             InputOption("fmt", str, False),
         ]
@@ -263,7 +263,7 @@ class Input:
     def parse_histogram(self, section: configparser.SectionProxy) -> None:
         """Define and parse the options for histogramming the trajectories"""
         options = [
-            InputOption("stride", int, True, Input.positive),
+            InputOption("stride", int, False, Input.positive),
             InputOption("filename", str, False, None),
             InputOption("write-stride", int, False, Input.positive),
             InputOption("fmt", str, False),
@@ -287,12 +287,15 @@ class Input:
         if not self.histogram:
             raise configparser.NoSectionError("histogram")
         options = [
-            InputOption("temperature", float, True, Input.positive),
-            InputOption("stride", int, True, Input.positive),
+            InputOption("kt", float, True, Input.positive),
+            InputOption("stride", int, False, Input.positive),
             InputOption("filename", str, False),
+            InputOption("write-stride", int, False, Input.positive),
             InputOption("fmt", str, False),
-            InputOption("plot", bool, False),
+            InputOption("plot-stride", int, False),
             InputOption("plot-filename", str, False),
+            InputOption("plot-domain", str, False),
+            InputOption("plot-title", str, False),
         ]
         self.fes = self.parse_section(section, options)
 
