@@ -3,6 +3,7 @@
 from typing import List, Optional, Union
 import numpy as np
 
+from bdld.action import Action
 from bdld.particle import Particle
 from bdld.potential import Potential
 
@@ -23,7 +24,7 @@ class BpldParticle(Particle):
         self.c2: float = 0.0  # second thermostat constant depends on mass
 
 
-class BussiParinelloLD:
+class BussiParinelloLD(Action):
     """Perform Langevin Dynamics with Bussi-Parinello thermostat
 
     Can handle multiple non-interacting particles (= walkers) simultaneously
@@ -72,7 +73,7 @@ class BussiParinelloLD:
             print(f"  seed = {seed}")
         print()
 
-    def step(self) -> None:
+    def run(self, step: int = None) -> None:
         """Perform single MD step on all particles"""
         for p in self.particles:
             # first part of thermostat

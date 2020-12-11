@@ -89,8 +89,12 @@ class Histogram(grid.Grid):
         if mintozero:
             fes -= np.min(fes)
         self.fes = fes
+        return self.get_fes_grid()
+
+    def get_fes_grid(self) -> grid.Grid:
+        """Returns the fes as Grid instead of numpy array"""
         new_grid = self.grid_from_histo()
-        new_grid.data = fes
+        new_grid.data = self.fes
         return new_grid
 
     def grid_from_histo(self) -> grid.Grid:

@@ -5,6 +5,7 @@ from typing import List, Optional, Union, Tuple
 
 import numpy as np
 
+from bdld.action import Action
 from bdld.bussi_parinello_ld import BpldParticle
 from bdld import grid
 
@@ -189,43 +190,50 @@ def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
         return np.mean(squareform(gauss), axis=0)
 
 
-class BirthDeath:
+class BirthDeath(Action):
     """Birth death algorithm
 
     :param correction: Grid holding the correction values
+    :param kill_count: number of succesful death events
+    :param kill_attempts: number of attempted death events
+    :param dup_count: number of succesful birth events
+    :param dup_attempts: number of succesful birth events
     """
 
     def __init__(
         self,
         particles: List[BpldParticle],
         dt: float,
+        stride: int,
         bw: Union[List[float], np.ndarray],
         kt: float,
         correction_variant: Optional[str] = None,
         eq_density: Optional[grid.Grid] = None,
         seed: Optional[int] = None,
-        logging: bool = False,
+        stats_stride: Optional[int] = None,
         kde: bool = False,
     ) -> None:
         """Set arguments
 
         :param particles: list of Particles shared with MD
         :param dt: timestep of MD
+        :param stride: number of timesteps between birth-death exectutions
         :param bw: bandwidth for gaussian kernels per direction
         :param kt: thermal energy of system
         :param correction_variant: correction from original algorithm
                                    can be "additive", "multiplicative" or None
         :param eq_density: Equilibrium probability density of system, (grid, values)
         :param seed: Seed for rng (optional)
-        :param logging: Collect statistics
+        :param stats_stride: Print statistics every n time steps
         :param kde: Use KDE from statsmodels to estimate walker density
         """
         self.particles: List[BpldParticle] = particles
+        self.stride: int = stride
         self.dt: float = dt
         self.bw: np.ndarray = np.array(bw, dtype=float)
         self.inv_kt: float = 1 / kt
         self.rng: np.random.Generator = np.random.default_rng(seed)
-        self.logging: bool = logging
+        self.stats_stride: Optional[int] = stats_stride
         self.kde: bool = kde
         print(
             f"Setting up birth/death scheme\n"
@@ -258,21 +266,23 @@ class BirthDeath:
                 raise ValueError(
                     f"Specified correction variant {self.correction_variant} was not understood"
                 )
-        if self.logging:
-            self.reset_stats()
+        self.reset_stats()
 
-    def step(self) -> List[Tuple[int, int]]:
+    def run(self, step: int) -> None:
         """Perform birth-death step on particles
 
-        Returns list of succesful birth/death events"""
-        bd_events = self.calculate_birth_death()
-        for dup, kill in bd_events:
-            self.particles[kill] = copy.deepcopy(self.particles[dup])
-            # this copies all properties: is this desired?
-            # what should be done with the momentum? Keep? Set to 0?
-            # -> violates energy conservation!
-            # keep the old random number for the initial thermostat step or generate new?
-        return bd_events
+        :param step: current timestep of simulation
+        """
+        if step % self.stride == 0:
+            bd_events = self.calculate_birth_death()
+            for dup, kill in bd_events:
+                self.particles[kill] = copy.deepcopy(self.particles[dup])
+                # this copies all properties: is this desired?
+                # what should be done with the momentum? Keep? Set to 0?
+                # -> violates energy conservation!
+                # keep the old random number for the initial thermostat step or generate new?
+        if self.stats_stride and step % self.stats_stride == 0:
+            self.print_stats()
 
     def calculate_birth_death(self) -> List[Tuple[int, int]]:
         """Calculate which particles to kill and duplicate
@@ -286,10 +296,10 @@ class BirthDeath:
         dup_list: List[int] = []
         kill_list: List[int] = []
         beta = self.calc_betas()
-        if self.logging:  # get number of attempts from betas
-            curr_kill_attempts = np.count_nonzero(beta > 0)
-            self.kill_attempts += curr_kill_attempts
-            self.dup_attempts += num_part - curr_kill_attempts
+        # get number of attempts from betas
+        curr_kill_attempts = np.count_nonzero(beta > 0)
+        self.kill_attempts += curr_kill_attempts
+        self.dup_attempts += num_part - curr_kill_attempts
 
         # evaluate all at same time not sequentially as in original paper
         # does it matter?
@@ -302,14 +312,12 @@ class BirthDeath:
                 if beta[i] > 0:
                     kill_list.append(i)
                     dup_list.append(self.random_particle(num_part, i))
-                    if self.logging:
-                        self.kill_count += 1
+                    self.kill_count += 1
                 elif beta[i] < 0:
                     dup_list.append(i)
                     # prevent killing twice
                     kill_list.append(self.random_particle(num_part, i))
-                    if self.logging:
-                        self.dup_count += 1
+                    self.dup_count += 1
 
         return list(zip(dup_list, kill_list))
 
@@ -372,43 +380,37 @@ class BirthDeath:
 
     def print_stats(self, reset: bool = False) -> None:
         """Print birth/death probabilities to screen"""
-        if self.logging:
-            try:
-                kill_perc = 100 * self.kill_count / self.kill_attempts
-            except ZeroDivisionError:
-                kill_perc = np.nan
-            try:
-                dup_perc = 100 * self.dup_count / self.dup_attempts
-            except ZeroDivisionError:
-                dup_perc = np.nan
-            try:
-                ratio_succ = self.dup_count / self.kill_count
-            except ZeroDivisionError:
-                ratio_succ = np.nan
-            try:
-                ratio_attempts = self.dup_attempts / self.kill_attempts
-            except ZeroDivisionError:
-                ratio_attempts = np.nan
-            print(
-                f"Succesful birth events: {self.dup_count}/{self.dup_attempts} ({dup_perc:.4}%)"
-            )
-            print(
-                f"Succesful death events: {self.kill_count}/{self.kill_attempts} ({kill_perc:.4}%)"
-            )
-            print(
-                f"Ratio birth/death: {ratio_succ:.4} (succesful)  {ratio_attempts:.4} (attemps)"
-            )
-            if reset:
-                self.reset_stats()
-        else:
-            raise ValueError("Can't print statistics: Logging is turned off")
+        try:
+            kill_perc = 100 * self.kill_count / self.kill_attempts
+        except ZeroDivisionError:
+            kill_perc = np.nan
+        try:
+            dup_perc = 100 * self.dup_count / self.dup_attempts
+        except ZeroDivisionError:
+            dup_perc = np.nan
+        try:
+            ratio_succ = self.dup_count / self.kill_count
+        except ZeroDivisionError:
+            ratio_succ = np.nan
+        try:
+            ratio_attempts = self.dup_attempts / self.kill_attempts
+        except ZeroDivisionError:
+            ratio_attempts = np.nan
+        print(
+            f"Succesful birth events: {self.dup_count}/{self.dup_attempts} ({dup_perc:.4}%)"
+        )
+        print(
+            f"Succesful death events: {self.kill_count}/{self.kill_attempts} ({kill_perc:.4}%)"
+        )
+        print(
+            f"Ratio birth/death: {ratio_succ:.4} (succesful)  {ratio_attempts:.4} (attemps)"
+        )
+        if reset:
+            self.reset_stats()
 
     def reset_stats(self) -> None:
         """Set all logging counters to zero"""
-        if self.logging:
-            self.dup_count = 0
-            self.dup_attempts = 0
-            self.kill_count = 0
-            self.kill_attempts = 0
-        else:
-            raise ValueError("Can't reset statistics: Logging is turned off")
+        self.dup_count = 0
+        self.dup_attempts = 0
+        self.kill_count = 0
+        self.kill_attempts = 0

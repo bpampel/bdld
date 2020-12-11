@@ -1,19 +1,20 @@
-"""Optional actions to use in the BirthDeathLangevinDynamics class
+"""Optional actions
 
 These are actions that write to file and do analysis in periodic intervals
-Each of these needs to have a "run(step)" function that performs the action
+Each of these needs to inherit from action.Action
 """
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
 from bdld import analysis
+from bdld.action import Action
 from bdld.bussi_parinello_ld import BussiParinelloLD
 from bdld.histogram import Histogram
 from bdld.helpers.plumed_header import PlumedHeader
 
 
-class TrajectoryAction:
+class TrajectoryAction(Action):
     """Class that stories trajectories and writes them to file"""
 
     def __init__(
@@ -52,7 +53,7 @@ class TrajectoryAction:
                         fileheader[0] = f"FIELDS traj.{i}"
                         f.write(str(fileheader) + "\n")
 
-    def run(self, step):
+    def run(self, step: int) -> None:
         """Store positions in traj array and write to file if write_stride is matched
 
         The stride parameters is ignored here and all times are temporarily stored
@@ -67,7 +68,11 @@ class TrajectoryAction:
         if step % self.write_stride == 0:
             self.write(step)
 
-    def write(self, step: int):
+    def final_run(self, step: int) -> None:
+        """Write rest of trajectories to files"""
+        self.write(step)
+
+    def write(self, step: int) -> None:
         """Write currently stored trajectory data to file
 
         This can also be called between regular saves (e.g. at the end of the simulation)
@@ -124,7 +129,7 @@ class TrajectoryAction:
         return self.traj[first_element:last_element:stride]
 
 
-class HistogramAction:
+class HistogramAction(Action):
     """Action collecting trajectory data into a histogram
 
     The Histogram data member is periodically enhanced with the new data from
@@ -201,6 +206,14 @@ class HistogramAction:
             if step % self.write_stride == 0:
                 self.write(step)
 
+    def final_run(self, step: int):
+        """Same as run without stride checks"""
+        data = self.traj_action.get_valid_data(step, self.stride)
+        # flatten the first 2 dimensions (combine all times)
+        self.histo.add(data.reshape(-1, data.shape[-1]))
+        if self.filename:
+            self.write()
+
     def write(self, step: int = None):
         """Write histogram to file
 
@@ -216,7 +229,7 @@ class HistogramAction:
         self.histo.write_to_file(filename, self.write_fmt, str(self.fileheader))
 
 
-class FesAction:
+class FesAction(Action):
     """Calculate fes from histogram and save to file"""
 
     def __init__(
@@ -231,7 +244,7 @@ class FesAction:
         plot_stride: Optional[int] = None,
         plot_filename: str = "",
         plot_domain: Optional[Tuple[float, float]] = None,
-        plot_title: Optional[str] = None,
+        plot_title: str = "",
         ref: Optional[np.ndarray] = None,
     ) -> None:
         """Set up fes action for a Histogram
@@ -289,9 +302,6 @@ class FesAction:
     def run(self, step: int) -> None:
         """Calculate fes from histogram, write to file and plot if matching strides
 
-        If no step is specified this will always perform the actions.
-        This can thus be run even if no strides were set.
-
         :param step: current simulation step, optional
         """
         if not step or step % self.stride == 0:
@@ -302,6 +312,14 @@ class FesAction:
         if not step or step % self.plot_stride == 0:
             if self.plot_filename:
                 self.plot(step)
+
+    def run_final(self, step: int) -> None:
+        """Same as run without stride checks"""
+        self.histo_action.histo.calculate_fes(self.kt)
+        if self.filename:
+            self.write()
+        if self.plot_filename:
+            self.plot()
 
     def write(self, step: int = None) -> None:
         """Write fes to file
@@ -319,7 +337,7 @@ class FesAction:
             filename, self.write_fmt, str(self.fileheader)
         )
 
-    def plot(self, step) -> None:
+    def plot(self, step: int = None) -> None:
         """Plot fes with reference and optionally save to file
 
         If a step is specified it will be appended to the filename, i.e. it is written
@@ -329,13 +347,15 @@ class FesAction:
         """
         if step:
             filename = f"{self.filename}_{step}"
+            plot_title = f"{self.plot_title}_{step}"
         else:
             filename = self.filename
+            plot_title = self.plot_title
         analysis.plot_fes(
             self.histo_action.histo.fes,
             self.histo_action.histo.bin_centers(),
             ref=self.ref,
             plot_domain=self.plot_domain,
             filename=filename,
-            title=self.plot_title,
+            title=plot_title,
         )
