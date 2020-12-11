@@ -104,7 +104,7 @@ class Input:
 
     # @staticmethod
     # def match_dimensions(n_dim: int) -> Condition:
-        # return Condition(lambda x: x == n_dim, f"wrong dimensions (must be {n_dim})")
+    # return Condition(lambda x: x == n_dim, f"wrong dimensions (must be {n_dim})")
 
     def __init__(self, filename: str) -> None:
         self.filename = filename

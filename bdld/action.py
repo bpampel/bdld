@@ -3,6 +3,7 @@
 
 class Action:
     """Abstract base class for all actions"""
+
     def run(self, step: int):
         """Needs to be defined for all actions"""
         raise NotImplementedError()

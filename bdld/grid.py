@@ -121,7 +121,6 @@ class Grid:
             )
         return new_grid
 
-
     def axes(self) -> List[np.ndarray]:
         """Return list of grid axes per dimension"""
         return [
