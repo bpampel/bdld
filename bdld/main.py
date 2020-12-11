@@ -1,7 +1,9 @@
 """Class that takes care about running and analysing a simulation"""
 
 import argparse
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
+import sys
+
 import numpy as np
 
 from bdld import inputparser
@@ -27,14 +29,24 @@ def main() -> None:
     """
     # parse cli argument(s)
     cliargs = argparse.ArgumentParser()
-    cliargs.add_argument("input", type=argparse.FileType("r"), required=True)
+    cliargs.add_argument("input", type=str)
     infile = cliargs.parse_args().input
 
-    # parse infile and initialize all actions
-    config = inputparser.Input(infile)
+    try:
+        config = inputparser.Input(infile)
+    except FileNotFoundError:
+        print(f"Error: Input file '{infile}' could not be found", file=sys.stderr)
+        sys.exit(1)
+    except inputparser.InputError as e:
+        print(e.args[0], file=sys.stderr)
+        sys.exit(1)
 
 
-    actions: Dict[str, Action] = {}  # dicts are ordered since python 3.7
+    # initialize all actions
+    actions: Dict[str, Action] = {}
+    # dicts are ordered since python 3.7
+    # actions are performed in order of insertion to the dict
+    # make sure actions are added after their dependencies (e.g. fes after hist)
 
     pot = setup_pot(config.potential)
     ld = BussiParinelloLD(
@@ -45,21 +57,19 @@ def main() -> None:
         config.ld["seed"],
     )
     init_particles(config.particles, ld)
-    actions['ld'] = ld
+    actions["ld"] = ld
 
     if config.birth_death:
-        actions['birth_death'] = setup_birth_death(config.birth_death, ld)
+        actions["birth_death"] = setup_birth_death(config.birth_death, ld)
 
     # main loop
     for step in range(config.ld["n_steps"]):
-        # actions are performed in order of insertion to the dict
-        # make sure actions are added after their dependencies (e.g. fes after hist)
         for action in actions.values():
             action.run(step)
 
     # final_run
     for action in actions.values():
-        action.final_run(config.ld["n_steps"]-1)
+        action.final_run(config.ld["n_steps"] - 1)
 
 
 def setup_pot(options: Dict) -> Potential:

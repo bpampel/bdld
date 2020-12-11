@@ -1,16 +1,16 @@
 [DEFAULT]
-temperature: 1
+kt: 1
 
 [ld]
-timestep: 1
+timestep: 0.005
 n_steps: 100
 friction: 0.1
 
 [potential]
 n_dim: 1
-coeffs: 0
-min: 0
-max: 1
+coeffs: 0, 0.1, -4, 0, 1
+min: -2.5
+max: 2.5
 
 [particles]
 number: 10

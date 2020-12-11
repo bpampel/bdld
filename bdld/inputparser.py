@@ -126,6 +126,11 @@ class Input:
 
         Does then launch the config for the individual sections
         """
+        # test that file can be opened -> raise FileNotFoundError if not
+        with open(self.filename) as _:
+            pass
+
+        print(f"Parsing input from file '{self.filename}'\n")
         infile = configparser.ConfigParser()
         infile.read(self.filename)
 
