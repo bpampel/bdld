@@ -13,7 +13,7 @@ from typing import (
 
 
 BuiltinType = Union[str, float, int, bool]
-OptionType = Union[BuiltinType, List[BuiltinType]]
+OptionType = Union[BuiltinType, List[BuiltinType], None]
 
 
 class InputError(Exception):
@@ -64,7 +64,7 @@ class InputOption:
             val: OptionType = section.get(self.key)
         try:
             if self.keytype == float:
-                val= section.getfloat(self.key)
+                val = section.getfloat(self.key)
             if self.keytype == int:
                 val = section.getint(self.key)
             if self.keytype == bool:
@@ -107,7 +107,7 @@ class Input:
         # return Condition(lambda x: x == n_dim, f"wrong dimensions (must be {n_dim})")
 
     def __init__(self, filename: str) -> None:
-        self.filename= filename
+        self.filename = filename
         # each config sections has it's own dictionary
         self.ld: Dict[str, OptionType] = {}
         self.potential: Dict[str, OptionType] = {}
@@ -156,7 +156,7 @@ class Input:
         options = [
             InputOption("timestep", float, True, Input.positive_or_zero),
             InputOption("n_steps", int, True, Input.positive),
-            InputOption("temperature", float, True, Input.positive),
+            InputOption("kt", float, True, Input.positive),
             InputOption("friction", float, True, Input.positive_or_zero),
         ]
         self.ld = self.parse_section(section, options)
@@ -169,52 +169,65 @@ class Input:
         if n_dim == 1:
             options = [
                 n_dim_option,
-                InputOption("coeffs", [float], True, None),
-                InputOption("min", float, True, None),
-                InputOption("max", float, True, None),
+                InputOption("coeffs", [float], True),
+                InputOption("min", float, True),
+                InputOption("max", float, True),
             ]
         else:
             options = [
                 n_dim_option,
-                InputOption("min", [float], True, None),
-                InputOption("max", [float], True, None),
+                InputOption("min", [float], True),
+                InputOption("max", [float], True),
             ]
             for i in range(n_dim):
-                options.append(InputOption("coeffs" + str(i + 1), [float], True, None))
+                options.append(InputOption("coeffs" + str(i + 1), [float], True))
+        options.append(InputOption("seed", int, False))
         self.potential = self.parse_section(section, options)
 
     def parse_particles(self, section: configparser.SectionProxy) -> None:
         """Parse the number of particles and initial distribution"""
+        options = [
+            InputOption("number", int, True, Input.positive),
+            InputOption("seed", int, False),
+        ]
+
+        # a bit more logic because the variants require different options
         initial_distribution_variants = [
             "random-global",
-            "random-states",
-            "equal-states",
+            "random-pos",
+            "fraction-pos",
         ]
         allowed_initial_distribution = Condition(
             lambda x: x in initial_distribution_variants,
             f"must be one of {initial_distribution_variants}",
         )
 
-        options = [
-            InputOption("number", int, True, Input.positive),
-            InputOption(
-                "initial-distribution", str, True, allowed_initial_distribution
-            ),
-        ]
+        init_dist_option = InputOption(
+            "initial-distribution", str, True, allowed_initial_distribution
+        )
+        init_dist = cast(str, init_dist_option.parse(section))
+        options.append(init_dist_option)
+
+        if init_dist in ["random-pos", "fraction-pos"]:
+            for i in range(self.get_number_of_options(section, "pos")):
+                options.append(InputOption(f"pos{i}", [float], True))
+
+        if init_dist == "fractions-pos":
+            options.append(InputOption("fractions", [float], True))
+
         self.particles = self.parse_section(section, options)
 
     def parse_birth_death(self, section: configparser.SectionProxy) -> None:
         """Define and parse the options of the potential"""
         options = [
-            InputOption("stride",             int, True, Input.positive),
-            InputOption("correction-variant", str, False, None),  # not checked here
-            InputOption("stats-stride",       int, False, Input.positive),
+            InputOption("stride", int, True, Input.positive),
+            InputOption("correction-variant", str, False),  # not checked here
+            InputOption("stats-stride", int, False, Input.positive),
+            InputOption("seed", int, False),
         ]
 
         if self.potential["n_dim"] == 1:
-            options.append(
-                InputOption("kernel-bandwidth", float, True, Input.positive)
-            )
+            options.append(InputOption("kernel-bandwidth", float, True, Input.positive))
         else:
             options.append(
                 InputOption("kernel-bandwidth", [float], True, Input.all_positive)
@@ -224,8 +237,8 @@ class Input:
     def parse_trajectories(self, section: configparser.SectionProxy) -> None:
         """Define and parse the options for trajectory output"""
         options = [
-            InputOption("filename",    str, False, None),
-            InputOption("stride",      int, True,  Input.positive),
+            InputOption("filename", str, False, None),
+            InputOption("stride", int, True, Input.positive),
             InputOption("save-stride", int, False, Input.positive),
         ]
         self.trajectories = self.parse_section(section, options)
@@ -233,48 +246,55 @@ class Input:
     def parse_histogram(self, section: configparser.SectionProxy) -> None:
         """Define and parse the options for histogramming the trajectories"""
         options = [
-            InputOption("stride",       int, True,  Input.positive),
-            InputOption("filename",     str, False, None),
-            InputOption("save-stride",  int, False, Input.positive),
+            InputOption("stride", int, True, Input.positive),
+            InputOption("filename", str, False, None),
+            InputOption("save-stride", int, False, Input.positive),
         ]
         if self.potential["n_dim"] == 1:
             options += [
-            InputOption("min",  float, True,  None),
-            InputOption("max",  float, True,  None),
-            InputOption("bins", int,   True,  Input.positive),
+                InputOption("min", float, True, None),
+                InputOption("max", float, True, None),
+                InputOption("bins", int, True, Input.positive),
             ]
         else:
             options += [
-            InputOption("min",  [float], True,  None),
-            InputOption("max",  [float], True,  None),
-            InputOption("bins", [int],   True,  Input.all_positive),
+                InputOption("min", [float], True, None),
+                InputOption("max", [float], True, None),
+                InputOption("bins", [int], True, Input.all_positive),
             ]
         self.histogram = self.parse_section(section, options)
 
     def parse_fes(self, section: configparser.SectionProxy) -> None:
         """Define and parse the fes section"""
         if not self.histogram:
-            raise configparser.NoSectionError('histogram')
+            raise configparser.NoSectionError("histogram")
         options = [
-            InputOption("temperature",   float, True,  Input.positive),
-            InputOption("stride",        int,   True,  Input.positive),
-            InputOption("filename",      str,   False, None),
-            InputOption("plot",          bool,  False, None),
-            InputOption("plot-filename", str,   False, None),
+            InputOption("temperature", float, True, Input.positive),
+            InputOption("stride", int, True, Input.positive),
+            InputOption("filename", str, False, None),
+            InputOption("plot", bool, False, None),
+            InputOption("plot-filename", str, False, None),
         ]
         self.fes = self.parse_section(section, options)
 
     def parse_delta_f(self, section: configparser.SectionProxy) -> None:
         """Define and parse if delta f should be calculated section"""
         if not self.fes:
-            raise configparser.NoSectionError('fes')
+            raise configparser.NoSectionError("fes")
         options = [
             InputOption("stride", int, True, Input.positive),
         ]
-        for i in range(self.get_number_of_states(section)):
+        n_states = self.get_number_of_options(section, "state", "-min")
+        if n_states == self.get_number_of_options(section, "state", "-max"):
+            raise InputError(
+                "The number of min and max options for the states doesn't match",
+                "statex-min",
+                section.name,
+            )
+        for i in range(n_states):
             options += [
-                InputOption('state'+str(i+1)+'-min', float, True, None),
-                InputOption('state'+str(i+1)+'-max', float, True, None),
+                InputOption("state" + str(i + 1) + "-min", float, True, None),
+                InputOption("state" + str(i + 1) + "-max", float, True, None),
             ]
         self.delta_f = self.parse_section(section, options)
 
@@ -283,10 +303,17 @@ class Input:
         options = [
             InputOption("stride", int, True, Input.positive),
         ]
-        for i in range(self.get_number_of_states(section)):
+        n_states = self.get_number_of_options(section, "state", "-min")
+        if n_states == self.get_number_of_options(section, "state", "-max"):
+            raise InputError(
+                "The number of min and max options for the states doesn't match",
+                "statex-min",
+                section.name,
+            )
+        for i in range(n_states):
             options += [
-                InputOption('state'+str(i+1)+'-min', float, True, None),
-                InputOption('state'+str(i+1)+'-max', float, True, None),
+                InputOption("state" + str(i + 1) + "-min", float, True, None),
+                InputOption("state" + str(i + 1) + "-max", float, True, None),
             ]
         self.particle_statistics = self.parse_section(section, options)
 
@@ -295,9 +322,7 @@ class Input:
     def parse_section(
         section: configparser.SectionProxy, options: List[InputOption]
     ) -> Dict[str, OptionType]:
-        """Parse all options of a section
-
-        Logic prevents all non-compulsory options from being added to the dictionary"""
+        """Parse all options of a section"""
         parsed_options: Dict[str, OptionType] = {}
         for o in options:
             res = o.parse(section)
@@ -306,17 +331,18 @@ class Input:
         return parsed_options
 
     @staticmethod
-    def get_number_of_states(section: configparser.SectionProxy) -> int:
-        """Check how many states were specified in section
+    def get_number_of_options(
+        section: configparser.SectionProxy, prefix: str = "", suffix: str = ""
+    ) -> int:
+        """Check how many numbered options with the given name were specified in section
 
-        The keys are pairs like 'state1-min' 'state1-max'
+        :param section: section to search through
+        :param prefix: prefix of option key (string before number)
+        :param suffix: suffix of option key (string after number)
         """
-        minima = [minx for minx in section.keys() if 'state' in minx and 'min' in minx]
-        maxima = [maxx for maxx in section.keys() if 'state' in maxx and 'max' in maxx]
-        # but check that their numbers are a sequence starting at 1
-        for i,_ in enumerate(minima):
-            minx = 'state'+str(i+i)+'-min'
-            maxx = 'state'+str(i+i)+'-max'
-            if not minx in minima or not maxx in maxima:
-                raise InputError(f"could not find both {minx} and {maxx} for this state", minx, section.name)
-        return len(minima)
+        counter = 0
+        while True:
+            if f"{prefix}{counter+1}{suffix}" in section.keys():
+                counter += 1
+            else:
+                return counter
