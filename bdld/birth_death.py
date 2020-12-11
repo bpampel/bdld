@@ -211,7 +211,7 @@ class BirthDeath(Action):
         eq_density: Optional[grid.Grid] = None,
         seed: Optional[int] = None,
         stats_stride: Optional[int] = None,
-        kde: bool = False,
+        kde: Optional[bool] = None,
     ) -> None:
         """Set arguments
 
@@ -234,7 +234,7 @@ class BirthDeath(Action):
         self.inv_kt: float = 1 / kt
         self.rng: np.random.Generator = np.random.default_rng(seed)
         self.stats_stride: Optional[int] = stats_stride
-        self.kde: bool = kde
+        self.kde: bool = kde if kde else False
         print(
             f"Setting up birth/death scheme\n"
             f"Parameters:\n"

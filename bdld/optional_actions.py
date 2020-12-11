@@ -15,16 +15,20 @@ from bdld.helpers.plumed_header import PlumedHeader
 
 
 class TrajectoryAction(Action):
-    """Class that stories trajectories and writes them to file"""
+    """Class that stories trajectories and writes them to file
 
+    :param traj: fixed size numpy array holding the time and positions
+                 it is written row-wise (i.e. every row represents a time)
+                 and overwritten after being saved to file
+    """
     def __init__(
         self,
         ld: BussiParinelloLD,
-        stride: int = 1,
-        filename: str = "",
+        stride: Optional[int] = None,
+        filename: Optional[str] = None,
         fileheader: Optional[PlumedHeader] = None,
-        write_stride: int = 100,
-        write_fmt: str = "%14.9",
+        write_stride: Optional[int] = None,
+        write_fmt: Optional[str] = None,
     ) -> None:
         """Set up trajectory storage action
 
@@ -37,16 +41,16 @@ class TrajectoryAction(Action):
         """
         n_particles = len(ld.particles)
         self.ld = ld
-        # one more per row for storing the time
-        self.traj = np.empty((write_stride, n_particles + 1, ld.pot.n_dim))
         self.filenames: Optional[List[str]] = None
-        self.stride = stride
-        self.write_stride = write_stride
+        self.stride: int = stride if stride else 1
+        self.write_stride: int = write_stride if write_stride else 100
+        # one more per row for storing the time
+        self.traj = np.empty((self.write_stride, n_particles + 1, ld.pot.n_dim))
         self.last_write: int = 0
         # write headers
         if filename:
             self.filenames = [f"{filename}.{i}" for i in range(n_particles)]
-            self.write_fmt = write_fmt
+            self.write_fmt = write_fmt if write_fmt else "%14.9"
             if fileheader:
                 for i, fname in enumerate(self.filenames):
                     with open(fname, "w") as f:
@@ -144,11 +148,11 @@ class HistogramAction(Action):
         traj_action: TrajectoryAction,
         n_bins: List[int],
         ranges: List[Tuple[float, float]],
-        stride: int = 1,
-        filename: str = "",
+        stride: Optional[int] = None,
+        filename: Optional[str] = None,
         fileheader: Optional[Union[PlumedHeader, str]] = None,
         write_stride: Optional[int] = None,
-        write_fmt: str = "%14.9",
+        write_fmt: Optional[str] = None,
     ) -> None:
         """Initialize a histogram for the trajectories
 
@@ -179,18 +183,15 @@ class HistogramAction(Action):
             raise ValueError(e)
         self.traj_action = traj_action
         self.histo = Histogram(n_bins, ranges)
-        self.stride = stride
+        self.stride = stride if stride else 1
         self.write_stride = write_stride
+        self.write_fmt = write_fmt if write_fmt else "%14.9"
+        self.fileheader = fileheader if fileheader else ""
         if write_stride:
             if not filename:
                 e = "Specifying a write_stride but no filename makes no sense"
                 raise ValueError(e)
             self.filename = filename
-            if fileheader:
-                self.fileheader = fileheader
-            else:
-                self.fileheader = ""
-            self.write_fmt = write_fmt
         self.update_stride = traj_action.stride
 
     def run(self, step: int):
@@ -237,14 +238,14 @@ class FesAction(Action):
         histo_action: HistogramAction,
         kt: float,
         stride: Optional[int] = None,
-        filename: str = "",
+        filename: Optional[str] = None,
         fileheader: Optional[Union[PlumedHeader, str]] = None,
         write_stride: Optional[int] = None,
-        write_fmt: str = "%14.9",
+        write_fmt: Optional[str] = None,
         plot_stride: Optional[int] = None,
-        plot_filename: str = "",
+        plot_filename: Optional[str] = None,
         plot_domain: Optional[Tuple[float, float]] = None,
-        plot_title: str = "",
+        plot_title: str = None,
         ref: Optional[np.ndarray] = None,
     ) -> None:
         """Set up fes action for a Histogram
@@ -268,32 +269,29 @@ class FesAction(Action):
         """
         self.histo_action = histo_action
         self.kt = kt
-        if stride:
-            self.stride = stride
-            if stride % histo_action.update_stride != 0:
+        self.stride = stride
+        if self.stride:
+            if self.stride % histo_action.update_stride != 0:
                 print("Warning: the FES stride is no multiple of the Histogram stride.")
         # writing
         self.filename = filename
-        if write_stride:
-            self.write_stride = write_stride
-            if write_stride % self.stride != 0:
+        self.write_fmt = write_fmt if write_fmt else "%14.9"
+        self.fileheader = fileheader if fileheader else ""
+        self.write_stride = write_stride
+        if self.write_stride:
+            if self.write_stride % self.stride != 0:
                 print("Warning: the write stride is no multiple of the update stride.")
             if not self.filename:
                 e = "Specifying a write_stride but no filename makes no sense"
                 raise ValueError(e)
-            if fileheader:
-                self.fileheader = fileheader
-            else:
-                self.fileheader = ""
-            self.write_fmt = write_fmt
         # plotting
         self.plot_filename = plot_filename
         self.plot_domain = plot_domain
-        self.plot_title = plot_title
+        self.plot_title = plot_title if plot_title else ""
         self.ref = ref
-        if plot_stride:
-            self.plot_stride = plot_stride
-            if plot_stride % self.stride != 0:
+        self.plot_stride = plot_stride
+        if self.plot_stride:
+            if self.plot_stride % self.stride != 0:
                 print("Warning: the plot stride is no multiple of the update stride.")
             if not self.plot_filename:
                 e = "Specifying a plot_stride but no plot_filename makes no sense"
@@ -304,14 +302,12 @@ class FesAction(Action):
 
         :param step: current simulation step, optional
         """
-        if not step or step % self.stride == 0:
+        if self.stride and step % self.stride == 0:
             self.histo_action.histo.calculate_fes(self.kt)
-        if not step or step % self.write_stride == 0:
-            if self.filename:
-                self.write(step)
-        if not step or step % self.plot_stride == 0:
-            if self.plot_filename:
-                self.plot(step)
+        if self.write_stride and step % self.write_stride == 0:
+            self.write(step)  # filename is always set
+        if self.plot_stride and step % self.plot_stride == 0:
+            self.plot(step)  # plot_filename is always set
 
     def run_final(self, step: int) -> None:
         """Same as run without stride checks"""
@@ -346,16 +342,16 @@ class FesAction(Action):
         :param step: current simulation step, optional
         """
         if step:
-            filename = f"{self.filename}_{step}"
+            plot_filename = f"{self.plot_filename}_{step}"
             plot_title = f"{self.plot_title}_{step}"
         else:
-            filename = self.filename
+            plot_filename = self.plot_filename
             plot_title = self.plot_title
         analysis.plot_fes(
             self.histo_action.histo.fes,
             self.histo_action.histo.bin_centers(),
             ref=self.ref,
             plot_domain=self.plot_domain,
-            filename=filename,
+            filename=plot_filename,
             title=plot_title,
         )
