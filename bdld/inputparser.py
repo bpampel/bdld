@@ -163,6 +163,7 @@ class Input:
             InputOption("n_steps", int, True, Input.positive),
             InputOption("kt", float, True, Input.positive),
             InputOption("friction", float, True, Input.positive_or_zero),
+            InputOption("seed", int, False),
         ]
         self.ld = self.parse_section(section, options)
 
@@ -330,9 +331,7 @@ class Input:
         """Parse all options of a section"""
         parsed_options: Dict[str, OptionType] = {}
         for o in options:
-            res = o.parse(section)
-            if res is not None:
-                parsed_options[o.key] = res
+            parsed_options[o.key] = o.parse(section)
         return parsed_options
 
     @staticmethod
