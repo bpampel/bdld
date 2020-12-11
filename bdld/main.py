@@ -41,44 +41,70 @@ def main() -> None:
         print(e.args[0], file=sys.stderr)
         sys.exit(1)
 
-
     # initialize all actions
     actions: Dict[str, Action] = {}
     # dicts are ordered since python 3.7
     # actions are performed in order of insertion to the dict
     # make sure actions are added after their dependencies (e.g. fes after hist)
 
-    pot = setup_pot(config.potential)
-    ld = BussiParinelloLD(
-        pot,
-        config.ld["timestep"],
-        config.ld["friction"],
-        config.ld["kt"],
-        config.ld["seed"],
-    )
+    # compulsory: set up Langevin dynamics
+    pot = setup_potential(config.potential)
+    ld = setup_ld(config.ld, pot)
     init_particles(config.particles, ld)
     actions["ld"] = ld
 
-    if config.birth_death:
-        actions["birth_death"] = setup_birth_death(config.birth_death, ld)
+    # optional actions in reasonable order
+    try:
+        if config.birth_death:
+            actions["birth_death"] = setup_birth_death(config.birth_death, ld)
+        if config.trajectories:
+            actions["trajectories"] = setup_trajectories(config.trajectories, ld)
+        if config.histogram:
+            actions["histogram"] = setup_histogram(
+                config.histogram, actions["trajectories"]
+            )
+        if config.fes:
+            actions["fes"] = setup_fes(config.fes, actions["histogram"])
+    except KeyError as e:
+        print(
+            f"Error: An action was specified that requires the '{e.args[0]}' section"
+            " in input but it was not found",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
+    n_steps = config.ld["n_steps"]
+    print(f"Setup finished, now running for {n_steps} steps")
     # main loop
-    for step in range(config.ld["n_steps"]):
+    for step in range(n_steps):
         for action in actions.values():
             action.run(step)
 
-    # final_run
+    print("Simulation finished, performing final actions")
     for action in actions.values():
-        action.final_run(config.ld["n_steps"] - 1)
+        action.final_run(n_steps - 1)
+
+    print("Finished without errors")
 
 
-def setup_pot(options: Dict) -> Potential:
+def setup_potential(options: Dict) -> Potential:
     """Return potential from given options"""
     if options["n_dim"] == 1:
-        ranges = [options["min"], options["max"]]
+        ranges = [(options["min"], options["max"])]
     else:
         ranges = list(zip(options["min"], options["max"]))
     return Potential(options["coeffs"], ranges)
+
+
+def setup_ld(options: Dict, pot: Potential) -> BussiParinelloLD:
+    """Return Langevin Dynamics with given options on the potential"""
+    return BussiParinelloLD(
+        pot,
+        options["timestep"],
+        options["friction"],
+        options["kt"],
+        options["seed"],
+    )
 
 
 def init_particles(options: Dict, ld: BussiParinelloLD) -> None:
@@ -101,6 +127,7 @@ def init_particles(options: Dict, ld: BussiParinelloLD) -> None:
     elif options["initial-distribution"] == "fractions-pos":
         counts = [int(frac * options["number"]) for frac in options["fractions"]]
         counts[0] += options["number"] - np.sum(counts)  # rounding offset
+        # dicts are ordered since python 3.7: no need to actually parse pos1 etc
         init_pos_choices = [pos for key, pos in options.items() if "pos" in key]
         if len(init_pos_choices) != len(counts):
             e = "fractions in [particles]: number of positions and fractions do not match"
@@ -156,3 +183,59 @@ def bd_prob_density(pot: Potential, bd_bw: List[float], kt: float) -> Grid:
             tmp_grid_points += 1  # odd number is better for convolution
         n_grid_points.append(tmp_grid_points)
     return pot.calculate_probability_density(kt, pot.ranges, n_grid_points)
+
+
+def setup_trajectories(options: Dict, ld: BussiParinelloLD) -> TrajectoryAction:
+    """Setup TrajectoryAction on ld with given options"""
+    return TrajectoryAction(
+        ld,
+        options["stride"],
+        options["filename"],
+        None,
+        options["write-stride"],
+        options["fmt"],
+    )
+
+
+def setup_histogram(options: Dict, traj_action: TrajectoryAction) -> HistogramAction:
+    """Setup HistogramAction on TrajectoryAction with given options"""
+    if traj_action.ld.pot.n_dim == 1:
+        ranges = [(options["min"], options["max"])]
+        n_bins = [options["bins"]]
+    else:
+        min_list = inputparser.get_all_numbered_values(options, "min")
+        max_list = inputparser.get_all_numbered_values(options, "max")
+        ranges = list(zip(min_list, max_list))
+        n_bins = options["bins"]
+    return HistogramAction(
+        traj_action,
+        n_bins,
+        ranges,
+        options["stride"],
+        options["filename"],
+        None,
+        options["write-stride"],
+        options["fmt"],
+    )
+
+
+def setup_fes(options: Dict, histo_action: HistogramAction) -> FesAction:
+    """Setup FesAction on HistogramAction with given options"""
+    # don't assume this will stay here in the future, it's ugly
+    ref = histo_action.traj_action.ld.pot.calculate_reference(
+        histo_action.histo.points()
+    )
+    return FesAction(
+        histo_action,
+        options["kt"],
+        options["stride"],
+        options["filename"],
+        None,
+        options["write-stride"],
+        options["fmt"],
+        options["plot-stride"],
+        options["plot-filename"],
+        options["plot-domain"],
+        options["plot-title"],
+        ref,
+    )
