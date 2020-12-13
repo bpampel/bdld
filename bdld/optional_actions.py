@@ -17,6 +17,10 @@ from bdld.helpers.plumed_header import PlumedHeader
 class TrajectoryAction(Action):
     """Class that stories trajectories and writes them to file
 
+    The write_stride parameter determines how many trajectory
+    points are being held in memory even if they are never written.
+    This allow other actions to use them.
+
     :param traj: fixed size numpy array holding the time and positions
                  it is written row-wise (i.e. every row represents a time)
                  and overwritten after being saved to file
@@ -94,7 +98,7 @@ class TrajectoryAction(Action):
                 with open(filename, "ab") as f:
                     np.savetxt(
                         f,
-                        save_data[:, (0, i + 1)],
+                        save_data[:, (0, i + 1)].reshape((-1,1+self.ld.pot.n_dim)),
                         delimiter=" ",
                         newline="\n",
                         fmt=self.write_fmt,
@@ -280,6 +284,9 @@ class FesAction(Action):
         self.fileheader = fileheader if fileheader else ""
         self.write_stride = write_stride
         if self.write_stride:
+            if not self.stride:
+                e = "Specifying a write_stride but no stride makes no sense"
+                raise ValueError(e)
             if self.write_stride % self.stride != 0:
                 print("Warning: the write stride is no multiple of the update stride.")
             if not self.filename:

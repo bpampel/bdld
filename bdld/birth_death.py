@@ -194,6 +194,7 @@ class BirthDeath(Action):
     """Birth death algorithm
 
     :param correction: Grid holding the correction values
+    :param dt: time between subsequent birth-death evaluations
     :param kill_count: number of succesful death events
     :param kill_attempts: number of attempted death events
     :param dup_count: number of succesful birth events
@@ -229,7 +230,7 @@ class BirthDeath(Action):
         """
         self.particles: List[BpldParticle] = particles
         self.stride: int = stride
-        self.dt: float = dt
+        self.dt: float = dt * stride
         self.bw: np.ndarray = np.array(bw, dtype=float)
         self.inv_kt: float = 1 / kt
         self.rng: np.random.Generator = np.random.default_rng(seed)

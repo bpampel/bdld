@@ -76,13 +76,13 @@ def main() -> None:
     n_steps = config.ld["n_steps"]
     print(f"Setup finished, now running for {n_steps} steps")
     # main loop
-    for step in range(n_steps):
+    for step in range(1, n_steps + 1):
         for action in actions.values():
             action.run(step)
 
     print("Simulation finished, performing final actions")
     for action in actions.values():
-        action.final_run(n_steps - 1)
+        action.final_run(n_steps)
 
     print("Finished without errors")
 
@@ -125,7 +125,9 @@ def init_particles(options: Dict, ld: BussiParinelloLD) -> None:
         for _ in range(options["number"]):
             ld.add_particle(rng.choice(init_pos_choices, axis=0))
     elif options["initial-distribution"] == "fractions-pos":
-        counts = [int(frac * options["number"]) for frac in options["fractions"]]
+        # normalize so sum of fractions is one -> allows also total number inputs
+        normalized_fractions = np.array(options["fractions"]) / np.sum(options["fractions"])
+        counts = [int(frac * options["number"]) for frac in normalized_fractions]
         counts[0] += options["number"] - np.sum(counts)  # rounding offset
         # dicts are ordered since python 3.7: no need to actually parse pos1 etc
         init_pos_choices = [pos for key, pos in options.items() if "pos" in key]
@@ -143,8 +145,11 @@ def setup_birth_death(options: Dict, ld: BussiParinelloLD) -> BirthDeath:
     Currently this requires to get the true probability density values from the
     potential for the corrections of the algorithm, so this is also set up here
     """
-    bd_bw = np.array(options["kernel-bandwidth"])
-    if options["correction_variant"]:
+    if ld.pot.n_dim == 1:
+        bd_bw = np.array([options["kernel-bandwidth"]])
+    else:
+        bd_bw = np.array(options["kernel-bandwidth"])
+    if options["correction-variant"]:
         eq_density: Optional[Grid] = bd_prob_density(ld.pot, bd_bw, ld.kt)
     else:
         eq_density = None
@@ -154,9 +159,9 @@ def setup_birth_death(options: Dict, ld: BussiParinelloLD) -> BirthDeath:
         options["stride"],
         bd_bw,
         ld.kt,
-        options["correction_variant"],
+        options["correction-variant"],
         eq_density,
-        options["seed"],
+        options["seed"] + 1000 if options["seed"] else None,
         options["stats-stride"],
     )
 

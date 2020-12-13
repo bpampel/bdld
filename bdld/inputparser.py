@@ -211,7 +211,7 @@ class Input:
         initial_distribution_variants = [
             "random-global",
             "random-pos",
-            "fraction-pos",
+            "fractions-pos",
         ]
         allowed_initial_distribution = Condition(
             lambda x: x in initial_distribution_variants,
@@ -224,9 +224,9 @@ class Input:
         init_dist = cast(str, init_dist_option.parse(section))
         options.append(init_dist_option)
 
-        if init_dist in ["random-pos", "fraction-pos"]:
-            for i in range(self.get_number_of_options(section, "pos")):
-                options.append(InputOption(f"pos{i}", [float], True))
+        if init_dist in ["random-pos", "fractions-pos"]:
+            for i,_ in enumerate(get_all_numbered_values(section, "pos")):
+                options.append(InputOption(f"pos{i+1}", [float], True))
 
         if init_dist == "fractions-pos":
             options.append(InputOption("fractions", [float], True))
@@ -306,8 +306,8 @@ class Input:
         options = [
             InputOption("stride", int, True, Input.positive),
         ]
-        n_states = len(get_all_numbered_values(section, "state", "-min"))
-        if n_states == len(get_number_of_options(section, "state", "-max")):
+        n_states = len(get_all_numbered_values(section, "state", "-min")) + 1
+        if n_states == len(get_all_numbered_values(section, "state", "-max")) + 1:
             raise InputError(
                 "The number of min and max options for the states doesn't match",
                 "statex-min",
@@ -315,8 +315,8 @@ class Input:
             )
         for i in range(n_states):
             options += [
-                InputOption("state" + str(i + 1) + "-min", float, True),
-                InputOption("state" + str(i + 1) + "-max", float, True),
+                InputOption(f"state{i+1}-min", float, True),
+                InputOption(f"state{i+1}-max", float, True),
             ]
         self.delta_f = self.parse_section(section, options)
 
@@ -362,15 +362,15 @@ def get_all_numbered_values(
     :param prefix: prefix of option key (string before number)
     :param suffix: suffix of option key (string after number)
     """
-    counter = 0
+    counter = 1
     res: List[OptionType] = []
     while True:
-        value = section[f"{prefix}{counter+1}{suffix}"]
-        if value:
-            res.append(value)
-            counter += 1
-        else:
+        try:
+            value = section[f"{prefix}{counter}{suffix}"]
+        except KeyError:  # not found
             return res
+        res.append(value)
+        counter += 1
 
 
 def min_max_to_ranges(
