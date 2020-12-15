@@ -235,7 +235,7 @@ class BirthDeath(Action):
         self.inv_kt: float = 1 / kt
         self.rng: np.random.Generator = np.random.default_rng(seed)
         self.stats_stride: Optional[int] = stats_stride
-        self.kde: bool = kde if kde else False
+        self.kde: bool = kde or False
         print(
             f"Setting up birth/death scheme\n"
             f"Parameters:\n"

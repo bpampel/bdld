@@ -46,15 +46,15 @@ class TrajectoryAction(Action):
         n_particles = len(ld.particles)
         self.ld = ld
         self.filenames: Optional[List[str]] = None
-        self.stride: int = stride if stride else 1
-        self.write_stride: int = write_stride if write_stride else 100
+        self.stride: int = stride or 1
+        self.write_stride: int = write_stride or 100
         # one more per row for storing the time
         self.traj = np.empty((self.write_stride, n_particles + 1, ld.pot.n_dim))
         self.last_write: int = 0
         # write headers
         if filename:
             self.filenames = [f"{filename}.{i}" for i in range(n_particles)]
-            self.write_fmt = write_fmt if write_fmt else "%14.9f"
+            self.write_fmt = write_fmt or "%14.9f"
             if fileheader:
                 for i, fname in enumerate(self.filenames):
                     with open(fname, "w") as f:
@@ -187,10 +187,10 @@ class HistogramAction(Action):
             raise ValueError(e)
         self.traj_action = traj_action
         self.histo = Histogram(n_bins, ranges)
-        self.stride = stride if stride else 1
+        self.stride = stride or 1
         self.write_stride = write_stride
-        self.write_fmt = write_fmt if write_fmt else "%14.9f"
-        self.fileheader = fileheader if fileheader else ""
+        self.write_fmt = write_fmt or "%14.9f"
+        self.fileheader = fileheader or ""
         self.filename = filename
         if write_stride:
             if not filename:
@@ -208,7 +208,7 @@ class HistogramAction(Action):
             # flatten the first 2 dimensions (combine all times)
             self.histo.add(data.reshape(-1, data.shape[-1]))
         if self.write_stride and step % self.write_stride == 0:
-                self.write(step)
+            self.write(step)
 
     def final_run(self, step: int):
         """Same as run without stride checks"""
@@ -280,8 +280,8 @@ class FesAction(Action):
                 print("Warning: the FES stride is no multiple of the Histogram stride.")
         # writing
         self.filename = filename
-        self.write_fmt = write_fmt if write_fmt else "%14.9f"
-        self.fileheader = fileheader if fileheader else ""
+        self.write_fmt = write_fmt or "%14.9f"
+        self.fileheader = fileheader or ""
         self.write_stride = write_stride
         if self.write_stride:
             if not self.stride:
@@ -295,7 +295,7 @@ class FesAction(Action):
         # plotting
         self.plot_filename = plot_filename
         self.plot_domain = plot_domain
-        self.plot_title = plot_title if plot_title else ""
+        self.plot_title = plot_title or ""
         self.ref = ref
         self.plot_stride = plot_stride
         if self.plot_stride:
