@@ -8,7 +8,7 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 
 from bdld import analysis
-from bdld.action import Action
+from bdld.action import Action, get_valid_data
 from bdld.bussi_parinello_ld import BussiParinelloLD
 from bdld.histogram import Histogram
 from bdld.helpers.plumed_header import PlumedHeader
@@ -25,6 +25,7 @@ class TrajectoryAction(Action):
                  it is written row-wise (i.e. every row represents a time)
                  and overwritten after being saved to file
     """
+
     def __init__(
         self,
         ld: BussiParinelloLD,
@@ -70,8 +71,8 @@ class TrajectoryAction(Action):
         :param step: current simulation step
         """
         row = (step % self.write_stride) - 1  # saving starts at step 1
-        self.traj[row][0] = step * self.ld.dt
-        self.traj[row][1:] = [p.pos for p in self.ld.particles]
+        self.traj[row, 0] = step * self.ld.dt
+        self.traj[row, 1:] = [p.pos for p in self.ld.particles]
 
         if step % self.write_stride == 0:
             self.write(step)
@@ -93,48 +94,19 @@ class TrajectoryAction(Action):
         :param step: current simulation step
         """
         if self.filenames:
-            save_data = self.get_valid_data(step)
+            save_data = get_valid_data(
+                self.traj, step, self.stride, self.write_stride, self.last_write
+            )
             for i, filename in enumerate(self.filenames):
                 with open(filename, "ab") as f:
                     np.savetxt(
                         f,
-                        save_data[:, (0, i + 1)].reshape((-1,1+self.ld.pot.n_dim)),
+                        save_data[:, (0, i + 1)].reshape((-1, 1 + self.ld.pot.n_dim)),
                         delimiter=" ",
                         newline="\n",
                         fmt=self.write_fmt,
                     )
                 self.last_write = step
-
-    def get_valid_data(
-        self,
-        step: int,
-        stride: int = None,
-        last_write: int = None,
-    ) -> np.ndarray:
-        """Get the currently valid data as a view of the stored trajectory array
-
-        By default this will use the internal stride and last_write, but other ones can be specified
-        (e.g. for histogramming)
-
-        :param step: current simulation step
-        :param stride: return only every nth datapoint
-        :param last_write: when the data was last written (needs to be less than write_stride ago)
-        """
-        if not stride:
-            stride = self.stride
-        if not last_write:
-            last_write = self.last_write
-        last_element = step % self.write_stride
-        already_written = last_write % self.write_stride
-        # shortcut for basic case
-        if stride == 1 and already_written == 0 and last_element == 0:
-            return self.traj
-        # shift from stride - number of elements at end that weren't saved last time
-        stride_offset = stride - 1 - (last_write % stride)
-        first_element = already_written + stride_offset
-        if last_element == 0:
-            return self.traj[first_element::stride]
-        return self.traj[first_element:last_element:stride]
 
 
 class HistogramAction(Action):
@@ -204,7 +176,7 @@ class HistogramAction(Action):
         :param step: current simulation step
         """
         if step % self.update_stride == 0:
-            data = self.traj_action.get_valid_data(step, self.stride)
+            data = get_valid_data(self.traj_action.traj, step, self.stride, self.traj_action.write_stride, self.traj_action.last_write)
             # flatten the first 2 dimensions (combine all times)
             self.histo.add(data.reshape(-1, data.shape[-1]))
         if self.write_stride and step % self.write_stride == 0:
@@ -212,7 +184,7 @@ class HistogramAction(Action):
 
     def final_run(self, step: int):
         """Same as run without stride checks"""
-        data = self.traj_action.get_valid_data(step, self.stride)
+        data = get_valid_data(self.traj_action.traj, step, self.stride, self.traj_action.write_stride, self.traj_action.last_write)
         # flatten the first 2 dimensions (combine all times)
         self.histo.add(data.reshape(-1, data.shape[-1]))
         if self.filename:
@@ -241,7 +213,6 @@ class FesAction(Action):
     def __init__(
         self,
         histo_action: HistogramAction,
-        kt: float,
         stride: Optional[int] = None,
         filename: Optional[str] = None,
         fileheader: Optional[Union[PlumedHeader, str]] = None,
@@ -273,7 +244,8 @@ class FesAction(Action):
         :param ref: reference fes for plot, optional
         """
         self.histo_action = histo_action
-        self.kt = kt
+        self.kt = self.histo_action.traj_action.ld.kt
+        self.get_fes_grid = self.histo_action.histo.get_fes_grid
         self.stride = stride
         if self.stride:
             if self.stride % histo_action.update_stride != 0:
@@ -337,7 +309,7 @@ class FesAction(Action):
                 filename = f"{self.filename}_{step}"
             else:
                 filename = self.filename
-            self.histo_action.histo.get_fes_grid().write_to_file(
+            self.get_fes_grid().write_to_file(
                 filename, self.write_fmt, str(self.fileheader)
             )
 
@@ -364,3 +336,106 @@ class FesAction(Action):
                 filename=plot_filename,
                 title=plot_title,
             )
+
+
+class DeltaFAction(Action):
+    """Calculate Delta F from fes and save to file"""
+
+    def __init__(
+        self,
+        fes_action: FesAction,
+        masks: np.ndarray,
+        stride: Optional[int] = None,
+        filename: Optional[str] = None,
+        fileheader: Optional[PlumedHeader] = None,
+        write_stride: Optional[int] = None,
+        write_fmt: Optional[str] = None,
+    ) -> None:
+        """Set up action that calculates free energy differences between states
+
+        If no stride is given, this action is not run periodically
+        but can manually be triggered.
+        If a stride is given, it needs to be a multiple of the stride of the
+        FesAction to make sense
+
+        :param fes_action: Fes action to analyise
+        :param masks: masks that define the states
+        :param stride: calculate delta f every n time steps, optional
+        :param filename: filename to save fes to, optional
+        :param fileheader: header for wiles
+        :param write_stride: write to file every n time steps, default None (never)
+        :param write_fmt: numeric format for saving the data, default "%14.9f"
+        """
+        self.fes_action = fes_action
+        self.masks = masks
+        self.stride = stride
+        if self.stride:
+            if not self.fes_action.stride or self.stride % self.fes_action.stride != 0:
+                print("Warning: the FES stride is no multiple of the Histogram stride.")
+            self.write_stride = write_stride or self.stride * 100
+            if self.write_stride % self.stride != 0:
+                e = "The write stride must be a multiple of the update stride."
+                raise ValueError(e)
+            if not filename:
+                e = "Specifying a write_stride but no filename makes no sense"
+                raise ValueError(e)
+            # time + (masks -1) states
+            self.delta_f = np.empty((self.write_stride // self.stride, len(self.masks)))
+            self.last_write: int = 0
+        else:  # just store one data set
+            self.delta_f = np.empty((len(self.masks)))
+        # writing
+        self.filename = filename
+        if self.filename:
+            if fileheader:
+                with open(self.filename, "w") as f:
+                    fileheader[0] = "FIELDS +" " ".join(
+                        f"delta_f.1-{i}" for i in range(2, len(self.masks) + 1)
+                    )
+                    f.write(str(fileheader) + "\n")
+        self.write_fmt = write_fmt if write_fmt else "%14.9f"
+
+        # copy temp and timestep from LD, shortcut for FES grid
+        self.kt = self.fes_action.histo_action.traj_action.ld.kt
+        self.dt = self.fes_action.histo_action.traj_action.ld.dt
+        self.fes = self.fes_action.histo_action.histo.fes
+
+    def run(self, step: int) -> None:
+        """Calculate Delta F from fes and write to file
+
+        :param step: current simulation step, optional
+        """
+        if self.stride and step % self.stride == 0:
+            row = (step % self.write_stride) // self.stride - 1
+            self.delta_f[row, 0] = step * self.dt
+            self.delta_f[row, 1:] = analysis.calculate_delta_f(
+                self.fes, self.kt, self.masks
+            )
+        if self.write_stride and step % self.write_stride == 0:
+            self.write(step)
+
+    def write(self, step: int) -> None:
+        """Write fes to file
+
+        If a step is specified it will be appended to the filename, i.e. it is written
+        to a new file.
+        If no filename is set, this will do nothing.
+
+        :param step: current simulation step, optional
+        """
+        if self.filename:
+            if self.stride:
+                save_data = get_valid_data(
+                    self.delta_f, step, self.stride, self.write_stride, self.last_write
+                )
+                self.last_write = step
+            else:  # reshape to rows to save as single line
+                save_data = self.delta_f.reshape((1, -1))
+            with open(self.filename, "ab") as f:
+                np.savetxt(
+                    f,
+                    save_data,
+                    delimiter=" ",
+                    newline="\n",
+                    fmt=self.write_fmt,
+                )

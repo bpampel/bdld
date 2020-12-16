@@ -12,7 +12,12 @@ from bdld.potential import Potential
 from bdld.birth_death import BirthDeath
 from bdld.bussi_parinello_ld import BussiParinelloLD
 from bdld.grid import Grid
-from bdld.optional_actions import TrajectoryAction, HistogramAction, FesAction
+from bdld.optional_actions import (
+    TrajectoryAction,
+    HistogramAction,
+    FesAction,
+    DeltaFAction,
+)
 from bdld.helpers.plumed_header import PlumedHeader as PlmdHeader
 from bdld.helpers.misc import backup_if_exists
 
@@ -65,6 +70,8 @@ def main() -> None:
             )
         if config.fes:
             actions["fes"] = setup_fes(config.fes, actions["histogram"])
+        if config.delta_f:
+            actions["delta_f"] = setup_delta_f(config.delta_f, actions["fes"])
     except KeyError as e:
         print(
             f"Error: An action was specified that requires the '{e.args[0]}' section"
@@ -126,7 +133,9 @@ def init_particles(options: Dict, ld: BussiParinelloLD) -> None:
             ld.add_particle(rng.choice(init_pos_choices, axis=0))
     elif options["initial-distribution"] == "fractions-pos":
         # normalize so sum of fractions is one -> allows also total number inputs
-        normalized_fractions = np.array(options["fractions"]) / np.sum(options["fractions"])
+        normalized_fractions = np.array(options["fractions"]) / np.sum(
+            options["fractions"]
+        )
         counts = [int(frac * options["number"]) for frac in normalized_fractions]
         counts[0] += options["number"] - np.sum(counts)  # rounding offset
         # dicts are ordered since python 3.7: no need to actually parse pos1 etc
@@ -232,7 +241,6 @@ def setup_fes(options: Dict, histo_action: HistogramAction) -> FesAction:
     )
     return FesAction(
         histo_action,
-        options["kt"],
         options["stride"],
         options["filename"],
         None,
@@ -243,4 +251,46 @@ def setup_fes(options: Dict, histo_action: HistogramAction) -> FesAction:
         options["plot-domain"],
         options["plot-title"],
         ref,
+    )
+
+
+def setup_delta_f(options: Dict, fes_action: FesAction) -> DeltaFAction:
+    """Setup FesAction on HistogramAction with given options"""
+    min_list = inputparser.get_all_numbered_values(options, "state", "-min")
+    max_list = inputparser.get_all_numbered_values(options, "state", "-max")
+    state_ranges = inputparser.min_max_to_ranges(min_list, max_list)
+    if len(state_ranges) < 2:
+        e_msg = "You need to specify at least 2 states for delta F calculations"
+        raise ValueError(e_msg)
+
+    fes_points = fes_action.histo_action.histo.points()
+    n_dim = fes_points.shape[-1]
+
+    masks: List[np.ndarray] = []
+    for state in state_ranges:
+        # start with boolean array for first (0) dimension
+        mask = (fes_points[:, 0] >= state[0][0]) & (fes_points[:, 0] <= state[1][0])
+        try:
+            for i in range(1, n_dim):  # now 'bitwise and' with all other dimensions
+                mask = (
+                    mask
+                    & (fes_points[:, i] >= state[0][i])
+                    & (fes_points[:, i] <= state[1][i])
+                )
+        except IndexError as e:
+            raise inputparser.InputError(
+                "The specified state dimensions are smaller than the fes dimensions",
+                "state{i}-min",
+                options,
+            ) from e
+        masks.append(mask)
+
+    return DeltaFAction(
+        fes_action,
+        masks,
+        options["stride"],
+        options["filename"],
+        None,
+        options["write-stride"],
+        options["fmt"],
     )

@@ -225,7 +225,7 @@ class Input:
         options.append(init_dist_option)
 
         if init_dist in ["random-pos", "fractions-pos"]:
-            for i,_ in enumerate(get_all_numbered_values(section, "pos")):
+            for i, _ in enumerate(get_all_numbered_values(section, "pos")):
                 options.append(InputOption(f"pos{i+1}", [float], True))
 
         if init_dist == "fractions-pos":
@@ -305,38 +305,21 @@ class Input:
             raise configparser.NoSectionError("fes")
         options = [
             InputOption("stride", int, True, Input.positive),
-        ]
-        n_states = len(get_all_numbered_values(section, "state", "-min")) + 1
-        if n_states == len(get_all_numbered_values(section, "state", "-max")) + 1:
-            raise InputError(
-                "The number of min and max options for the states doesn't match",
-                "statex-min",
-                section.name,
-            )
-        for i in range(n_states):
-            options += [
-                InputOption(f"state{i+1}-min", float, True),
-                InputOption(f"state{i+1}-max", float, True),
-            ]
+            InputOption("filename", str, False),
+            InputOption("write-stride", int, False, Input.positive),
+            InputOption("fmt", str, False),
+        ] + numbered_state_options(section)
+
         self.delta_f = self.parse_section(section, options)
 
     def parse_particle_statistics(self, section: configparser.SectionProxy) -> None:
         """Define and parse if statistics about particles should be printed periodically"""
         options = [
             InputOption("stride", int, True, Input.positive),
-        ]
-        n_states = len(get_all_numbered_values(section, "state", "-min"))
-        if n_states == len(get_all_numbered_values(section, "state", "-max")):
-            raise InputError(
-                "The number of min and max options for the states doesn't match",
-                "statex-min",
-                section.name,
-            )
-        for i in range(n_states):
-            options += [
-                InputOption("state" + str(i + 1) + "-min", float, True),
-                InputOption("state" + str(i + 1) + "-max", float, True),
-            ]
+            InputOption("filename", str, False),
+            InputOption("write-stride", int, False, Input.positive),
+            InputOption("fmt", str, False),
+        ] + numbered_state_options(section)
         self.particle_statistics = self.parse_section(section, options)
 
     @staticmethod
@@ -373,17 +356,54 @@ def get_all_numbered_values(
         counter += 1
 
 
+def numbered_state_options(section: configparser.SectionProxy) -> List[InputOption]:
+    """Return list with 'state{i}_min' & 'state{i}_max' InputOptions in section
+
+    This reads the keys of a section and adds two new options for each found state
+    The state InputOptions are lists regardless of dimensions
+
+    :param section: section of configparser to search through
+    """
+    n_states = len(get_all_numbered_values(section, "state", "-min"))
+    if n_states != len(get_all_numbered_values(section, "state", "-max")):
+        raise InputError(
+            "The number of min and max options for the states doesn't match",
+            "statex-min",
+            section.name,
+        )
+    options = []
+    for i in range(n_states):
+        options += [
+            InputOption(f"state{i+1}-min", [float], True),
+            InputOption(f"state{i+1}-max", [float], True),
+        ]
+    return options
+
+
 def min_max_to_ranges(
-    min_list: List[float], max_list: List[float]
-) -> List[Tuple[float, float]]:
+    min_list: Union[List[float], List[List[float]]],
+    max_list: Union[List[float], List[List[float]]],
+) -> Union[List[Tuple[float, float]], List[List[Tuple[List[float], List[float]]]]]:
     """Transform the max and min lists to a single list of tuples
 
     The min_list and max_list have one point per entry, i.e. for more than 1D they are
     also lists.
+    This also checks that all min and max values have the same dimension
 
     :param min_list: list with all minimum points of the intervals
     :param max_list: list with all maximum points of the intervals
     """
     if len(min_list) != len(max_list):
         raise ValueError("Not the same number of minimum and maximum points given")
+
+    # check if dimensions of elements match
+    try:
+        n_dim = len(min_list[0])  # IndexError if not list
+        for i, _ in enumerate(min_list):
+            if len(min_list[i]) != len(max_list[i]) != n_dim:
+                raise ValueError(f"Dimensions of min/max {i} are inconsistent")
+    except IndexError:  # elements are not lists
+        for min_max_i in min_list + max_list:
+            float(min_max_i)  # verify that none is list
+
     return list(zip(min_list, max_list))
