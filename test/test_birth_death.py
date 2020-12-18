@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from bdld import birth_death as bd
+from bdld.actions import birth_death as bd
 from bdld import grid  # needed for some inputs
 
 
