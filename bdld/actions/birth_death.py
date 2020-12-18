@@ -5,8 +5,8 @@ from typing import List, Optional, Union, Tuple
 
 import numpy as np
 
-from bdld.action import Action
-from bdld.bussi_parinello_ld import BpldParticle
+from bdld.actions.action import Action
+from bdld.actions.bussi_parinello_ld import BpldParticle
 from bdld import grid
 
 

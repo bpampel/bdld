@@ -7,17 +7,17 @@ import sys
 import numpy as np
 
 from bdld import inputparser
-from bdld.action import Action
 from bdld.potential import Potential
-from bdld.birth_death import BirthDeath
-from bdld.bussi_parinello_ld import BussiParinelloLD
 from bdld.grid import Grid
-from bdld.optional_actions import (
-    TrajectoryAction,
-    HistogramAction,
-    FesAction,
-    DeltaFAction,
-)
+# imports of all actions
+from bdld.actions.action import Action
+from bdld.actions.birth_death import BirthDeath
+from bdld.actions.bussi_parinello_ld import BussiParinelloLD
+from bdld.actions.trajectory_action import TrajectoryAction
+from bdld.actions.histogram_action import HistogramAction
+from bdld.actions.fes_action import FesAction
+from bdld.actions.delta_f_action import DeltaFAction
+
 from bdld.helpers.plumed_header import PlumedHeader as PlmdHeader
 from bdld.helpers.misc import backup_if_exists
 

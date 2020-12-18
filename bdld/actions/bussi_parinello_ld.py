@@ -3,7 +3,7 @@
 from typing import List, Optional, Union
 import numpy as np
 
-from bdld.action import Action
+from bdld.actions.action import Action
 from bdld.particle import Particle
 from bdld.potential import Potential
 
