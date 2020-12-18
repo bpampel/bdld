@@ -109,7 +109,7 @@ class DeltaFAction(Action):
         if self.filename:
             if self.stride:
                 save_data = get_valid_data(
-                    self.delta_f, step, self.stride, self.write_stride, self.last_write
+                    self.delta_f, step, 1, self.stride, self.last_write
                 )
                 self.last_write = step
             else:  # reshape to rows to save as single line

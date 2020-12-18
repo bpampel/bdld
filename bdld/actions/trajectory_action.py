@@ -89,13 +89,12 @@ class TrajectoryAction(Action):
         :param step: current simulation step
         """
         if self.filenames:
-            save_data = get_valid_data(
-                self.traj, step, self.stride, self.write_stride, self.last_write
-            )
+            save_data = get_valid_data(self.traj, step, self.stride, 1, self.last_write)
             for i, filename in enumerate(self.filenames):
                 with open(filename, "ab") as f:
                     np.savetxt(
                         f,
+                        # 3d (times, 1+walkers, pot_dims) to 2d array (times, 1+pot_dims)
                         save_data[:, (0, i + 1)].reshape((-1, 1 + self.ld.pot.n_dim)),
                         delimiter=" ",
                         newline="\n",

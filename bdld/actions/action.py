@@ -25,18 +25,17 @@ def get_valid_data(
     update_stride: int,
     last_write: int,
 ) -> np.ndarray:
-    # thoughts: following the assumptions we don't need all the info
-    #    - get either update_stride or write_stride from data.shape[0]
     """Get the currently valid rows as a view of the data array
 
     This is required to for actions storing their data continuously that also want to
     be able to write / reset their data array at any time
 
-    The data array is required to have the following properties:
-    - it has exactly write_stride // update_stride elements
+    The data array is assumed to have the following properties:
     - it is filled every update_stride, the first step is 1, not 0
-    - after each multiple of write_stride it is rewritten from the beginning,
+    - after the last element is reached the first is written again,
       all previously stored data is no longer valid
+    - nothing influences this order, e.g. even a reset will continue writing the next
+      element instead of starting from the beginning
 
     This results in several assumptions on the arguments, which are not checked!
     - the write_stride must be a multiple of the update_stride
@@ -58,7 +57,7 @@ def get_valid_data(
     if step == last_write:  # manual check because already_written is 0 due to modulo
         return data[:0]  # empty view
 
-    write_stride = data.shape[0] * update_stride  # wrapping time steps of data
+    write_stride = data.shape[0] * update_stride  # wrapping time of data
     already_written = (last_write % write_stride) // update_stride
     last_element = (step % write_stride) // update_stride
     # shortcut for basic case
