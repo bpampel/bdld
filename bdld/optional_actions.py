@@ -350,6 +350,7 @@ class DeltaFAction(Action):
         fileheader: Optional[PlumedHeader] = None,
         write_stride: Optional[int] = None,
         write_fmt: Optional[str] = None,
+        ref: Optional[np.ndarray] = None,
     ) -> None:
         """Set up action that calculates free energy differences between states
 
@@ -365,6 +366,7 @@ class DeltaFAction(Action):
         :param fileheader: header for wiles
         :param write_stride: write to file every n time steps, default None (never)
         :param write_fmt: numeric format for saving the data, default "%14.9f"
+        :param ref: reference FES to calculate reference values
         """
         self.fes_action = fes_action
         self.masks = masks
@@ -398,7 +400,12 @@ class DeltaFAction(Action):
         # copy temp and timestep from LD, shortcut for FES grid
         self.kt = self.fes_action.histo_action.traj_action.ld.kt
         self.dt = self.fes_action.histo_action.traj_action.ld.dt
-        self.fes = self.fes_action.histo_action.histo.fes
+
+        if ref:
+            self.ref_values = analysis.calculate_delta_f(
+                ref, self.kt, self.masks
+            )
+
 
     def run(self, step: int) -> None:
         """Calculate Delta F from fes and write to file
@@ -409,10 +416,17 @@ class DeltaFAction(Action):
             row = (step % self.write_stride) // self.stride - 1
             self.delta_f[row, 0] = step * self.dt
             self.delta_f[row, 1:] = analysis.calculate_delta_f(
-                self.fes, self.kt, self.masks
+                self.fes_action.histo_action.histo.fes, self.kt, self.masks
             )
         if self.write_stride and step % self.write_stride == 0:
             self.write(step)
+
+    def final_run(self, step: int) -> None:
+        self.delta_f[0] = step * self.dt
+        self.delta_f[1:] = analysis.calculate_delta_f(
+            self.fes_action.histo_action.histo.fes, self.kt, self.masks
+        )
+        self.write(step)
 
     def write(self, step: int) -> None:
         """Write fes to file
