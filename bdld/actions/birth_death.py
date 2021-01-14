@@ -349,15 +349,16 @@ class BirthDeath(Action):
             # density can be zero and make beta -inf. Filter when averaging in next step
             beta = np.log(walker_density(pos, self.bw, self.kde))
 
+        # if outside of corrections grid: doesn't throw error but sets correction to 0
         if self.correction_variant == "additive" or not self.correction_variant:
             ene = np.array([p.energy for p in self.particles])
             beta += ene * self.inv_kt
             beta -= np.mean(beta[beta != -np.inf])
             if self.correction_variant == "additive":
-                beta += self.correction.interpolate(pos, "linear").reshape(len(pos))
+                beta += self.correction.interpolate(pos, "linear", 0.0).reshape(len(pos))
         elif self.correction_variant == "multiplicative":
             # do not use actual energies, just add the smoothed density
-            beta += self.correction.interpolate(pos, "linear").reshape(len(pos))
+            beta += self.correction.interpolate(pos, "linear", 0.0).reshape(len(pos))
             beta -= np.mean(beta[beta != -np.inf])
         return beta
 

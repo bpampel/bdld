@@ -144,7 +144,7 @@ class Grid:
         return from_npoints(copy.deepcopy(self.ranges), copy.deepcopy(self.n_points))
 
     def interpolate(
-        self, points: Union[np.ndarray, Tuple[np.ndarray, ...]], method: str = "linear"
+        self, points: Union[np.ndarray, Tuple[np.ndarray, ...]], method: str = "linear", fill_value=np.nan
     ) -> np.ndarray:
         """Interpolate grid data at the given points
 
