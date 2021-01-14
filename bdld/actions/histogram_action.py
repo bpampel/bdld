@@ -56,6 +56,12 @@ class HistogramAction(Action):
                 + f"({len(ranges)} vs. {n_dim})"
             )
             raise ValueError(e)
+        print(
+            f"Setting up histogram for the trajectories\n"
+            f"Parameters:\n"
+            f"  ranges = {ranges}\n"
+            f"  n_bins = {n_bins}\n"
+        )
         self.traj_action = traj_action
         self.histo = Histogram(n_bins, ranges)
         self.stride = stride or 1
@@ -67,7 +73,8 @@ class HistogramAction(Action):
             if not filename:
                 e = "Specifying a write_stride but no filename makes no sense"
                 raise ValueError(e)
-        self.update_stride = traj_action.stride
+        self.update_stride = traj_action.write_stride
+        print()
 
     def run(self, step: int):
         """Add trajectory data to histogram and write to file if strides are matched
@@ -75,12 +82,18 @@ class HistogramAction(Action):
         :param step: current simulation step
         """
         if step % self.update_stride == 0:
+            # take into account that the traj might have been written this step
+            last_write = (
+                self.traj_action.last_write
+                if self.traj_action.last_write != step
+                else self.traj_action.last_write - self.traj_action.write_stride
+            )
             data = get_valid_data(
                 self.traj_action.traj,
                 step,
                 self.stride,
-                self.traj_action.write_stride,
-                self.traj_action.last_write,
+                1,  # assumes that traj data is stored even if not written
+                last_write,
             )
             # flatten the first 2 dimensions (combine all times)
             self.histo.add(data.reshape(-1, data.shape[-1]))
