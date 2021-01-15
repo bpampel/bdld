@@ -212,6 +212,7 @@ class BirthDeath(Action):
         eq_density: Optional[grid.Grid] = None,
         seed: Optional[int] = None,
         stats_stride: Optional[int] = None,
+        stats_filename: Optional[str] = None,
         kde: Optional[bool] = None,
     ) -> None:
         """Set arguments
@@ -235,6 +236,7 @@ class BirthDeath(Action):
         self.inv_kt: float = 1 / kt
         self.rng: np.random.Generator = np.random.default_rng(seed)
         self.stats_stride: Optional[int] = stats_stride
+        self.stats_filename: Optional[str] = stats_filename
         self.kde: bool = kde or False
         print(
             f"Setting up birth/death scheme\n"
@@ -266,6 +268,10 @@ class BirthDeath(Action):
                 raise ValueError(
                     f"Specified correction variant {self.correction_variant} was not understood"
                 )
+
+        if self.stats_filename:
+            with open(self.stats_filename, "w") as f:  # overwrite old files
+                pass
         self.reset_stats()
         print()
 
@@ -283,6 +289,11 @@ class BirthDeath(Action):
                 # -> violates energy conservation!
                 # keep the old random number for the initial thermostat step or generate new?
         if self.stats_stride and step % self.stats_stride == 0:
+            self.print_stats(step)
+
+    def final_run(self, step: int) -> None:
+        """Print out stats if they were not before"""
+        if not self.stats_stride:
             self.print_stats()
 
     def calculate_birth_death(self) -> List[Tuple[int, int]]:
@@ -379,33 +390,55 @@ class BirthDeath(Action):
 
         return np.c_[grid, rho, beta]
 
-    def print_stats(self, reset: bool = False) -> None:
+    def print_stats(self, step: int = None, reset: bool = False) -> None:
         """Print birth/death probabilities to screen"""
-        try:
-            kill_perc = 100 * self.kill_count / self.kill_attempts
-        except ZeroDivisionError:
-            kill_perc = np.nan
-        try:
-            dup_perc = 100 * self.dup_count / self.dup_attempts
-        except ZeroDivisionError:
-            dup_perc = np.nan
-        try:
-            ratio_succ = self.dup_count / self.kill_count
-        except ZeroDivisionError:
-            ratio_succ = np.nan
-        try:
-            ratio_attempts = self.dup_attempts / self.kill_attempts
-        except ZeroDivisionError:
-            ratio_attempts = np.nan
-        print(
-            f"Succesful birth events: {self.dup_count}/{self.dup_attempts} ({dup_perc:.4}%)"
-        )
-        print(
-            f"Succesful death events: {self.kill_count}/{self.kill_attempts} ({kill_perc:.4}%)"
-        )
-        print(
-            f"Ratio birth/death: {ratio_succ:.4} (succesful)  {ratio_attempts:.4} (attemps)"
-        )
+        if self.stats_filename:
+            stats = np.array(
+                [
+                    step,
+                    self.dup_count,
+                    self.dup_attempts,
+                    self.kill_count,
+                    self.kill_attempts,
+                ]
+            ).reshape(1, 5)  # to print as single row
+            with open(self.stats_filename, "ab") as f:
+                np.savetxt(
+                    f,
+                    stats,
+                    delimiter=" ",
+                    newline="\n",
+                    fmt="%d",
+                )
+        else:  # calculate percentages and ratios and write to output
+            try:
+                kill_perc = 100 * self.kill_count / self.kill_attempts
+            except ZeroDivisionError:
+                kill_perc = np.nan
+            try:
+                dup_perc = 100 * self.dup_count / self.dup_attempts
+            except ZeroDivisionError:
+                dup_perc = np.nan
+            try:
+                ratio_succ = self.dup_count / self.kill_count
+            except ZeroDivisionError:
+                ratio_succ = np.nan
+            try:
+                ratio_attempts = self.dup_attempts / self.kill_attempts
+            except ZeroDivisionError:
+                ratio_attempts = np.nan
+            if step:
+                print(f"After {step} time steps:")
+            print(
+                f"Succesful birth events: {self.dup_count}/{self.dup_attempts} ({dup_perc:.4}%)"
+            )
+            print(
+                f"Succesful death events: {self.kill_count}/{self.kill_attempts} ({kill_perc:.4}%)"
+            )
+            print(
+                f"Ratio birth/death: {ratio_succ:.4} (succesful)  {ratio_attempts:.4} (attemps)"
+            )
+            print()
         if reset:
             self.reset_stats()
 
