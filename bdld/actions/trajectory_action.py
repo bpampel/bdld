@@ -52,9 +52,9 @@ class TrajectoryAction(Action):
         if filename:
             self.filenames = [f"{filename}.{i}" for i in range(n_particles)]
             self.write_fmt = write_fmt or "%14.9f"
-            if fileheader:
-                for i, fname in enumerate(self.filenames):
-                    with open(fname, "w") as f:
+            for i, fname in enumerate(self.filenames):
+                with open(fname, "w") as f:  # overwrite old files
+                    if fileheader:
                         fileheader[0] = f"FIELDS traj.{i}"
                         f.write(str(fileheader) + "\n")
             print(f"Saving every {self.stride} point to the files {filename}.{{i}}")

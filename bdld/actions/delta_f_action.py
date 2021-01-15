@@ -61,8 +61,8 @@ class DeltaFAction(Action):
         # writing
         self.filename = filename
         if self.filename:
-            if fileheader:
-                with open(self.filename, "w") as f:
+            with open(self.filename, "w") as f:  # overwrite old files
+                if fileheader:
                     fileheader[0] = "FIELDS +" " ".join(
                         f"delta_f.1-{i}" for i in range(2, len(self.masks) + 1)
                     )
@@ -91,10 +91,11 @@ class DeltaFAction(Action):
             self.write(step)
 
     def final_run(self, step: int) -> None:
-        self.delta_f[0] = step * self.dt
-        self.delta_f[1:] = analysis.calculate_delta_f(
-            self.fes_action.histo_action.histo.fes, self.kt, self.masks
-        )
+        if not self.stride:  # perform analysis once
+            self.delta_f[0] = step * self.dt
+            self.delta_f[1:] = analysis.calculate_delta_f(
+                self.fes_action.histo_action.histo.fes, self.kt, self.masks
+            )
         self.write(step)
 
     def write(self, step: int) -> None:
@@ -104,12 +105,12 @@ class DeltaFAction(Action):
         to a new file.
         If no filename is set, this will do nothing.
 
-        :param step: current simulation step, optional
+        :param step: current simulation step
         """
         if self.filename:
             if self.stride:
                 save_data = get_valid_data(
-                    self.delta_f, step, 1, self.stride, self.last_write
+                    self.delta_f, step, self.stride, self.stride, self.last_write
                 )
                 self.last_write = step
             else:  # reshape to rows to save as single line
