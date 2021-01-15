@@ -46,16 +46,19 @@ class FesAction(Action):
         :param plot_domain: specify domain for plots, optional
         :param ref: reference fes for plot, optional
         """
-        print("Setting up FES calculation for the histogram\n" "Parameters:\n")
+        print("Setting up FES calculation for the histogram\n" "Parameters:")
         self.histo_action = histo_action
         self.kt = self.histo_action.traj_action.ld.kt
-        print(f"  kt = {self.kt}\n")
+        print(f"  kt = {self.kt}")
         self.get_fes_grid = self.histo_action.histo.get_fes_grid
         self.stride = stride
         if self.stride:
             if self.stride % histo_action.update_stride != 0:
-                print("Warning: the FES stride is no multiple of the Histogram stride.")
-            print(f"  stride = {self.stride}\n")
+                print(
+                    "Warning: the FES stride is no multiple of the Histogram update stride.\n"
+                    "Set a matching write-stride for the [trajectories]"
+                )
+            print(f"  stride = {self.stride}")
         # writing
         self.filename = filename
         self.write_fmt = write_fmt or "%14.9f"
@@ -71,7 +74,7 @@ class FesAction(Action):
                 e = "Specifying a write_stride but no filename makes no sense"
                 raise ValueError(e)
             print(
-                f"Saving current FES every {self.write_stride} time steps to {filename}_{{step}}"
+                f"Saving FES every {self.write_stride} time steps to '{filename}_{{step}}'"
             )
         # plotting
         self.plot_filename = plot_filename
@@ -89,8 +92,9 @@ class FesAction(Action):
                 e = "Specifying a plot_stride but no plot_filename makes no sense"
                 raise ValueError(e)
             print(
-                f"Plotting every {self.plot_stride} time steps to {self.plot_filename}_{{step}}"
+                f"Plotting every {self.plot_stride} time steps to '{self.plot_filename}_{{step}}'"
             )
+        print()
 
     def run(self, step: int) -> None:
         """Calculate fes from histogram, write to file and plot if matching strides

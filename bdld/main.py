@@ -42,7 +42,7 @@ def main() -> None:
     except FileNotFoundError:
         print(f"Error: Input file '{infile}' could not be found", file=sys.stderr)
         sys.exit(1)
-    except inputparser.InputError as e:
+    except inputparser.InputError as e:  # print error message and exit
         print(e.args[0], file=sys.stderr)
         sys.exit(1)
 

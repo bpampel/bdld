@@ -57,7 +57,7 @@ class TrajectoryAction(Action):
                     if fileheader:
                         fileheader[0] = f"FIELDS traj.{i}"
                         f.write(str(fileheader) + "\n")
-            print(f"Saving every {self.stride} point to the files {filename}.{{i}}")
+            print(f"Saving every {self.stride} point to the files '{filename}.{{i}}'")
         print()
 
     def run(self, step: int) -> None:

@@ -49,7 +49,7 @@ class HistogramAction(Action):
             f"Setting up histogram for the trajectories\n"
             f"Parameters:\n"
             f"  ranges = {ranges}\n"
-            f"  n_bins = {n_bins}\n"
+            f"  n_bins = {n_bins}"
         )
         n_dim = traj_action.traj.shape[-1]  # last dimension of traj array is dim of pot
         if n_dim != len(n_bins):
@@ -67,7 +67,7 @@ class HistogramAction(Action):
         self.traj_action = traj_action
         self.histo = Histogram(n_bins, ranges)
         self.stride = stride or 1
-        print(f"  stride = {self.stride}\n")
+        print(f"  stride = {self.stride}")
         self.write_stride = write_stride
         self.write_fmt = write_fmt or "%14.9f"
         self.fileheader = fileheader or ""
@@ -76,7 +76,7 @@ class HistogramAction(Action):
             if not filename:
                 e = "Specifying a write_stride but no filename makes no sense"
                 raise ValueError(e)
-            print(f"Saving current histogram every {self.write_stride} time steps to {filename}")
+            print(f"Saving histogram every {self.write_stride} time steps to '{filename}'")
         self.update_stride = traj_action.write_stride
         print()
 
