@@ -39,6 +39,7 @@ class TrajectoryAction(Action):
         :param write_stride: write to file every n time steps, default 100
         :param write_fmt: numeric format for saving the data, default "%14.9f"
         """
+        print("Setting up storage of the trajectories")
         n_particles = len(ld.particles)
         self.ld = ld
         self.filenames: Optional[List[str]] = None
@@ -56,6 +57,8 @@ class TrajectoryAction(Action):
                     with open(fname, "w") as f:
                         fileheader[0] = f"FIELDS traj.{i}"
                         f.write(str(fileheader) + "\n")
+            print(f"Saving every {self.stride} point to the files {filename}.{{i}}")
+        print()
 
     def run(self, step: int) -> None:
         """Store positions in traj array and write to file if write_stride is matched

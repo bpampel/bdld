@@ -247,7 +247,6 @@ class BirthDeath(Action):
             print(f"  seed = {seed}")
         if kde:
             print(f"  using KDE to calculate kernels")
-        print()
         self.correction_variant: Optional[str] = correction_variant
         if self.correction_variant:
             if not eq_density:
@@ -268,6 +267,7 @@ class BirthDeath(Action):
                     f"Specified correction variant {self.correction_variant} was not understood"
                 )
         self.reset_stats()
+        print()
 
     def run(self, step: int) -> None:
         """Perform birth-death step on particles
