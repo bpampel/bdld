@@ -136,6 +136,7 @@ class FesAction(Action):
                 filename = f"{self.filename}_{step}"
             else:
                 filename = self.filename
+            backup_if_exists(filename)
             self.get_fes_grid().write_to_file(
                 filename, self.write_fmt, str(self.fileheader)
             )
