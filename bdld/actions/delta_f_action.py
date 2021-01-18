@@ -7,7 +7,7 @@ import numpy as np
 from bdld import analysis
 from bdld.actions.action import Action, get_valid_data
 from bdld.actions.fes_action import FesAction
-from bdld.helpers.plumed_header import PlumedHeader
+from bdld.helpers.misc import initialize_file
 
 
 class DeltaFAction(Action):
@@ -19,7 +19,6 @@ class DeltaFAction(Action):
         masks: np.ndarray,
         stride: Optional[int] = None,
         filename: Optional[str] = None,
-        fileheader: Optional[PlumedHeader] = None,
         write_stride: Optional[int] = None,
         write_fmt: Optional[str] = None,
         ref: Optional[np.ndarray] = None,
@@ -58,16 +57,6 @@ class DeltaFAction(Action):
             self.last_write: int = 0
         else:  # just store one data set
             self.delta_f = np.empty((len(self.masks)))
-        # writing
-        self.filename = filename
-        if self.filename:
-            with open(self.filename, "w") as f:  # overwrite old files
-                if fileheader:
-                    fileheader[0] = "FIELDS +" " ".join(
-                        f"delta_f.1-{i}" for i in range(2, len(self.masks) + 1)
-                    )
-                    f.write(str(fileheader) + "\n")
-        self.write_fmt = write_fmt if write_fmt else "%14.9f"
 
         # copy temp and timestep from LD, shortcut for FES grid
         self.kt = self.fes_action.histo_action.traj_action.ld.kt
@@ -75,6 +64,17 @@ class DeltaFAction(Action):
 
         if ref:
             self.ref_values = analysis.calculate_delta_f(ref, self.kt, self.masks)
+
+        # writing
+        self.filename = filename
+        if self.filename:
+            fields = [f"delta_f.1-{i}" for i in range(2, len(self.masks) + 1)]
+            constants = {"kt": self.kt}
+            if ref:
+                for i, val in enumerate(self.ref_values):
+                    constants[f"ref_{fields[i]}"] = val
+            initialize_file(self.filename, fields, constants)
+        self.write_fmt = write_fmt if write_fmt else "%14.9f"
 
     def run(self, step: int) -> None:
         """Calculate Delta F from fes and write to file

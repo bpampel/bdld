@@ -7,6 +7,7 @@ import numpy as np
 from bdld.histogram import Histogram
 from bdld.actions.action import Action, get_valid_data
 from bdld.actions.trajectory_action import TrajectoryAction
+from bdld.helpers.misc import backup_if_exists
 from bdld.helpers.plumed_header import PlumedHeader
 
 
@@ -27,7 +28,6 @@ class HistogramAction(Action):
         ranges: List[Tuple[float, float]],
         stride: Optional[int] = None,
         filename: Optional[str] = None,
-        fileheader: Optional[Union[PlumedHeader, str]] = None,
         write_stride: Optional[int] = None,
         write_fmt: Optional[str] = None,
     ) -> None:
@@ -41,7 +41,6 @@ class HistogramAction(Action):
         :param ranges: extent of histogram (min, max) per dimension
         :param int stride: add every nth particle position to the histogram, default 1
         :param filename: optional filename to save histogram to
-        :param fileheader: header for the files
         :param write_stride: write to file every n time steps, default None (never)
         :param write_fmt: numeric format for saving the data, default "%14.9f"
         """
@@ -70,8 +69,15 @@ class HistogramAction(Action):
         print(f"  stride = {self.stride}")
         self.write_stride = write_stride
         self.write_fmt = write_fmt or "%14.9f"
-        self.fileheader = fileheader or ""
         self.filename = filename
+        if filename:  # set up header
+            fields = traj_action.ld.pot.get_fields() + ["histo_count"]
+            constants = {}
+            for i in range(n_dim):
+                constants[f"{fields[i]}_min"] = ranges[i][0]
+                constants[f"{fields[i]}_max"] = ranges[i][1]
+                constants[f"{fields[i]}_n_bins"] = n_bins[i]
+            self.fileheader = PlumedHeader(fields, constants)
         if write_stride:
             if not filename:
                 e = "Specifying a write_stride but no filename makes no sense"
@@ -136,4 +142,5 @@ class HistogramAction(Action):
                 filename = f"{self.filename}_{step}"
             else:
                 filename = self.filename
+            backup_if_exists(filename)
             self.histo.write_to_file(filename, self.write_fmt, str(self.fileheader))

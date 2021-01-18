@@ -7,6 +7,7 @@ import numpy as np
 from bdld import analysis
 from bdld.actions.action import Action
 from bdld.actions.histogram_action import HistogramAction
+from bdld.helpers.misc import backup_if_exists
 from bdld.helpers.plumed_header import PlumedHeader
 
 
@@ -18,7 +19,6 @@ class FesAction(Action):
         histo_action: HistogramAction,
         stride: Optional[int] = None,
         filename: Optional[str] = None,
-        fileheader: Optional[Union[PlumedHeader, str]] = None,
         write_stride: Optional[int] = None,
         write_fmt: Optional[str] = None,
         plot_stride: Optional[int] = None,
@@ -61,8 +61,16 @@ class FesAction(Action):
             print(f"  stride = {self.stride}")
         # writing
         self.filename = filename
+        if filename:  # set up header
+            fields = histo_action.traj_action.ld.pot.get_fields() + ["histo_count"]
+            constants = {}
+            h_grid = histo_action.histo
+            for i in range(h_grid.n_dim):
+                constants[f"{fields[i]}_min"] = h_grid.ranges[i][0]
+                constants[f"{fields[i]}_max"] = h_grid.ranges[i][1]
+                constants[f"{fields[i]}_n_bins"] = h_grid.n_points[i]
+            self.fileheader = PlumedHeader(fields, constants)
         self.write_fmt = write_fmt or "%14.9f"
-        self.fileheader = fileheader or ""
         self.write_stride = write_stride
         if self.write_stride:
             if not self.stride:

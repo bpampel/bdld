@@ -6,7 +6,7 @@ import numpy as np
 
 from bdld.actions.action import Action, get_valid_data
 from bdld.actions.bussi_parinello_ld import BussiParinelloLD
-from bdld.helpers.plumed_header import PlumedHeader
+from bdld.helpers.misc import initialize_file
 
 
 class TrajectoryAction(Action):
@@ -26,7 +26,6 @@ class TrajectoryAction(Action):
         ld: BussiParinelloLD,
         stride: Optional[int] = None,
         filename: Optional[str] = None,
-        fileheader: Optional[PlumedHeader] = None,
         write_stride: Optional[int] = None,
         write_fmt: Optional[str] = None,
     ) -> None:
@@ -35,7 +34,6 @@ class TrajectoryAction(Action):
         :param ld: Langevin Dynamics to track
         :param stride: write every nth time step to file, default 1
         :param filename: base of filename(s) to write to
-        :param fileheader: header for the files, the FIELDS line will be overwritten
         :param write_stride: write to file every n time steps, default 100
         :param write_fmt: numeric format for saving the data, default "%14.9f"
         """
@@ -52,11 +50,10 @@ class TrajectoryAction(Action):
         if filename:
             self.filenames = [f"{filename}.{i}" for i in range(n_particles)]
             self.write_fmt = write_fmt or "%14.9f"
+            fields = ld.pot.get_fields()
             for i, fname in enumerate(self.filenames):
-                with open(fname, "w") as f:  # overwrite old files
-                    if fileheader:
-                        fileheader[0] = f"FIELDS traj.{i}"
-                        f.write(str(fileheader) + "\n")
+                ifields = [f"{f}.{i}" for f in fields]
+                initialize_file(fname, ifields)
             print(f"Saving every {self.stride} point to the files '{filename}.{{i}}'")
         print()
 

@@ -121,3 +121,17 @@ class Potential:
         # normalize with volume element from stepsizes
         prob /= np.sum(prob.data) * np.prod(prob.stepsizes)
         return prob
+
+    def get_fields(self) -> List[str]:
+        """Return list of identifiers for the potential dimensions
+
+        Can be overwritten by subclasses to have custom names
+        """
+        if self.n_dim == 1:
+            return ["x"]
+        elif self.n_dim == 2:
+            return ["x", "y"]
+        elif self.n_dim == 3:
+            return ["x", "y", "z"]
+        else:
+            raise ValueError("Class can't be used for more than 3 dimensions")

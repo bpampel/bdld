@@ -8,6 +8,7 @@ import numpy as np
 from bdld.actions.action import Action
 from bdld.actions.bussi_parinello_ld import BpldParticle
 from bdld import grid
+from bdld.helpers.misc import initialize_file
 
 
 def dens_kernel_convolution(
@@ -270,8 +271,9 @@ class BirthDeath(Action):
                 )
 
         if self.stats_filename:
-            with open(self.stats_filename, "w") as f:  # overwrite old files
-                pass
+            fields = ["timestep", "dup_succ", "dup_attempts", "kill_succ", "kill_attempts"]
+            constants = {"timestep": self.dt, "kernel_bandwidth": self.bw, "kt": kt}
+            initialize_file(self.stats_filename, fields, constants)
         self.reset_stats()
         print()
 
