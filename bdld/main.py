@@ -7,7 +7,9 @@ import sys
 import numpy as np
 
 from bdld import inputparser
-from bdld.potential import Potential
+from bdld.potential.potential import Potential
+from bdld.potential.polynomial import PolynomialPotential
+from bdld.potential.mueller_brown import MuellerBrownPotential
 from bdld.grid import Grid
 # imports of all actions
 from bdld.actions.action import Action
@@ -76,6 +78,9 @@ def main() -> None:
             file=sys.stderr,
         )
         sys.exit(1)
+    except inputparser.InputError as e:
+        print(e.args[0], file=sys.stderr)
+        sys.exit(1)
 
     n_steps = config.ld["n_steps"]
     print(f"Setup finished, now running for {n_steps} steps")
@@ -93,12 +98,19 @@ def main() -> None:
 
 def setup_potential(options: Dict) -> Potential:
     """Return potential from given options"""
-    if options["n_dim"] == 1:
-        ranges = [(options["min"], options["max"])]
+    if options["type"] == "polynomial":
+        if options["n_dim"] == 1:
+            ranges = [(options["min"], options["max"])]
+        else:
+            ranges = list(zip(options["min"], options["max"]))
+        return PolynomialPotential(options["coeffs"], ranges)
+    elif options["type"] == "mueller-brown":
+        return MuellerBrownPotential(options["scaling-factor"])
     else:
-        ranges = list(zip(options["min"], options["max"]))
-    return Potential(options["coeffs"], ranges)
-
+        raise inputparser.InputError(
+            f'Specified potential type {options["type"]} is not implemented',
+            "type", "potential"
+        )
 
 def setup_ld(options: Dict, pot: Potential) -> BussiParinelloLD:
     """Return Langevin Dynamics with given options on the potential"""

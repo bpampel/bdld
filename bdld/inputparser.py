@@ -179,25 +179,34 @@ class Input:
 
     def parse_potential(self, section: configparser.SectionProxy) -> None:
         """Define and parse the options of the potential"""
-        n_dim_option = InputOption("n_dim", int, True, Input.at_most_3dim)
-        n_dim = cast(int, n_dim_option.parse(section))
+        type_option = InputOption("type", str, True)
+        pot_type = cast(str, type_option.parse(section))
+        if pot_type == "polynomial":
+            n_dim_option = InputOption("n_dim", int, True, Input.at_most_3dim)
+            n_dim = cast(int, n_dim_option.parse(section))
 
-        if n_dim == 1:
+            if n_dim == 1:
+                options = [
+                    type_option,
+                    n_dim_option,
+                    InputOption("coeffs", [float], True),
+                    InputOption("min", float, True),
+                    InputOption("max", float, True),
+                ]
+            else:
+                options = [
+                    type_option,
+                    n_dim_option,
+                    InputOption("min", [float], True),
+                    InputOption("max", [float], True),
+                ]
+                for i in range(n_dim):
+                    options.append(InputOption("coeffs" + str(i + 1), [float], True))
+        elif pot_type == "mueller-brown":
             options = [
-                n_dim_option,
-                InputOption("coeffs", [float], True),
-                InputOption("min", float, True),
-                InputOption("max", float, True),
+                type_option,
+                InputOption("scaling_factor", float, False),
             ]
-        else:
-            options = [
-                n_dim_option,
-                InputOption("min", [float], True),
-                InputOption("max", [float], True),
-            ]
-            for i in range(n_dim):
-                options.append(InputOption("coeffs" + str(i + 1), [float], True))
-        options.append(InputOption("seed", int, False))
         self.potential = self.parse_section(section, options)
 
     def parse_particles(self, section: configparser.SectionProxy) -> None:
