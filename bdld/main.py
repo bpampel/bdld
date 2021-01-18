@@ -18,9 +18,6 @@ from bdld.actions.histogram_action import HistogramAction
 from bdld.actions.fes_action import FesAction
 from bdld.actions.delta_f_action import DeltaFAction
 
-from bdld.helpers.plumed_header import PlumedHeader as PlmdHeader
-from bdld.helpers.misc import backup_if_exists
-
 
 def main() -> None:
     """Main function of simulation
@@ -206,7 +203,6 @@ def setup_trajectories(options: Dict, ld: BussiParinelloLD) -> TrajectoryAction:
         ld,
         options["stride"],
         options["filename"],
-        None,
         options["write-stride"],
         options["fmt"],
     )
@@ -228,7 +224,6 @@ def setup_histogram(options: Dict, traj_action: TrajectoryAction) -> HistogramAc
         ranges,
         options["stride"],
         options["filename"],
-        None,
         options["write-stride"],
         options["fmt"],
     )
@@ -244,7 +239,6 @@ def setup_fes(options: Dict, histo_action: HistogramAction) -> FesAction:
         histo_action,
         options["stride"],
         options["filename"],
-        None,
         options["write-stride"],
         options["fmt"],
         options["plot-stride"],
@@ -291,7 +285,6 @@ def setup_delta_f(options: Dict, fes_action: FesAction) -> DeltaFAction:
         masks,
         options["stride"],
         options["filename"],
-        None,
         options["write-stride"],
         options["fmt"],
     )

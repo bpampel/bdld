@@ -62,7 +62,7 @@ class FesAction(Action):
         # writing
         self.filename = filename
         if filename:  # set up header
-            fields = histo_action.traj_action.ld.pot.get_fields() + ["histo_count"]
+            fields = histo_action.traj_action.ld.pot.get_fields() + ["fes"]
             constants = {}
             h_grid = histo_action.histo
             for i in range(h_grid.n_dim):
