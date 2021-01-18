@@ -181,6 +181,7 @@ class Input:
         """Define and parse the options of the potential"""
         type_option = InputOption("type", str, True)
         pot_type = cast(str, type_option.parse(section))
+        defaults: Dict[str, OptionType] = {}  # need default option for n_dim
         if pot_type == "polynomial":
             n_dim_option = InputOption("n_dim", int, True, Input.at_most_3dim)
             n_dim = cast(int, n_dim_option.parse(section))
@@ -205,9 +206,15 @@ class Input:
         elif pot_type == "mueller-brown":
             options = [
                 type_option,
-                InputOption("scaling_factor", float, False),
+                InputOption("scaling-factor", float, False),
             ]
-        self.potential = self.parse_section(section, options)
+            defaults["n_dim"] = 2
+        else:
+            raise InputError(
+                f'Specified potential type "{pot_type}" is not implemented',
+                "type", section.name,
+            )
+        self.potential = self.parse_section(section, options, defaults)
 
     def parse_particles(self, section: configparser.SectionProxy) -> None:
         """Parse the number of particles and initial distribution"""
@@ -334,10 +341,15 @@ class Input:
 
     @staticmethod
     def parse_section(
-        section: configparser.SectionProxy, options: List[InputOption]
+        section: configparser.SectionProxy, options: List[InputOption], defaults: [Dict[str, OptionType]] = None
     ) -> Dict[str, OptionType]:
-        """Parse all options of a section"""
-        parsed_options: Dict[str, OptionType] = {}
+        """Parse all options of a section
+
+        :param section: section to parse
+        :param options: list of InputOption to parse
+        :param defaults: optional defaults for the output dictionary
+        """
+        parsed_options: Dict[str, OptionType] = defaults or {}
         for o in options:
             parsed_options[o.key] = o.parse(section)
         return parsed_options

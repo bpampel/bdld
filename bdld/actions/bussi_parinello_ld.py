@@ -5,7 +5,7 @@ import numpy as np
 
 from bdld.actions.action import Action
 from bdld.particle import Particle
-from bdld.potential import Potential
+from bdld.potential.potential import Potential
 
 
 class BpldParticle(Particle):

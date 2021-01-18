@@ -1,6 +1,6 @@
 """Müller-Brown Potential class to be evaluated with md"""
 
-from typing import List, Union, Tuple
+from typing import List, Optional, Union, Tuple
 import numpy as np
 
 from bdld.potential.potential import Potential
@@ -34,15 +34,20 @@ class MuellerBrownPotential(Potential):
 
     def __init__(
         self,
-        scaling_factor: float,
+        scaling_factor: Optional[float] = None,
     ) -> None:
+        """Initialize Müller-Brown potential
+
+        :param scaling_factor: Scale potential by float, optional
+        """
         super().__init__()  # not actually needed but enforces having the values
 
         self.n_dim = 2
         self.ranges = [(-1.5,1.5), (-0.5,2.5)]
-        self.scaling_factor = scaling_factor
-        global A
-        A *= self.scaling_factor
+        self.scaling_factor = scaling_factor or 1.0
+        if scaling_factor:
+            global A
+            A *= self.scaling_factor
 
     def __str__(self) -> str:
         """Give out coefficients"""

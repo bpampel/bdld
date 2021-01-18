@@ -11,6 +11,7 @@ from bdld.potential.potential import Potential
 from bdld.potential.polynomial import PolynomialPotential
 from bdld.potential.mueller_brown import MuellerBrownPotential
 from bdld.grid import Grid
+
 # imports of all actions
 from bdld.actions.action import Action
 from bdld.actions.birth_death import BirthDeath
@@ -108,9 +109,11 @@ def setup_potential(options: Dict) -> Potential:
         return MuellerBrownPotential(options["scaling-factor"])
     else:
         raise inputparser.InputError(
-            f'Specified potential type {options["type"]} is not implemented',
-            "type", "potential"
+            f'Specified potential type "{options["type"]}" is not implemented',
+            "type",
+            "potential",
         )
+
 
 def setup_ld(options: Dict, pot: Potential) -> BussiParinelloLD:
     """Return Langevin Dynamics with given options on the potential"""
@@ -167,6 +170,13 @@ def setup_birth_death(options: Dict, ld: BussiParinelloLD) -> BirthDeath:
         bd_bw = np.array([options["kernel-bandwidth"]])
     else:
         bd_bw = np.array(options["kernel-bandwidth"])
+    if len(bd_bw) != ld.pot.n_dim:
+        raise inputparser.InputError(
+            f"dimensions of kernel bandwidth does not match potential (should be {ld.pot.n_dim} values)",
+            "kernel-bandwidth",
+            "birth-death",
+        )
+
     if options["correction-variant"]:
         eq_density: Optional[Grid] = bd_prob_density(ld.pot, bd_bw, ld.kt)
     else:
@@ -226,9 +236,7 @@ def setup_histogram(options: Dict, traj_action: TrajectoryAction) -> HistogramAc
         ranges = [(options["min"], options["max"])]
         n_bins = [options["bins"]]
     else:
-        min_list = inputparser.get_all_numbered_values(options, "min")
-        max_list = inputparser.get_all_numbered_values(options, "max")
-        ranges = list(zip(min_list, max_list))
+        ranges = list(zip(options["min"], options["max"]))
         n_bins = options["bins"]
     return HistogramAction(
         traj_action,
@@ -288,7 +296,7 @@ def setup_delta_f(options: Dict, fes_action: FesAction) -> DeltaFAction:
             raise inputparser.InputError(
                 "The specified state dimensions are smaller than the fes dimensions",
                 "state{i}-min",
-                options,
+                "delta-f",
             ) from e
         masks.append(mask)
 
