@@ -1,4 +1,4 @@
-.PHONY: clean-build coverage install package test venv
+.PHONY: clean-build coverage install package test docs-html docs-pdf
 
 VIRTUAL_ENV?=.venv
 PY=$(VIRTUAL_ENV)/bin/python3
@@ -16,6 +16,12 @@ $(VIRTUAL_ENV)/bin/activate: requirements.txt
 	test -d $(VIRTUAL_ENV) || python3 -m venv $(VIRTUAL_ENV)
 	$(PIP) install -U pip; $(PIP) install -Ur requirements.txt
 	@touch $(VIRTUAL_ENV)/bin/activate
+
+docs-html: docs
+	@cd docs && make html
+
+docs-pdf: docs
+	@cd docs && make latexpdf
 
 test:
 	python3 -m unittest discover
