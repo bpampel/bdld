@@ -43,8 +43,9 @@ class TrajectoryAction(Action):
         self.filenames: Optional[List[str]] = None
         self.stride: int = stride or 1
         self.write_stride: int = write_stride or 100
-        # one more per row for storing the time
-        self.traj = np.empty((self.write_stride, n_particles + 1, ld.pot.n_dim))
+        # two data members for storing positions and time
+        self.traj = np.empty((self.write_stride, n_particles, ld.pot.n_dim))
+        self.times = np.empty((self.write_stride, 1))
         self.last_write: int = 0
         # write headers
         if filename:
@@ -66,8 +67,8 @@ class TrajectoryAction(Action):
         :param step: current simulation step
         """
         row = (step % self.write_stride) - 1  # saving starts at step 1
-        self.traj[row, 0] = step * self.ld.dt
-        self.traj[row, 1:] = [p.pos for p in self.ld.particles]
+        self.times[row] = step * self.ld.dt
+        self.traj[row] = [p.pos for p in self.ld.particles]
 
         if step % self.write_stride == 0:
             self.write(step)
@@ -89,13 +90,14 @@ class TrajectoryAction(Action):
         :param step: current simulation step
         """
         if self.filenames:
-            save_data = get_valid_data(self.traj, step, self.stride, 1, self.last_write)
+            save_traj = get_valid_data(self.traj, step, self.stride, 1, self.last_write)
+            save_times = get_valid_data(self.times, step, self.stride, 1, self.last_write)
             for i, filename in enumerate(self.filenames):
                 with open(filename, "ab") as f:
                     np.savetxt(
                         f,
-                        # 3d (times, 1+walkers, pot_dims) to 2d array (times, 1+pot_dims)
-                        save_data[:, (0, i + 1)].reshape((-1, 1 + self.ld.pot.n_dim)),
+                        # 3d (times, walkers, pot_dims) to 2d array (times, pot_dims)
+                        np.c_[save_times, save_traj[:, i]],
                         delimiter=" ",
                         newline="\n",
                         fmt=self.write_fmt,
