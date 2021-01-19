@@ -9,7 +9,7 @@ install: venv
 
 package: venv
 	$(PIP) install -U pip wheel
-	python3 setup.py sdist bdist_wheel
+	$(PY) setup.py sdist bdist_wheel
 
 venv: $(VIRTUAL_ENV)/bin/activate
 $(VIRTUAL_ENV)/bin/activate: requirements.txt
@@ -18,7 +18,7 @@ $(VIRTUAL_ENV)/bin/activate: requirements.txt
 	@touch $(VIRTUAL_ENV)/bin/activate
 
 test:
-	python -m unittest discover
+	python3 -m unittest discover
 
 coverage: coverage_installed
 	@coverage run -m unittest discover > /dev/null
