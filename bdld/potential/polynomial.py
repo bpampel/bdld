@@ -81,3 +81,28 @@ class PolynomialPotential(Potential):
         :return force: array with force per direction
         """
         return np.array([-self.polyval(*pos, self.der[d]) for d in range(self.n_dim)])
+
+
+def coefficients_from_file(filename: str, n_dim: int) -> np.ndarray:
+    """Read coefficients from file
+
+    This should be compatible to the ves_md_linearexpansion files
+
+    The syntax for the files is rows with one coefficient each.
+    The first n_dim columns contain the polynomial orders per dimension,
+    the next one the coefficient value. Remaining columns are ignored.
+
+    :param filename: path to file holding the coefficients
+    :param n_dim: dimensions of potential
+    """
+    file_data = np.genfromtxt(filename)
+
+    # highest polynomial order per dimension
+    shape = [int(max(file_data[:,i]))+1 for i in range(n_dim)]
+
+    coeffs = np.zeros(shape)
+    for row in file_data:  # each row is one coefficient
+        indices = row[:n_dim].astype(int)
+        coeffs[tuple(indices)] = row[n_dim]  # without tuple gives elements of 1st level
+
+    return coeffs

@@ -6,20 +6,19 @@ import sys
 
 import numpy as np
 
-from bdld import inputparser
-from bdld.potential.potential import Potential
-from bdld.potential.polynomial import PolynomialPotential
-from bdld.potential.mueller_brown import MuellerBrownPotential
+from bdld import actions, inputparser, potential
 from bdld.grid import Grid
 
-# imports of all actions
-from bdld.actions.action import Action
-from bdld.actions.birth_death import BirthDeath
-from bdld.actions.bussi_parinello_ld import BussiParinelloLD
-from bdld.actions.trajectory_action import TrajectoryAction
-from bdld.actions.histogram_action import HistogramAction
-from bdld.actions.fes_action import FesAction
-from bdld.actions.delta_f_action import DeltaFAction
+# alias shortcuts
+Action = actions.action.Action
+BirthDeath = actions.birth_death.BirthDeath
+BussiParinelloLD = actions.bussi_parinello_ld.BussiParinelloLD
+TrajectoryAction = actions.trajectory_action.TrajectoryAction
+HistogramAction = actions.histogram_action.HistogramAction
+FesAction = actions.fes_action.FesAction
+DeltaFAction = actions.delta_f_action.DeltaFAction
+
+Potential = potential.potential.Potential
 
 
 def main() -> None:
@@ -47,7 +46,7 @@ def main() -> None:
         sys.exit(1)
 
     # initialize all actions
-    actions: Dict[str, Action] = {}
+    all_actions: Dict[str, Action] = {}
     # dicts are ordered since python 3.7
     # actions are performed in order of insertion to the dict
     # make sure actions are added after their dependencies (e.g. fes after hist)
@@ -56,22 +55,22 @@ def main() -> None:
     pot = setup_potential(config.potential)
     ld = setup_ld(config.ld, pot)
     init_particles(config.particles, ld)
-    actions["ld"] = ld
+    all_actions["ld"] = ld
 
     # optional actions in reasonable order
     try:
         if config.birth_death:
-            actions["birth_death"] = setup_birth_death(config.birth_death, ld)
+            all_actions["birth_death"] = setup_birth_death(config.birth_death, ld)
         if config.trajectories:
-            actions["trajectories"] = setup_trajectories(config.trajectories, ld)
+            all_actions["trajectories"] = setup_trajectories(config.trajectories, ld)
         if config.histogram:
-            actions["histogram"] = setup_histogram(
-                config.histogram, actions["trajectories"]
+            all_actions["histogram"] = setup_histogram(
+                config.histogram, all_actions["trajectories"]
             )
         if config.fes:
-            actions["fes"] = setup_fes(config.fes, actions["histogram"])
+            all_actions["fes"] = setup_fes(config.fes, all_actions["histogram"])
         if config.delta_f:
-            actions["delta_f"] = setup_delta_f(config.delta_f, actions["fes"])
+            all_actions["delta_f"] = setup_delta_f(config.delta_f, all_actions["fes"])
     except KeyError as e:
         print(
             f"Error: An action was specified that requires the '{e.args[0]}' section"
@@ -87,11 +86,11 @@ def main() -> None:
     print(f"Setup finished, now running for {n_steps} steps")
     # main loop
     for step in range(1, n_steps + 1):
-        for action in actions.values():
+        for action in all_actions.values():
             action.run(step)
 
     print("Simulation finished, performing final actions")
-    for action in actions.values():
+    for action in all_actions.values():
         action.final_run(n_steps)
 
     print("Finished without errors")
@@ -102,11 +101,15 @@ def setup_potential(options: Dict) -> Potential:
     if options["type"] == "polynomial":
         if options["n_dim"] == 1:
             ranges = [(options["min"], options["max"])]
+            return potential.polynomial.PolynomialPotential(options["coeffs"], ranges)
         else:
             ranges = list(zip(options["min"], options["max"]))
-        return PolynomialPotential(options["coeffs"], ranges)
+            coeffs = potential.polynomial.coefficients_from_file(
+                options["coeffs-file"], options["n_dim"]
+            )
+        return potential.polynomial.PolynomialPotential(coeffs, ranges)
     elif options["type"] == "mueller-brown":
-        return MuellerBrownPotential(options["scaling-factor"])
+        return potential.mueller_brown.MuellerBrownPotential(options["scaling-factor"])
     else:
         raise inputparser.InputError(
             f'Specified potential type "{options["type"]}" is not implemented',

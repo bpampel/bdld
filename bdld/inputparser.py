@@ -185,12 +185,11 @@ class Input:
         if pot_type == "polynomial":
             n_dim_option = InputOption("n_dim", int, True, Input.at_most_3dim)
             n_dim = cast(int, n_dim_option.parse(section))
-
             if n_dim == 1:
                 options = [
                     type_option,
                     n_dim_option,
-                    InputOption("coeffs", [float], True),
+                    InputOption("coeffs", [float], False),
                     InputOption("min", float, True),
                     InputOption("max", float, True),
                 ]
@@ -198,11 +197,10 @@ class Input:
                 options = [
                     type_option,
                     n_dim_option,
+                    InputOption("coeffs-file", str, True),
                     InputOption("min", [float], True),
                     InputOption("max", [float], True),
                 ]
-                for i in range(n_dim):
-                    options.append(InputOption("coeffs" + str(i + 1), [float], True))
         elif pot_type == "mueller-brown":
             options = [
                 type_option,
