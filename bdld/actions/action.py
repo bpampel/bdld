@@ -10,11 +10,17 @@ class Action:
     """Abstract base class for all actions"""
 
     def run(self, step: int):
-        """Needs to be defined for all actions"""
+        """Needs to be defined for all actions
+
+        :param step: current simulation step
+        """
         raise NotImplementedError()
 
     def final_run(self, step: int):
-        """If not implemented, do nothing"""
+        """If not implemented, do nothing
+
+        :param step: current simulation step
+        """
         pass
 
 
@@ -31,17 +37,20 @@ def get_valid_data(
     be able to write / reset their data array at any time
 
     The data array is assumed to have the following properties:
-    - it is filled every update_stride, the first step is 1, not 0
-    - after the last element is reached the first is written again,
+
+    * it is filled every update_stride, the first step is 1, not 0
+    * after the last element is reached the first is written again,
       all previously stored data is no longer valid
-    - nothing influences this order, e.g. even a reset will continue writing the next
+    * nothing influences this order, e.g. even a reset will continue writing the next
       element instead of starting from the beginning
 
     This results in several assumptions on the arguments, which are not checked!
-    - the write_stride must be a multiple of the update_stride
-    - the last_write argument should not refer to a step before the last rewrite
+
+    * the write_stride must be a multiple of the update_stride
+    * the last_write argument should not refer to a step before the last rewrite
       from the beginning
-    - the stride argument must be a multiple of the update_stride
+    * the stride argument must be a multiple of the update_stride
+
     if these are not satisfied the returned data will not be correct.
 
     The stride argument makes the function only return the data of every nth time step.

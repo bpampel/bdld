@@ -82,7 +82,9 @@ class HistogramAction(Action):
             if not filename:
                 e = "Specifying a write_stride but no filename makes no sense"
                 raise ValueError(e)
-            print(f"Saving histogram every {self.write_stride} time steps to '{filename}'")
+            print(
+                f"Saving histogram every {self.write_stride} time steps to '{filename}'"
+            )
         self.update_stride = traj_action.write_stride
         print()
 

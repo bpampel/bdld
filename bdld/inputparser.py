@@ -210,7 +210,8 @@ class Input:
         else:
             raise InputError(
                 f'Specified potential type "{pot_type}" is not implemented',
-                "type", section.name,
+                "type",
+                section.name,
             )
         self.potential = self.parse_section(section, options, defaults)
 
@@ -339,7 +340,9 @@ class Input:
 
     @staticmethod
     def parse_section(
-        section: configparser.SectionProxy, options: List[InputOption], defaults: [Dict[str, OptionType]] = None
+        section: configparser.SectionProxy,
+        options: List[InputOption],
+        defaults: [Dict[str, OptionType]] = None,
     ) -> Dict[str, OptionType]:
         """Parse all options of a section
 

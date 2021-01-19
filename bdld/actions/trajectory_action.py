@@ -91,7 +91,9 @@ class TrajectoryAction(Action):
         """
         if self.filenames:
             save_traj = get_valid_data(self.traj, step, self.stride, 1, self.last_write)
-            save_times = get_valid_data(self.times, step, self.stride, 1, self.last_write)
+            save_times = get_valid_data(
+                self.times, step, self.stride, 1, self.last_write
+            )
             for i, filename in enumerate(self.filenames):
                 with open(filename, "ab") as f:
                     np.savetxt(

@@ -6,12 +6,12 @@ import numpy as np
 from bdld.potential.potential import Potential
 
 # coefficients
-A = np.array(  [ -200.0 , -100.0 , -175.0 ,  15.0 ] )
-a = np.array(  [   -1.0 ,   -1.0 ,   -6.5 ,   0.7 ] )
-b = np.array(  [    0.0 ,    0.0 ,   11.0 ,   0.6 ] )
-c = np.array(  [  -10.0 ,  -10.0 ,   -6.5 ,   0.7 ] )
-x0 = np.array( [    1.0 ,    0.0 ,   -0.5 ,  -1.0 ] )
-y0 = np.array( [    0.0 ,    0.5 ,    1.5 ,   1.0 ] )
+A = np.array([-200.0, -100.0, -175.0, 15.0])
+a = np.array([-1.0, -1.0, -6.5, 0.7])
+b = np.array([0.0, 0.0, 11.0, 0.6])
+c = np.array([-10.0, -10.0, -6.5, 0.7])
+x0 = np.array([1.0, 0.0, -0.5, -1.0])
+y0 = np.array([0.0, 0.5, 1.5, 1.0])
 pot_shift = +30.33319242243656
 
 
@@ -43,7 +43,7 @@ class MuellerBrownPotential(Potential):
         super().__init__()  # not actually needed but enforces having the values
 
         self.n_dim = 2
-        self.ranges = [(-1.5,1.5), (-0.5,2.5)]
+        self.ranges = [(-1.5, 1.5), (-0.5, 2.5)]
         self.scaling_factor = scaling_factor or 1.0
         if scaling_factor:
             global A
@@ -63,16 +63,24 @@ class MuellerBrownPotential(Potential):
         """
         # from Omar's bdls-code
         pot = 0.0
-        force = np.array([ 0.0 , 0.0 ])
+        force = np.array([0.0, 0.0])
         x = pos[0]
         y = pos[1]
         for i in range(4):
-            exp_tmp1 = np.exp( a[i]*(x-x0[i])**2 + b[i]*(x-x0[i])*(y-y0[i]) + c[i]*(y-y0[i])**2 )
+            exp_tmp1 = np.exp(
+                a[i] * (x - x0[i]) ** 2
+                + b[i] * (x - x0[i]) * (y - y0[i])
+                + c[i] * (y - y0[i]) ** 2
+            )
             pot += A[i] * exp_tmp1
-            force[0] += -A[i] * ( 2.0*a[i]*(x-x0[i])+ b[i]*(y-y0[i]) ) * exp_tmp1
-            force[1] += -A[i] * ( b[i]*(x-x0[i])+ 2.0*c[i]*(y-y0[i]) ) * exp_tmp1
+            force[0] += (
+                -A[i] * (2.0 * a[i] * (x - x0[i]) + b[i] * (y - y0[i])) * exp_tmp1
+            )
+            force[1] += (
+                -A[i] * (b[i] * (x - x0[i]) + 2.0 * c[i] * (y - y0[i])) * exp_tmp1
+            )
         pot += pot_shift
-        return (pot,force)
+        return (pot, force)
 
     def energy(self, pos: Union[List[float], np.ndarray]) -> float:
         """Get energy at position
@@ -84,7 +92,11 @@ class MuellerBrownPotential(Potential):
         x = pos[0]
         y = pos[1]
         for i in range(4):
-            pot += A[i] * np.exp( a[i]*(x-x0[i])**2 + b[i]*(x-x0[i])*(y-y0[i]) + c[i]*(y-y0[i])**2 )
+            pot += A[i] * np.exp(
+                a[i] * (x - x0[i]) ** 2
+                + b[i] * (x - x0[i]) * (y - y0[i])
+                + c[i] * (y - y0[i]) ** 2
+            )
         pot += pot_shift
         return pot
 
@@ -94,11 +106,19 @@ class MuellerBrownPotential(Potential):
         :param pos: position to be evaluated (given as list or array even in 1d)
         :return force: array with force per direction
         """
-        force = np.array([ 0.0 , 0.0 ])
+        force = np.array([0.0, 0.0])
         x = pos[0]
         y = pos[1]
         for i in range(4):
-            exp_tmp1 = np.exp( a[i]*(x-x0[i])**2 + b[i]*(x-x0[i])*(y-y0[i]) + c[i]*(y-y0[i])**2 )
-            force[0] += -A[i] * ( 2.0*a[i]*(x-x0[i])+ b[i]*(y-y0[i]) ) * exp_tmp1
-            force[1] += -A[i] * ( b[i]*(x-x0[i])+ 2.0*c[i]*(y-y0[i]) ) * exp_tmp1
+            exp_tmp1 = np.exp(
+                a[i] * (x - x0[i]) ** 2
+                + b[i] * (x - x0[i]) * (y - y0[i])
+                + c[i] * (y - y0[i]) ** 2
+            )
+            force[0] += (
+                -A[i] * (2.0 * a[i] * (x - x0[i]) + b[i] * (y - y0[i])) * exp_tmp1
+            )
+            force[1] += (
+                -A[i] * (b[i] * (x - x0[i]) + 2.0 * c[i] * (y - y0[i])) * exp_tmp1
+            )
         return force

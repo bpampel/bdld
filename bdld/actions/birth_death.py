@@ -42,7 +42,7 @@ def calc_prob_correction_kernel(
 
     Calculates the following two terms from the Kernel K and equilibrium walker distribution pi
     .. :math::
-        -log((K(x) * \pi(x)) / \pi(x)) + \int (log((K(x) * \pi(x)) / \pi(x))) \pi \mathrm{d}x
+    -log((K(x) * \pi(x)) / \pi(x)) + \int (log((K(x) * \pi(x)) / \pi(x))) \pi \mathrm{d}x
 
     :param eq_density: grid with equilibrium probability density of system
     :param bw: bandwidths of the kernel (sigma)
@@ -271,7 +271,13 @@ class BirthDeath(Action):
                 )
 
         if self.stats_filename:
-            fields = ["timestep", "dup_succ", "dup_attempts", "kill_succ", "kill_attempts"]
+            fields = [
+                "timestep",
+                "dup_succ",
+                "dup_attempts",
+                "kill_succ",
+                "kill_attempts",
+            ]
             constants = {"timestep": self.dt, "kernel_bandwidth": self.bw, "kt": kt}
             initialize_file(self.stats_filename, fields, constants)
         self.reset_stats()
@@ -403,7 +409,7 @@ class BirthDeath(Action):
                     self.kill_count,
                     self.kill_attempts,
                 ]
-            ).reshape(1, 5)  # to print as single row
+            ).reshape(1, 5)
             with open(self.stats_filename, "ab") as f:
                 np.savetxt(
                     f,

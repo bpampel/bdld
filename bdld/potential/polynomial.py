@@ -98,7 +98,7 @@ def coefficients_from_file(filename: str, n_dim: int) -> np.ndarray:
     file_data = np.genfromtxt(filename)
 
     # highest polynomial order per dimension
-    shape = [int(max(file_data[:,i]))+1 for i in range(n_dim)]
+    shape = [int(max(file_data[:, i])) + 1 for i in range(n_dim)]
 
     coeffs = np.zeros(shape)
     for row in file_data:  # each row is one coefficient
