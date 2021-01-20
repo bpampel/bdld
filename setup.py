@@ -7,7 +7,7 @@ setup(
     author="Benjamin Pampel",
     packages=["bdld", "bdld.actions", "bdld.potential", "bdld.helpers"],
     scripts=["bin/bdld_run"],
-    python_requires=">=3.7",
+    python_requires=">=3.6",
     install_requires=["numpy>=1.19", "scipy>=1.5", "matplotlib>=3.3"],
     extras_require={"kde-statsmodels": ["statsmodels"]},
 )
