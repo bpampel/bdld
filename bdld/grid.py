@@ -154,7 +154,7 @@ class Grid:
         :param method: interpolation method to use, defaults to linear
         """
         return sp_interpolate.griddata(
-            self.points(), self.data.flatten(), points, method
+            self.points(), self.data.flatten(), points, method, fill_value
         )
 
     def write_to_file(
