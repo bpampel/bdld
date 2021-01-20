@@ -1,6 +1,8 @@
 """Class that takes care about running and analysing a simulation"""
 
 import argparse
+import logging
+import logging.config
 from typing import Dict, List, Optional
 import sys
 
@@ -34,15 +36,25 @@ def main() -> None:
     # parse cli argument(s)
     cliargs = argparse.ArgumentParser()
     cliargs.add_argument("input", type=str)
-    infile = cliargs.parse_args().input
+    cliargs.add_argument(
+        "--log-level",
+        type=str,
+        default="warning",
+        dest="log_level",
+        help="Logging level, default 'warning'",
+    )
+    args = cliargs.parse_args()
 
+    log = init_logger(args.log_level)
+
+    infile = args.input
     try:
         config = inputparser.Input(infile)
     except FileNotFoundError:
-        print(f"Error: Input file '{infile}' could not be found", file=sys.stderr)
+        log.error("Input file '%s' could not be found", infile)
         sys.exit(1)
-    except inputparser.InputError as e:  # print error message and exit
-        print(e.args[0], file=sys.stderr)
+    except (inputparser.OptionError, inputparser.SectionError) as e:
+        log.error("Input file '%s': %s", infile, e.args[0])
         sys.exit(1)
 
     # initialize all actions
@@ -72,14 +84,14 @@ def main() -> None:
         if config.delta_f:
             all_actions["delta_f"] = setup_delta_f(config.delta_f, all_actions["fes"])
     except KeyError as e:
-        print(
-            f"Error: An action was specified that requires the '{e.args[0]}' section"
-            " in input but it was not found",
-            file=sys.stderr,
+        log.error(
+            "Error: An action was specified that requires the '%s' section in input"
+            "but it was not found",
+            e.args[0],
         )
         sys.exit(1)
-    except inputparser.InputError as e:
-        print(e.args[0], file=sys.stderr)
+    except inputparser.OptionError as e:
+        log.error("Input file '%s': %s", infile, e.args[0])
         sys.exit(1)
 
     n_steps = config.ld["n_steps"]
@@ -111,7 +123,7 @@ def setup_potential(options: Dict) -> Potential:
     elif options["type"] == "mueller-brown":
         return potential.mueller_brown.MuellerBrownPotential(options["scaling-factor"])
     else:
-        raise inputparser.InputError(
+        raise inputparser.OptionError(
             f'Specified potential type "{options["type"]}" is not implemented',
             "type",
             "potential",
@@ -174,7 +186,7 @@ def setup_birth_death(options: Dict, ld: BussiParinelloLD) -> BirthDeath:
     else:
         bd_bw = np.array(options["kernel-bandwidth"])
     if len(bd_bw) != ld.pot.n_dim:
-        raise inputparser.InputError(
+        raise inputparser.OptionError(
             f"dimensions of kernel bandwidth does not match potential (should be {ld.pot.n_dim} values)",
             "kernel-bandwidth",
             "birth-death",
@@ -296,7 +308,7 @@ def setup_delta_f(options: Dict, fes_action: FesAction) -> DeltaFAction:
                     & (fes_points[:, i] <= state[1][i])
                 )
         except IndexError as e:
-            raise inputparser.InputError(
+            raise inputparser.OptionError(
                 "The specified state dimensions are smaller than the fes dimensions",
                 "state{i}-min",
                 "delta-f",
@@ -311,3 +323,26 @@ def setup_delta_f(options: Dict, fes_action: FesAction) -> DeltaFAction:
         options["write-stride"],
         options["fmt"],
     )
+
+
+def init_logger(level_str: str) -> logging.Logger:
+    """Set up logger with specified level
+
+    :param level_str: string with the level
+    """
+    levels = {
+        "critical": logging.CRITICAL,
+        "error": logging.ERROR,
+        "warn": logging.WARNING,
+        "warning": logging.WARNING,
+        "info": logging.INFO,
+        "debug": logging.DEBUG,
+    }
+    log_level = levels.get(level_str.lower())
+
+    log = logging.getLogger("bdld")
+    fmt='%(asctime)s - %(name)s - %(levelname)s: %(message)s'
+    datefmt='%Y-%m-%d %H:%M:%S'
+    logging.basicConfig(level=log_level,format=fmt,datefmt=datefmt)
+
+    return log

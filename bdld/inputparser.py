@@ -25,11 +25,18 @@ BuiltinType = Union[str, float, int, bool]
 OptionType = Union[BuiltinType, List[BuiltinType], None]
 
 
-class InputError(Exception):
-    """Custom error message style related to config parsing"""
+class OptionError(Exception):
+    """Custom error message if option missing or could not be parsed"""
 
     def __init__(self, message, key, section):
         super().__init__(f"Option '{key}' in section [{section}]: {message}")
+
+
+class SectionError(Exception):
+    """Error if section is missing"""
+
+    def __init__(self, section):
+        super().__init__(f"No section '{section}' found, but it is required")
 
 
 class Condition:
@@ -65,9 +72,8 @@ class InputOption:
         """
         if self.key not in section.keys():
             if self.compulsory:
-                raise InputError(
-                    "Could not be found but is required", self.key, section.name
-                )
+                e = "Option not found, but it is required"
+                raise OptionError(e, self.key, section.name)
             return None
         if self.keytype == str:
             val: OptionType = section.get(self.key)
@@ -79,7 +85,7 @@ class InputOption:
             if self.keytype == bool:
                 val = section.getbool(self.key)
         except ValueError as e:
-            raise InputError(
+            raise OptionError(
                 f"could not be converted to {self.keytype.__name__}",
                 self.key,
                 section.name,
@@ -90,7 +96,7 @@ class InputOption:
             val = [self.keytype[0](x) for x in val.split(",")]
         if self.condition:
             if not self.condition.function(val):
-                raise InputError(self.condition.desc, self.key, section.name)
+                raise OptionError(self.condition.desc, self.key, section.name)
         return val
 
 
@@ -146,8 +152,7 @@ class Input:
 
         for required_sec in ["ld", "potential", "particles"]:
             if not required_sec in infile.sections():
-                e = f"No {required_sec} section in input, but it is required"
-                raise configparser.NoSectionError(e)
+                raise SectionError(required_sec)
 
         self.parse_ld(infile["ld"])
         self.parse_potential(infile["potential"])
@@ -208,7 +213,7 @@ class Input:
             ]
             defaults["n_dim"] = 2
         else:
-            raise InputError(
+            raise OptionError(
                 f'Specified potential type "{pot_type}" is not implemented',
                 "type",
                 section.name,
@@ -389,7 +394,7 @@ def numbered_state_options(section: configparser.SectionProxy) -> List[InputOpti
     """
     n_states = len(get_all_numbered_values(section, "state", "-min"))
     if n_states != len(get_all_numbered_values(section, "state", "-max")):
-        raise InputError(
+        raise OptionError(
             "The number of min and max options for the states doesn't match",
             "statex-min",
             section.name,
