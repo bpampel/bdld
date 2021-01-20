@@ -285,6 +285,7 @@ class Input:
         """Define and parse the options for histogramming the trajectories"""
         options = [
             InputOption("stride", int, False, Input.positive),
+            InputOption("reset", [int], False, Input.all_positive),
             InputOption("filename", str, False, None),
             InputOption("write-stride", int, False, Input.positive),
             InputOption("fmt", str, False),

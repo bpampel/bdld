@@ -1,5 +1,6 @@
 """Module holding the HistogramAction class"""
 
+import logging
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
@@ -27,6 +28,7 @@ class HistogramAction(Action):
         n_bins: List[int],
         ranges: List[Tuple[float, float]],
         stride: Optional[int] = None,
+        reset: Optional[List[int]] = None,
         filename: Optional[str] = None,
         write_stride: Optional[int] = None,
         write_fmt: Optional[str] = None,
@@ -39,7 +41,8 @@ class HistogramAction(Action):
         :param traj_action: trajectories to use for histogramming
         :param n_bins: number of bins of the histogram per dimension
         :param ranges: extent of histogram (min, max) per dimension
-        :param int stride: add every nth particle position to the histogram, default 1
+        :param stride: add every nth particle position to the histogram, default 1
+        :param reset: clear previous counts at given timesteps (reset histogram)
         :param filename: optional filename to save histogram to
         :param write_stride: write to file every n time steps, default None (never)
         :param write_fmt: numeric format for saving the data, default "%14.9f"
@@ -67,6 +70,7 @@ class HistogramAction(Action):
         self.histo = Histogram(n_bins, ranges)
         self.stride = stride or 1
         print(f"  stride = {self.stride}")
+        self.reset = reset or []
         self.write_stride = write_stride
         self.write_fmt = write_fmt or "%14.9f"
         self.filename = filename
@@ -99,6 +103,9 @@ class HistogramAction(Action):
             self.histo.add(data.reshape(-1, data.shape[-1]))
         if self.write_stride and step % self.write_stride == 0:
             self.write(step)
+        if step in self.reset:
+            logging.info("Reset of histogram at step %s", step)
+            self.histo.clear()
 
     def final_run(self, step: int):
         """Same as run without stride checks

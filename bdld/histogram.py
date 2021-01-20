@@ -53,6 +53,10 @@ class Histogram(grid.Grid):
         tmp_histo, _ = np.histogramdd(data, bins=self.bins)
         self.data += tmp_histo
 
+    def clear(self) -> None:
+        """Reset all counts to zero"""
+        self.data.fill(0)
+
     def bin_centers(self):
         """Calculate the centers of the histogram bins from the bin edges
 

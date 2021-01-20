@@ -27,11 +27,12 @@ def main() -> None:
     """Main function of simulation
 
     Does these things (in order):
-    1) parse cli args
-    2) get input from file
-    3) set up all actions
-    4) run the main loop for the desired time steps
-    5) run final actions
+
+        1. parse cli args
+        2. get input from file
+        3. set up all actions
+        4. run the main loop for the desired time steps
+        5. run final actions
     """
     # parse cli argument(s)
     cliargs = argparse.ArgumentParser()
@@ -258,6 +259,7 @@ def setup_histogram(options: Dict, traj_action: TrajectoryAction) -> HistogramAc
         n_bins,
         ranges,
         options["stride"],
+        options["reset"],
         options["filename"],
         options["write-stride"],
         options["fmt"],
