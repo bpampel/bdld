@@ -1,5 +1,6 @@
 """Module holding the HistogramAction class"""
 
+from collections import OrderedDict
 import logging
 from typing import List, Optional, Tuple, Union
 
@@ -76,7 +77,7 @@ class HistogramAction(Action):
         self.filename = filename
         if filename:  # set up header
             fields = traj_action.ld.pot.get_fields() + ["histo_count"]
-            constants = {}
+            constants = OrderedDict()  # makes sure constants are printed in order
             for i in range(n_dim):
                 constants[f"{fields[i]}_min"] = ranges[i][0]
                 constants[f"{fields[i]}_max"] = ranges[i][1]

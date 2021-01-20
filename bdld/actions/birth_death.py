@@ -1,5 +1,6 @@
 """Birth death algorithm"""
 
+from collections import OrderedDict
 import copy
 from typing import List, Optional, Union, Tuple
 
@@ -278,7 +279,9 @@ class BirthDeath(Action):
                 "kill_succ",
                 "kill_attempts",
             ]
-            constants = {"timestep": self.dt, "kernel_bandwidth": self.bw, "kt": kt}
+            constants = OrderedDict(
+                [("timestep", self.dt), ("kernel_bandwidth", self.bw), ("kt", kt)]
+            )
             initialize_file(self.stats_filename, fields, constants)
         self.reset_stats()
         print()
@@ -355,7 +358,9 @@ class BirthDeath(Action):
             beta += ene * self.inv_kt
             beta -= np.mean(beta[beta != -np.inf])
             if self.correction_variant == "additive":
-                beta += self.correction.interpolate(pos, "linear", 0.0).reshape(len(pos))
+                beta += self.correction.interpolate(pos, "linear", 0.0).reshape(
+                    len(pos)
+                )
         elif self.correction_variant == "multiplicative":
             # do not use actual energies, just add the smoothed density
             beta += self.correction.interpolate(pos, "linear", 0.0).reshape(len(pos))

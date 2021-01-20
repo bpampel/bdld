@@ -1,5 +1,6 @@
 """Module holding the DeltaFAction class"""
 
+from collections import OrderedDict
 from typing import Optional
 
 import numpy as np
@@ -69,7 +70,7 @@ class DeltaFAction(Action):
         self.filename = filename
         if self.filename:
             fields = [f"delta_f.1-{i}" for i in range(2, len(self.masks) + 1)]
-            constants = {"kt": self.kt}
+            constants = OrderedDict([("kt", self.kt)])
             if ref:
                 for i, val in enumerate(self.ref_values):
                     constants[f"ref_{fields[i]}"] = val

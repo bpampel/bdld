@@ -1,6 +1,8 @@
 """Module holding the FesAction class"""
 
-from typing import Optional, Tuple, Union
+from collections import OrderedDict
+import logging
+from typing import Optional, Tuple
 
 import numpy as np
 
@@ -54,8 +56,8 @@ class FesAction(Action):
         self.stride = stride
         if self.stride:
             if self.stride % histo_action.update_stride != 0:
-                print(
-                    "Warning: the FES stride is no multiple of the Histogram update stride.\n"
+                logging.warning(
+                    "The FES stride is no multiple of the Histogram update stride. "
                     "Set a matching write-stride for the [trajectories]"
                 )
             print(f"  stride = {self.stride}")
@@ -63,7 +65,7 @@ class FesAction(Action):
         self.filename = filename
         if filename:  # set up header
             fields = histo_action.traj_action.ld.pot.get_fields() + ["fes"]
-            constants = {}
+            constants = OrderedDict()  # makes sure constants are printed in order
             h_grid = histo_action.histo
             for i in range(h_grid.n_dim):
                 constants[f"{fields[i]}_min"] = h_grid.ranges[i][0]
