@@ -1,6 +1,7 @@
 """Class that takes care about running and analysing a simulation"""
 
 import argparse
+from collections import OrderedDict
 import logging
 import logging.config
 from typing import Dict, List, Optional
@@ -59,8 +60,8 @@ def main() -> None:
         sys.exit(1)
 
     # initialize all actions
-    all_actions: Dict[str, Action] = {}
-    # dicts are ordered since python 3.7
+    actions_dict: OrderedDict[str, Action] = OrderedDict()
+    # normal dicts are ordered since python 3.7 --> switch if available on cluster
     # actions are performed in order of insertion to the dict
     # make sure actions are added after their dependencies (e.g. fes after hist)
 
@@ -68,22 +69,22 @@ def main() -> None:
     pot = setup_potential(config.potential)
     ld = setup_ld(config.ld, pot)
     init_particles(config.particles, ld)
-    all_actions["ld"] = ld
+    actions_dict["ld"] = ld
 
     # optional actions in reasonable order
     try:
         if config.birth_death:
-            all_actions["birth_death"] = setup_birth_death(config.birth_death, ld)
+            actions_dict["birth_death"] = setup_birth_death(config.birth_death, ld)
         if config.trajectories:
-            all_actions["trajectories"] = setup_trajectories(config.trajectories, ld)
+            actions_dict["trajectories"] = setup_trajectories(config.trajectories, ld)
         if config.histogram:
-            all_actions["histogram"] = setup_histogram(
-                config.histogram, all_actions["trajectories"]
+            actions_dict["histogram"] = setup_histogram(
+                config.histogram, actions_dict["trajectories"]
             )
         if config.fes:
-            all_actions["fes"] = setup_fes(config.fes, all_actions["histogram"])
+            actions_dict["fes"] = setup_fes(config.fes, actions_dict["histogram"])
         if config.delta_f:
-            all_actions["delta_f"] = setup_delta_f(config.delta_f, all_actions["fes"])
+            actions_dict["delta_f"] = setup_delta_f(config.delta_f, actions_dict["fes"])
     except KeyError as e:
         log.error(
             "Error: An action was specified that requires the '%s' section in input"
@@ -97,13 +98,16 @@ def main() -> None:
 
     n_steps = config.ld["n_steps"]
     print(f"Setup finished, now running for {n_steps} steps")
+
+    # iterating over OrderedDict is slow, cache as list
+    actions_list = list(actions_dict.values())
     # main loop
     for step in range(1, n_steps + 1):
-        for action in all_actions.values():
+        for action in actions_list:
             action.run(step)
 
     print("Simulation finished, performing final actions")
-    for action in all_actions.values():
+    for action in actions_list:
         action.final_run(n_steps)
 
     print("Finished without errors")
@@ -343,8 +347,8 @@ def init_logger(level_str: str) -> logging.Logger:
     log_level = levels.get(level_str.lower())
 
     log = logging.getLogger("bdld")
-    fmt='%(asctime)s - %(name)s - %(levelname)s: %(message)s'
-    datefmt='%Y-%m-%d %H:%M:%S'
-    logging.basicConfig(level=log_level,format=fmt,datefmt=datefmt)
+    fmt = "%(asctime)s - %(name)s - %(levelname)s: %(message)s"
+    datefmt = "%Y-%m-%d %H:%M:%S"
+    logging.basicConfig(level=log_level, format=fmt, datefmt=datefmt)
 
     return log
