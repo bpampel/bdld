@@ -75,7 +75,9 @@ class BussiParinelloLD(Action):
         print()
 
     def run(self, step: int = None) -> None:
-        """Perform single MD step on all particles"""
+        """Perform single MD step on all particles
+
+        :param step: Not used, just to have the right function signature"""
         for p in self.particles:
             # first part of thermostat
             p.mom = self.c1 * p.mom + p.c2 * self.rng.standard_normal(self.pot.n_dim)
