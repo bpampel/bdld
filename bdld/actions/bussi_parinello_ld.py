@@ -1,11 +1,12 @@
 """Simple Langevin Dynamics with Bussi-Parinello thermostat"""
 
+from enum import Enum, auto
 from typing import List, Optional, Union
 import numpy as np
 
 from bdld.actions.action import Action
 from bdld.particle import Particle
-from bdld.potential.potential import Potential
+from bdld.potential import potential
 
 
 class BpldParticle(Particle):
@@ -40,7 +41,7 @@ class BussiParinelloLD(Action):
 
     def __init__(
         self,
-        pot: Potential,
+        pot: potential.Potential,
         dt: float,
         friction: float,
         kt: float,
@@ -54,7 +55,7 @@ class BussiParinelloLD(Action):
         :param kt: thermal energy in units of kt
         :param seed: seed for rng, optional
         """
-        self.pot: Potential = pot
+        self.pot: potential.Potential = pot
         self.particles: List[BpldParticle] = []  # list of particles
         self.dt: float = dt
         self.kt: float = kt
@@ -83,6 +84,8 @@ class BussiParinelloLD(Action):
             p.pos += (p.mom / p.mass) * self.dt
             p.energy, p.forces = self.pot.evaluate(p.pos)
             p.mom += 0.5 * p.forces * self.dt
+            # apply boundary conditions if needed
+            self.check_outside(p)
             # second part of thermostat
             p.mom = self.c1 * p.mom + p.c2 * self.rng.standard_normal(self.pot.n_dim)
 
@@ -118,3 +121,27 @@ class BussiParinelloLD(Action):
         :param partnum: specifies particle number in list
         """
         del self.particles[partnum]
+
+    def check_outside(self, p: BpldParticle) -> None:
+        """Check if particle is outside of potential range and apply boundary condtition
+
+        The boundary condition is a property of the potential but is handled here
+        """
+        bc = self.pot.boundary_condition
+        if not bc:
+            return
+        ra = self.pot.ranges
+        if bc == potential.BoundaryCondition.reflective:
+            for i, x in enumerate(p.pos):
+                if x < ra[i][0]:
+                    x = ra[i][0]
+                    p.mom[i] = -p.mom[i]
+                elif x > ra[i][1]:
+                    x = ra[i][1]
+                    p.mom[i] = -p.mom[i]
+        if bc == potential.BoundaryCondition.reflective:
+            for i, x in enumerate(p.pos):
+                if x < ra[i][0]:
+                    x += ra[i][0]
+                elif x > ra[i][1]:
+                    x -= ra[i][1]

@@ -1,9 +1,16 @@
 """Potential class to be evaluated with md"""
 
+import enum
 from typing import List, Union, Tuple
 import numpy as np
 
 from bdld import grid
+
+
+class BoundaryCondition(enum.Enum):
+    """Enum for the different boundary conditions"""
+    reflective = enum.auto()
+    periodic = enum.auto()
 
 
 class Potential:
@@ -18,6 +25,7 @@ class Potential:
         """Define some data members all potentials should set"""
         self.n_dim: int = 0
         self.ranges: List[Tuple[float, float]] = []
+        self.boundary_condition = None # default
 
     def evaluate(self, pos: Union[List[float], np.ndarray]) -> Tuple[float, np.ndarray]:
         """Get potential energy and forces at position
@@ -99,3 +107,4 @@ class Potential:
             return ["x", "y", "z"]
         else:
             raise ValueError("Class can't be used for more than 3 dimensions")
+
