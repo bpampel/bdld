@@ -3,3 +3,7 @@ __pycache__
 .venv
 .mypy_cache
 *egg-info
+.coverage
+build
+dist
+docs/_build
