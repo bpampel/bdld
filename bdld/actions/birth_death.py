@@ -229,6 +229,7 @@ class BirthDeath(Action):
         :param eq_density: Equilibrium probability density of system, (grid, values)
         :param seed: Seed for rng (optional)
         :param stats_stride: Print statistics every n time steps
+        :param stats_filename: File to print statistics to (optional, else stdout)
         :param kde: Use KDE from statsmodels to estimate walker density
         """
         self.particles: List[BpldParticle] = particles
