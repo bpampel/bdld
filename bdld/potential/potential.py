@@ -25,8 +25,8 @@ class Potential:
         """Define some data members all potentials should set"""
         self.n_dim: int = 0
         self.ranges: List[Tuple[float, float]] = []
-        self.boundary_condition = None # default
-        self.apply_boundary_condition = self._set_boundary_condition()
+        self.apply_boundary_condition = None  # never set
+        self._boundary_condition = None # default
 
     def evaluate(self, pos: Union[List[float], np.ndarray]) -> Tuple[float, np.ndarray]:
         """Get potential energy and forces at position
@@ -108,6 +108,20 @@ class Potential:
             return ["x", "y", "z"]
         else:
             raise ValueError("Class can't be used for more than 3 dimensions")
+
+    @property
+    def boundary_condition(self):
+        """Type of boundary condition for the potential"""
+        return self._boundary_condition
+
+    @boundary_condition.setter
+    def boundary_condition(self, cond: BoundaryCondition):
+        """Change the type of boundary condition
+
+        This also updates the apply_boundary_condition function
+        """
+        self._boundary_condition = cond
+        self.apply_boundary_condition = self._set_boundary_condition()
 
     def _set_boundary_condition(self) -> Callable:
         """Selects polyval function from numpy.polynomial.polynomial depending on self.n_dim"""
