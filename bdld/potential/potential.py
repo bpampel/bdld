@@ -150,10 +150,10 @@ class Potential:
         """
         for i, x in enumerate(pos):
             if x < self.ranges[i][0]:
-                x = self.ranges[i][0]
+                pos[i] = self.ranges[i][0]
                 mom[i] = -mom[i]
             elif x > self.ranges[i][1]:
-                x = self.ranges[i][1]
+                pos[i] = self.ranges[i][1]
                 mom[i] = -mom[i]
 
     def apply_boundary_condition_periodic(self, pos: np.ndarray, mom: np.ndarray) -> None:

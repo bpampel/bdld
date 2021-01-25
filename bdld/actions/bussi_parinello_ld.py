@@ -31,7 +31,6 @@ class BussiParinelloLD(Action):
     Can handle multiple non-interacting particles (= walkers) simultaneously
 
     :param pot: potential to perform LD on
-    :param particles: list with particles (=walkers) of simulation
     :param dt: timestep
     :param friction: friction parameter of langevin equation
     :param kt: thermal energy in units of kt
