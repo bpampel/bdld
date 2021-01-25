@@ -124,7 +124,7 @@ def setup_potential(options: Dict) -> Potential:
             coeffs = potential.polynomial.coefficients_from_file(
                 options["coeffs-file"], options["n_dim"]
             )
-        return potential.polynomial.PolynomialPotential(coeffs, ranges)
+            pot = potential.polynomial.PolynomialPotential(coeffs, ranges)
     elif options["type"] == "mueller-brown":
         pot = potential.mueller_brown.MuellerBrownPotential(options["scaling-factor"])
     else:
