@@ -4,7 +4,7 @@ import argparse
 from collections import OrderedDict
 import logging
 import logging.config
-from typing import Dict, List, Optional
+from typing import cast, Dict, List, Optional, Tuple
 import sys
 
 import numpy as np
@@ -79,12 +79,12 @@ def main() -> None:
             actions_dict["trajectories"] = setup_trajectories(config.trajectories, ld)
         if config.histogram:
             actions_dict["histogram"] = setup_histogram(
-                config.histogram, actions_dict["trajectories"]
+                config.histogram, actions_dict["trajectories"]  # type: ignore
             )
         if config.fes:
-            actions_dict["fes"] = setup_fes(config.fes, actions_dict["histogram"])
+            actions_dict["fes"] = setup_fes(config.fes, actions_dict["histogram"])  # type: ignore
         if config.delta_f:
-            actions_dict["delta_f"] = setup_delta_f(config.delta_f, actions_dict["fes"])
+            actions_dict["delta_f"] = setup_delta_f(config.delta_f, actions_dict["fes"])  # type: ignore
     except KeyError as e:
         log.error(
             "Error: An action was specified that requires the '%s' section in input"
@@ -96,7 +96,7 @@ def main() -> None:
         log.error("Input file '%s': %s", infile, e.args[0])
         sys.exit(1)
 
-    n_steps = config.ld["n_steps"]
+    n_steps = cast(int, config.ld["n_steps"])
     print(f"Setup finished, now running for {n_steps} steps")
 
     # iterating over OrderedDict is slow, cache as list
@@ -118,7 +118,9 @@ def setup_potential(options: Dict) -> Potential:
     if options["type"] == "polynomial":
         if options["n_dim"] == 1:
             ranges = [(options["min"], options["max"])]
-            pot: Potential = potential.polynomial.PolynomialPotential(options["coeffs"], ranges)
+            pot: Potential = potential.polynomial.PolynomialPotential(
+                options["coeffs"], ranges
+            )
         else:
             ranges = list(zip(options["min"], options["max"]))
             coeffs = potential.polynomial.coefficients_from_file(
@@ -140,9 +142,6 @@ def setup_potential(options: Dict) -> Potential:
     elif bc == "periodic":
         pot.boundary_condition = potential.potential.BoundaryCondition.periodic
     return pot
-
-
-
 
 
 def setup_ld(options: Dict, pot: Potential) -> BussiParinelloLD:
@@ -180,8 +179,9 @@ def init_particles(options: Dict, ld: BussiParinelloLD) -> None:
         )
         counts = [int(frac * options["number"]) for frac in normalized_fractions]
         counts[0] += options["number"] - np.sum(counts)  # rounding offset
-        # dicts are ordered since python 3.7: no need to actually parse pos1 etc
-        init_pos_choices = [pos for key, pos in options.items() if "pos" in key]
+        init_pos_choices = cast(
+            List[List[float]], inputparser.get_all_numbered_values(options, "pos")
+        )
         if len(init_pos_choices) != len(counts):
             e = "fractions in [particles]: number of positions and fractions do not match"
             raise ValueError(e)
@@ -302,9 +302,16 @@ def setup_fes(options: Dict, histo_action: HistogramAction) -> FesAction:
 
 def setup_delta_f(options: Dict, fes_action: FesAction) -> DeltaFAction:
     """Setup FesAction on HistogramAction with given options"""
-    min_list = inputparser.get_all_numbered_values(options, "state", "-min")
-    max_list = inputparser.get_all_numbered_values(options, "state", "-max")
-    state_ranges = inputparser.min_max_to_ranges(min_list, max_list)
+    min_list = cast(
+        List[float], inputparser.get_all_numbered_values(options, "state", "-min")
+    )
+    max_list = cast(
+        List[float], inputparser.get_all_numbered_values(options, "state", "-max")
+    )
+    state_ranges = cast(
+        List[List[Tuple[List[float], List[float]]]],
+        inputparser.min_max_to_ranges(min_list, max_list),
+    )
     if len(state_ranges) < 2:
         e_msg = "You need to specify at least 2 states for delta F calculations"
         raise ValueError(e_msg)
