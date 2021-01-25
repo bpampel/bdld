@@ -118,7 +118,7 @@ def setup_potential(options: Dict) -> Potential:
     if options["type"] == "polynomial":
         if options["n_dim"] == 1:
             ranges = [(options["min"], options["max"])]
-            return potential.polynomial.PolynomialPotential(options["coeffs"], ranges)
+            pot: Potential = potential.polynomial.PolynomialPotential(options["coeffs"], ranges)
         else:
             ranges = list(zip(options["min"], options["max"]))
             coeffs = potential.polynomial.coefficients_from_file(
@@ -126,13 +126,23 @@ def setup_potential(options: Dict) -> Potential:
             )
         return potential.polynomial.PolynomialPotential(coeffs, ranges)
     elif options["type"] == "mueller-brown":
-        return potential.mueller_brown.MuellerBrownPotential(options["scaling-factor"])
+        pot = potential.mueller_brown.MuellerBrownPotential(options["scaling-factor"])
     else:
         raise inputparser.OptionError(
             f'Specified potential type "{options["type"]}" is not implemented',
             "type",
             "potential",
         )
+
+    bc = options["boundary-condition"]
+    if bc == "reflective":
+        pot.boundary_condition = potential.potential.BoundaryCondition.reflective
+    elif bc == "periodic":
+        pot.boundary_condition = potential.potential.BoundaryCondition.periodic
+    return pot
+
+
+
 
 
 def setup_ld(options: Dict, pot: Potential) -> BussiParinelloLD:

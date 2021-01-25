@@ -218,6 +218,7 @@ class Input:
                 "type",
                 section.name,
             )
+        options.append(InputOption("boundary-condition", str, False))
         self.potential = self.parse_section(section, options, defaults)
 
     def parse_particles(self, section: configparser.SectionProxy) -> None:

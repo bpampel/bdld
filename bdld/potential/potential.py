@@ -25,8 +25,8 @@ class Potential:
         """Define some data members all potentials should set"""
         self.n_dim: int = 0
         self.ranges: List[Tuple[float, float]] = []
-        self.apply_boundary_condition = None  # never set
         self._boundary_condition = None # default
+        self.apply_boundary_condition = self._set_boundary_condition()
 
     def evaluate(self, pos: Union[List[float], np.ndarray]) -> Tuple[float, np.ndarray]:
         """Get potential energy and forces at position
