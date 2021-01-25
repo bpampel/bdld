@@ -26,7 +26,8 @@ class Potential:
         self.n_dim: int = 0
         self.ranges: List[Tuple[float, float]] = []
         self._boundary_condition = None # default
-        self.apply_boundary_condition = self._set_boundary_condition()
+        self.apply_boundary_condition = None
+        self._set_boundary_condition_function()
 
     def evaluate(self, pos: Union[List[float], np.ndarray]) -> Tuple[float, np.ndarray]:
         """Get potential energy and forces at position
@@ -121,18 +122,19 @@ class Potential:
         This also updates the apply_boundary_condition function
         """
         self._boundary_condition = cond
-        self.apply_boundary_condition = self._set_boundary_condition()
+        self._set_boundary_condition_function()
 
-    def _set_boundary_condition(self) -> Callable:
-        """Selects polyval function from numpy.polynomial.polynomial depending on self.n_dim"""
+    def _set_boundary_condition_function(self) -> None:
+        """Set correct apply_boundary_condition function"""
         if self.boundary_condition is None:
-            return (lambda pos, force: None)  # do nothing
+            func = lambda pos, force: None  # do nothing
         elif self.boundary_condition == BoundaryCondition.reflective:
-            return self.apply_boundary_condition_reflective
+            func = self.apply_boundary_condition_reflective
         elif self.boundary_condition == BoundaryCondition.periodic:
-            return self.apply_boundary_condition_periodic
+            func = self.apply_boundary_condition_periodic
         else:
             raise ValueError("Unknown boundary condition set")
+        self.apply_boundary_condition = func
 
     def apply_boundary_condition_reflective(self, pos: np.ndarray, mom: np.ndarray) -> None:
         """Apply reflective boundary condition
