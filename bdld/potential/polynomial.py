@@ -40,7 +40,7 @@ class PolynomialPotential(Potential):
         self.der: List[np.ndarray] = [
             poly.polyder(self.coeffs, axis=d) for d in range(self.n_dim)
         ]
-        self.polyval = self.choose_polyval()
+        self.polyval = self.set_polyval()
         # the ranges are at the moment not actually checked when evaluating but needed for the birth/death
         if ranges is None:
             ranges = []  # mutable default arguments are bad
@@ -55,7 +55,7 @@ class PolynomialPotential(Potential):
             string += f"\n{np.array(self.coeffs)}\n"
         return string
 
-    def choose_polyval(self) -> Callable:
+    def set_polyval(self) -> Callable:
         """Selects polyval function from numpy.polynomial.polynomial depending on self.n_dim"""
         if self.n_dim == 1:
             return poly.polyval

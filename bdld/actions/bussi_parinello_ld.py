@@ -81,13 +81,14 @@ class BussiParinelloLD(Action):
         for p in self.particles:
             # first part of thermostat
             p.mom = self.c1 * p.mom + p.c2 * self.rng.standard_normal(self.pot.n_dim)
-            # velocity verlet with force evaluation
+            # first part of velocity verlet
             p.mom += 0.5 * p.forces * self.dt
             p.pos += (p.mom / p.mass) * self.dt
+            # apply boundary conditions if needed
+            self.pot.apply_boundary_condition(p.pos, p.mom)
+            # second part of velocity verlet with force evaluation
             p.energy, p.forces = self.pot.evaluate(p.pos)
             p.mom += 0.5 * p.forces * self.dt
-            # apply boundary conditions if needed
-            self.check_outside(p)
             # second part of thermostat
             p.mom = self.c1 * p.mom + p.c2 * self.rng.standard_normal(self.pot.n_dim)
 
@@ -123,27 +124,3 @@ class BussiParinelloLD(Action):
         :param partnum: specifies particle number in list
         """
         del self.particles[partnum]
-
-    def check_outside(self, p: BpldParticle) -> None:
-        """Check if particle is outside of potential range and apply boundary condtition
-
-        The boundary condition is a property of the potential but is handled here
-        """
-        bc = self.pot.boundary_condition
-        if not bc:
-            return
-        ra = self.pot.ranges
-        if bc == potential.BoundaryCondition.reflective:
-            for i, x in enumerate(p.pos):
-                if x < ra[i][0]:
-                    x = ra[i][0]
-                    p.mom[i] = -p.mom[i]
-                elif x > ra[i][1]:
-                    x = ra[i][1]
-                    p.mom[i] = -p.mom[i]
-        if bc == potential.BoundaryCondition.reflective:
-            for i, x in enumerate(p.pos):
-                if x < ra[i][0]:
-                    x += ra[i][0]
-                elif x > ra[i][1]:
-                    x -= ra[i][1]

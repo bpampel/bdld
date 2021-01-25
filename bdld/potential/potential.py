@@ -1,7 +1,7 @@
 """Potential class to be evaluated with md"""
 
 import enum
-from typing import List, Union, Tuple
+from typing import Callable, List, Union, Tuple
 import numpy as np
 
 from bdld import grid
@@ -26,6 +26,7 @@ class Potential:
         self.n_dim: int = 0
         self.ranges: List[Tuple[float, float]] = []
         self.boundary_condition = None # default
+        self.apply_boundary_condition = self._set_boundary_condition()
 
     def evaluate(self, pos: Union[List[float], np.ndarray]) -> Tuple[float, np.ndarray]:
         """Get potential energy and forces at position
@@ -108,3 +109,50 @@ class Potential:
         else:
             raise ValueError("Class can't be used for more than 3 dimensions")
 
+    def _set_boundary_condition(self) -> Callable:
+        """Selects polyval function from numpy.polynomial.polynomial depending on self.n_dim"""
+        if self.boundary_condition is None:
+            return (lambda pos, force: None)  # do nothing
+        elif self.boundary_condition == BoundaryCondition.reflective:
+            return self.apply_boundary_condition_reflective
+        elif self.boundary_condition == BoundaryCondition.periodic:
+            return self.apply_boundary_condition_periodic
+        else:
+            raise ValueError("Unknown boundary condition set")
+
+    def apply_boundary_condition_reflective(self, pos: np.ndarray, mom: np.ndarray) -> None:
+        """Apply reflective boundary condition
+
+        If the particle is outside the potential range, it is set to the boundary
+        and its momentum is reversed
+
+        Because position and momentum are numpy arrays, they are passed by reference and
+        can be changed in place
+
+        :param pos: position of particle per direction
+        :param mom: momentum of particle per direction
+        """
+        for i, x in enumerate(pos):
+            if x < self.ranges[i][0]:
+                x = self.ranges[i][0]
+                mom[i] = -mom[i]
+            elif x > self.ranges[i][1]:
+                x = self.ranges[i][1]
+                mom[i] = -mom[i]
+
+    def apply_boundary_condition_periodic(self, pos: np.ndarray, mom: np.ndarray) -> None:
+        """Apply periodic boundary condition
+
+        If the particle is outside the potential range, it is moved to the other side of the
+        potential range
+        Because position and momentum are numpy arrays, they are passed by reference and
+        can be changed in place
+
+        :param pos: position of particle per direction
+        :param mom: momentum of particle per direction (not actually changed
+        """
+        for i, x in enumerate(pos):
+            if x < self.ranges[i][0]:
+                x += self.ranges[i][0]
+            elif x > self.ranges[i][1]:
+                x -= self.ranges[i][1]
