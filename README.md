@@ -1,7 +1,7 @@
 # Simple langevin dynamics with additional birth-death processes
 
 Quickstart:
-Download one of the package archives under [build/](build/) and install it e.g. with `pip install`
+Download one of the package archives under [dist/](dist/) and install it e.g. with `pip install`
 
 You can then execute the program with `python -m bdld your_input_file`
 
