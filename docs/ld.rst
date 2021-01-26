@@ -27,6 +27,17 @@ The respective Langevin equation is
 **seed**: *int*, optional
   starting seed for the random number generator of the thermostat
 
+Example
+^^^^^^^
+
+::
+
+  [ld]
+  timestep: 0.005
+  kt: 1.0
+  friction: 10.0
+  n_steps: 10000
+
 
 References
 ^^^^^^^^^^

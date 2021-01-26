@@ -9,7 +9,7 @@ This is an explanation of the syntax of the input file and an overview over the 
 Syntax
 ^^^^^^
 
-The input files are read with the `configparser package<https://docs.python.org/3/library/configparser.html>`_.
+The input files are read with the `configparser package <https://docs.python.org/3/library/configparser.html>`_ .
 In short, the file is structured into sections, which are marked with square brackets, e.g.::
 
   [potential]
@@ -34,7 +34,7 @@ which sets the thermal energy to 1 for all sections.
   Therefore, beware of typos in non-essential sections or options:
   the program will run without error, but might not do what is expected!
 
-For more details of the file syntax see the `configparser documentation<https://docs.python.org/3/library/configparser.html>`_.
+For more details of the file syntax see the `configparser documentation <https://docs.python.org/3/library/configparser.html>`_ .
 
 
 Option types
@@ -75,12 +75,13 @@ Each action is listed here shortly, for more details visit the specific pages.
   Number of independent particles/walkers and the initial conditions, always required.
 
 :ref:`[birth-death]<birth-death>`
-  Options for the birth-death events. Can be omitted for pure Langevin Dynamics
+  Options for the birth-death events. Can be omitted for pure Langevin Dynamics.
 
 
-The following actions are for receiving output from the simulation, some of them after performing analysis. They will not alter the movement of the particles.
+The following actions are for receiving output from the simulation, some of them after performing analysis.
+They will not alter the movement of the particles.
+
 Note that while all of them are optional, some are required for other actions, e.g. you need a histogram to calculate the FES.
-
 
 
 :ref:`[trajectories]<trajectories>`

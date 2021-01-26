@@ -4,10 +4,9 @@
    contain the root `toctree` directive.
 
 Birth-Death Langevin Dynamics
-=============================
+*****************************
 
 .. toctree::
-   :maxdepth: 2
 
   install
   usage
@@ -18,8 +17,8 @@ This python package provides a simple Langevin Dynamics simulation with addition
 
 
 
-Indices and tables
-==================
+Indices
+*******
 
 * :ref:`genindex`
 * :ref:`modindex`
