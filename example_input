@@ -3,8 +3,8 @@ kt: 1
 
 [ld]
 timestep: 0.005
+friction: 10.0
 n_steps: 1000
-friction: 0.1
 
 [potential]
 type: polynomial
@@ -19,8 +19,8 @@ initial-distribution: random-global
 
 [birth-death]
 stride: 100
-correction-variant: multiplicative
 kernel-bandwidth: 0.3
+correction-variant: multiplicative
 
 [trajectories]
 stride: 5
@@ -36,6 +36,8 @@ filename: histo
 stride: 100
 write-stride: 200
 filename: fes
+plot-filename: fes.png
+plot-domain: -2,5
 
 [delta-f]
 filename: delta_f
