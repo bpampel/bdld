@@ -317,7 +317,7 @@ class Input:
             InputOption("fmt", str, False),
             InputOption("plot-stride", int, False),
             InputOption("plot-filename", str, False),
-            InputOption("plot-domain", str, False),
+            InputOption("plot-domain", [float], False),
             InputOption("plot-title", str, False),
         ]
         self.fes = self.parse_section(section, options)
