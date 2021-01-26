@@ -91,7 +91,9 @@ class Histogram(grid.Grid):
             self.data == 0, np.inf, -kt * np.log(self.data, where=(self.data != 0))
         )
         if mintozero:
-            fes -= np.min(fes)
+            minimum = np.min(fes)
+            if minimum != np.inf:  # otherwise all values become nan
+                fes -= np.min(fes)
         self.fes = fes
         return self.get_fes_grid()
 
