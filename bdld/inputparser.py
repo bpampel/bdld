@@ -133,7 +133,7 @@ class Input:
         self.histogram: Optional[Dict[str, OptionType]] = None
         self.fes: Optional[Dict[str, OptionType]] = None
         self.delta_f: Optional[Dict[str, OptionType]] = None
-        self.particle_statistics: Optional[Dict[str, OptionType]] = None
+        self.particle_distribution: Optional[Dict[str, OptionType]] = None
 
         self.parse_all()
 
@@ -168,8 +168,8 @@ class Input:
             self.parse_fes(infile["fes"])
         if infile.has_section("delta-f"):
             self.parse_delta_f(infile["delta-f"])
-        if infile.has_section("particle-statistics"):
-            self.parse_particle_statistics(infile["particle-statistics"])
+        if infile.has_section("particle-distribution"):
+            self.parse_particle_distribution(infile["particle-distribution"])
 
     def parse_ld(self, section: configparser.SectionProxy) -> None:
         """Define and parse the options of the langevin dynamics"""
@@ -335,7 +335,7 @@ class Input:
 
         self.delta_f = self.parse_section(section, options)
 
-    def parse_particle_statistics(self, section: configparser.SectionProxy) -> None:
+    def parse_particle_distribution(self, section: configparser.SectionProxy) -> None:
         """Define and parse if statistics about particles should be printed periodically"""
         options = [
             InputOption("stride", int, True, Input.positive),
@@ -349,7 +349,7 @@ class Input:
     def parse_section(
         section: configparser.SectionProxy,
         options: List[InputOption],
-        defaults: [Dict[str, OptionType]] = None,
+        defaults: Dict[str, OptionType] = None,
     ) -> Dict[str, OptionType]:
         """Parse all options of a section
 
