@@ -95,3 +95,6 @@ Note that while all of them are optional, some are required for other actions, e
 
 :ref:`[delta-f]<delta-f>`
   Calculate the free energy difference between specified states, optional. Requires the [fes] action.
+
+:ref:`[particle-distribution]<particle-distribution>`
+  Count the number of particles in given states, optional.
