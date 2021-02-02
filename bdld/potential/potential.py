@@ -9,6 +9,7 @@ from bdld import grid
 
 class BoundaryCondition(enum.Enum):
     """Enum for the different boundary conditions"""
+
     reflective = enum.auto()
     periodic = enum.auto()
 
@@ -25,7 +26,7 @@ class Potential:
         """Define some data members all potentials should set"""
         self.n_dim: int = 0
         self.ranges: List[Tuple[float, float]] = []
-        self._boundary_condition = None # default
+        self._boundary_condition = None  # default
         self.apply_boundary_condition = None
         self._set_boundary_condition_function()
 
@@ -136,7 +137,9 @@ class Potential:
             raise ValueError("Unknown boundary condition set")
         self.apply_boundary_condition = func
 
-    def apply_boundary_condition_reflective(self, pos: np.ndarray, mom: np.ndarray) -> None:
+    def apply_boundary_condition_reflective(
+        self, pos: np.ndarray, mom: np.ndarray
+    ) -> None:
         """Apply reflective boundary condition
 
         If the particle is outside the potential range, it is set to the boundary
@@ -156,7 +159,9 @@ class Potential:
                 pos[i] = self.ranges[i][1]
                 mom[i] = -mom[i]
 
-    def apply_boundary_condition_periodic(self, pos: np.ndarray, mom: np.ndarray) -> None:
+    def apply_boundary_condition_periodic(
+        self, pos: np.ndarray, mom: np.ndarray
+    ) -> None:
         """Apply periodic boundary condition
 
         If the particle is outside the potential range, it is moved to the other side of the

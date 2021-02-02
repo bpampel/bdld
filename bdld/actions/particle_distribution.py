@@ -57,10 +57,12 @@ class ParticleDistributionAction(Action):
                 e = "Specifying a write_stride but no filename makes no sense"
                 raise ValueError(e)
             # extra col for time
-            self.counts = np.empty((self.write_stride // self.stride, len(self.states) + 1))
+            self.counts = np.empty(
+                (self.write_stride // self.stride, len(self.states) + 1)
+            )
             self.last_write: int = 0
         else:  # just store one data set
-            self.counts = np.empty((len(self.states) +1))
+            self.counts = np.empty((len(self.states) + 1))
             print(f"Saving every {self.stride} point to '{filename}'")
 
         # writing
