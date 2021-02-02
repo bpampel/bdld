@@ -343,7 +343,7 @@ class Input:
             InputOption("write-stride", int, False, Input.positive),
             InputOption("fmt", str, False),
         ] + numbered_state_options(section)
-        self.particle_statistics = self.parse_section(section, options)
+        self.particle_distribution = self.parse_section(section, options)
 
     @staticmethod
     def parse_section(
