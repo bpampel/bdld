@@ -88,7 +88,7 @@ def calculate_delta_f(fes, kt, masks):
 
     :return delta_F: a list of doubles containing the free energy difference to the first state
     """
-    probabilities = np.exp(-fes / float(kt))
+    probabilities = np.exp(-fes / float(kt)).reshape((-1))
     state_probs = [np.sum(probabilities[m]) for m in masks]
     delta_f = [
         -kt * np.log(state_probs[i] / state_probs[0])
