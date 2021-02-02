@@ -20,6 +20,7 @@ TrajectoryAction = actions.trajectory_action.TrajectoryAction
 HistogramAction = actions.histogram_action.HistogramAction
 FesAction = actions.fes_action.FesAction
 DeltaFAction = actions.delta_f_action.DeltaFAction
+ParticleDistributionAction = actions.particle_distribution.ParticleDistributionAction
 
 Potential = potential.potential.Potential
 
@@ -315,6 +316,24 @@ def setup_delta_f(options: Dict, fes_action: FesAction) -> DeltaFAction:
     return DeltaFAction(
         fes_action,
         masks,
+        options["stride"],
+        options["filename"],
+        options["write-stride"],
+        options["fmt"],
+    )
+
+
+def setup_particle_distribution(
+    options: Dict, ld: BussiParinelloLD
+) -> ParticleDistributionAction:
+    """Setup analysis of particle distribution of LD"""
+    min_list = inputparser.get_all_numbered_values(options, "state", "-min")
+    max_list = inputparser.get_all_numbered_values(options, "state", "-max")
+    state_ranges = inputparser.min_max_to_ranges(min_list, max_list)
+
+    return ParticleDistributionAction(
+        ld.particles,
+        state_ranges,
         options["stride"],
         options["filename"],
         options["write-stride"],

@@ -4,6 +4,7 @@ from . import bussi_parinello_ld
 from . import delta_f_action
 from . import fes_action
 from . import histogram_action
+from . import particle_distribution
 from . import trajectory_action
 
 __all__ = [
@@ -13,5 +14,6 @@ __all__ = [
     "delta_f_action",
     "fes_action",
     "histogram_action",
+    "particle_distribution",
     "trajectory_action",
 ]
