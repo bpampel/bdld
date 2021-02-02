@@ -75,7 +75,7 @@ def main() -> None:
     # optional actions in reasonable order
     try:
         if config.birth_death:
-            actions_dict["birth_death"] = setup_birth_death(config.birth_death, ld)
+            actions_dict["birth-death"] = setup_birth_death(config.birth_death, ld)
         if config.trajectories:
             actions_dict["trajectories"] = setup_trajectories(config.trajectories, ld)
         if config.histogram:
@@ -85,7 +85,11 @@ def main() -> None:
         if config.fes:
             actions_dict["fes"] = setup_fes(config.fes, actions_dict["histogram"])  # type: ignore
         if config.delta_f:
-            actions_dict["delta_f"] = setup_delta_f(config.delta_f, actions_dict["fes"])  # type: ignore
+            actions_dict["delta-f"] = setup_delta_f(config.delta_f, actions_dict["fes"])  # type: ignore
+        if config.particle_distribution:
+            actions_dict["particle-distribution"] = setup_particle_distribution(
+                config.particle_distribution, actions_dict["ld"]  # type: ignore
+            )
     except KeyError as e:
         log.error(
             "Error: An action was specified that requires the '%s' section in input"
