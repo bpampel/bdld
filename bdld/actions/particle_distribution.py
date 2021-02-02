@@ -8,7 +8,7 @@ import numpy as np
 
 from bdld.actions.action import Action, get_valid_data
 from bdld.actions.bussi_parinello_ld import BpldParticle
-from bdld.helpers.misc import initialize_file
+from bdld.helpers.misc import initialize_file, make_ordinal
 from bdld.tools import pos_inside_ranges
 
 
@@ -61,9 +61,9 @@ class ParticleDistributionAction(Action):
                 (self.write_stride // self.stride, len(self.states) + 1)
             )
             self.last_write: int = 0
+            print(f"Saving distribution of every {make_ordinal(self.stride)} time step to '{filename}'")
         else:  # just store one data set
             self.counts = np.empty((len(self.states) + 1))
-            print(f"Saving every {self.stride} point to '{filename}'")
 
         # writing
         self.filename = filename
@@ -74,6 +74,7 @@ class ParticleDistributionAction(Action):
                 constants[f"state_{i}"] = str(state)
             initialize_file(self.filename, fields, constants)
         self.write_fmt = write_fmt if write_fmt else "%14.9f"
+        print()
 
     def run(self, step: int) -> None:
         """Calculate Delta F from fes and write to file

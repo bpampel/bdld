@@ -6,7 +6,7 @@ import numpy as np
 
 from bdld.actions.action import Action, get_valid_data
 from bdld.actions.bussi_parinello_ld import BussiParinelloLD
-from bdld.helpers.misc import initialize_file
+from bdld.helpers.misc import initialize_file, make_ordinal
 
 
 class TrajectoryAction(Action):
@@ -55,7 +55,11 @@ class TrajectoryAction(Action):
             for i, fname in enumerate(self.filenames):
                 ifields = [f"{f}.{i}" for f in fields]
                 initialize_file(fname, ifields)
-            print(f"Saving every {self.stride} point to the files '{filename}.{{i}}'")
+            if self.stride == 1:
+                logstr = f"Saving all positions to the files '{filename}.{{i}}'"
+            else:
+                logstr = f"Saving every {make_ordinal(self.stride)} position to the files '{filename}.{{i}}'"
+            print(logstr)
         print()
 
     def run(self, step: int) -> None:

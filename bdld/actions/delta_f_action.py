@@ -8,7 +8,7 @@ import numpy as np
 from bdld import analysis
 from bdld.actions.action import Action, get_valid_data
 from bdld.actions.fes_action import FesAction
-from bdld.helpers.misc import initialize_file
+from bdld.helpers.misc import initialize_file, make_ordinal
 
 
 class DeltaFAction(Action):
@@ -40,6 +40,7 @@ class DeltaFAction(Action):
         :param write_fmt: numeric format for saving the data, default "%14.9f"
         :param ref: reference FES to calculate reference values
         """
+        print("Setting up delta-f action")
         self.fes_action = fes_action
         self.masks = masks
         self.stride = stride
@@ -56,6 +57,7 @@ class DeltaFAction(Action):
             # time + (masks -1) states
             self.delta_f = np.empty((self.write_stride // self.stride, len(self.masks)))
             self.last_write: int = 0
+            print(f"Saving delta-f of every {make_ordinal(self.stride)} time step to '{filename}'")
         else:  # just store one data set
             self.delta_f = np.empty((len(self.masks)))
 
@@ -76,6 +78,7 @@ class DeltaFAction(Action):
                     constants[f"ref_{fields[i]}"] = val
             initialize_file(self.filename, fields, constants)
         self.write_fmt = write_fmt if write_fmt else "%14.9f"
+        print()
 
     def run(self, step: int) -> None:
         """Calculate Delta F from fes and write to file
