@@ -3,7 +3,6 @@
 import argparse
 from collections import OrderedDict
 import logging
-import logging.config
 from typing import cast, Dict, List, Optional, Tuple
 import sys
 
@@ -11,6 +10,7 @@ import numpy as np
 
 from bdld import actions, inputparser, potential
 from bdld.grid import Grid
+from bdld.tools import pos_inside_ranges
 
 # alias shortcuts
 Action = actions.action.Action
@@ -302,41 +302,15 @@ def setup_fes(options: Dict, histo_action: HistogramAction) -> FesAction:
 
 def setup_delta_f(options: Dict, fes_action: FesAction) -> DeltaFAction:
     """Setup FesAction on HistogramAction with given options"""
-    min_list = cast(
-        List[float], inputparser.get_all_numbered_values(options, "state", "-min")
-    )
-    max_list = cast(
-        List[float], inputparser.get_all_numbered_values(options, "state", "-max")
-    )
-    state_ranges = cast(
-        List[List[Tuple[List[float], List[float]]]],
-        inputparser.min_max_to_ranges(min_list, max_list),
-    )
+    min_list = inputparser.get_all_numbered_values(options, "state", "-min")
+    max_list = inputparser.get_all_numbered_values(options, "state", "-max")
+    state_ranges = inputparser.min_max_to_ranges(min_list, max_list)
     if len(state_ranges) < 2:
         e_msg = "You need to specify at least 2 states for delta F calculations"
         raise ValueError(e_msg)
 
     fes_points = fes_action.histo_action.histo.points()
-    n_dim = fes_points.shape[-1]
-
-    masks: List[np.ndarray] = []
-    for state in state_ranges:
-        # start with boolean array for first (0) dimension
-        mask = (fes_points[:, 0] >= state[0][0]) & (fes_points[:, 0] <= state[1][0])
-        try:
-            for i in range(1, n_dim):  # now 'bitwise and' with all other dimensions
-                mask = (
-                    mask
-                    & (fes_points[:, i] >= state[0][i])
-                    & (fes_points[:, i] <= state[1][i])
-                )
-        except IndexError as e:
-            raise inputparser.OptionError(
-                "The specified state dimensions are smaller than the fes dimensions",
-                "state{i}-min",
-                "delta-f",
-            ) from e
-        masks.append(mask)
+    masks = pos_inside_ranges(fes_points, state_ranges)
 
     return DeltaFAction(
         fes_action,

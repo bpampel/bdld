@@ -413,27 +413,34 @@ def numbered_state_options(section: configparser.SectionProxy) -> List[InputOpti
 def min_max_to_ranges(
     min_list: Union[List[float], List[List[float]]],
     max_list: Union[List[float], List[List[float]]],
-) -> Union[List[Tuple[float, float]], List[List[Tuple[List[float], List[float]]]]]:
-    """Transform the max and min lists to a single list of tuples
+) -> List[List[Tuple[float, float]]]:
+    """Transform the max and min lists to a list of lists of tuples for the states
 
     The min_list and max_list have one point per entry, i.e. for more than 1D they are
     also lists.
     This also checks that all min and max values have the same dimension
 
+    The output list contains one list for every range.
+    The list then contains a tuple with (min, max) value for every dimension.
+
     :param min_list: list with all minimum points of the intervals
     :param max_list: list with all maximum points of the intervals
     """
-    if len(min_list) != len(max_list):
+    n_items = len(min_list)
+    if n_items != len(max_list):
         raise ValueError("Not the same number of minimum and maximum points given")
 
     # check if dimensions of elements match
     try:
-        n_dim = len(min_list[0])  # IndexError if not list
+        n_dim = len(min_list[0])  # TypeError if not list
         for i, _ in enumerate(min_list):
             if len(min_list[i]) != len(max_list[i]) != n_dim:
                 raise ValueError(f"Dimensions of min/max {i} are inconsistent")
-    except IndexError:  # elements are not lists
+    except TypeError:  # elements are not lists
         for min_max_i in min_list + max_list:
             float(min_max_i)  # verify that none is list
+        # put all items in lists
+        min_list = [[item] for item in min_list]
+        max_list = [[item] for item in max_list]
 
-    return list(zip(min_list, max_list))
+    return [list(zip(min_list[i], max_list[i])) for i in range(n_items)]
