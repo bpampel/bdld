@@ -15,7 +15,7 @@ class Histogram(grid.Grid):
     Also allows histogramming over time, i.e. adding more data to the existing histogram
 
     :param n_points: number of bins for histogramming per dimension
-    :param ranges: extent of histogram (min, max) per dimension
+    :param histo_ranges: extent of histogram (min, max) per dimension
     :param bins: bin edges of the histogram per dimension
     :param data: histogram data
     :param fes: the free energy values corresponding to the histogram stored in data
@@ -36,13 +36,14 @@ class Histogram(grid.Grid):
             n_bins = [n_bins]
         self.n_points = n_bins
         self.stepsizes = grid.stepsizes_from_npoints(ranges, [n+1 for n in n_bins])
-        self.ranges = ranges
+        self.histo_ranges = ranges
         self.n_dim = len(ranges)
         self.fes: Optional[np.ndarray] = None
         # create bins from arbitrary value, there doesn't seem to be a function doing it
         self.data, self.bins = np.histogramdd(
-            np.zeros((1, len(self.n_points))), bins=self.n_points, range=self.ranges
+            np.zeros((1, len(self.n_points))), bins=self.n_points, range=self.histo_ranges
         )
+        self.ranges = [(a[0], a[-1]) for a in self.axes()]  # ranges of points in underlying grid
 
     def add(self, data: np.ndarray) -> None:
         """Add data to histogram
@@ -99,11 +100,6 @@ class Histogram(grid.Grid):
 
     def get_fes_grid(self) -> grid.Grid:
         """Returns the fes as Grid instead of numpy array"""
-        new_grid = self.grid_from_histo()
+        new_grid = self.copy_empty()
         new_grid.data = self.fes
         return new_grid
-
-    def grid_from_histo(self) -> grid.Grid:
-        """Return grid with the same points instead of bins"""
-        ranges = [(a[0], a[-1]) for a in self.axes()]
-        return grid.from_npoints(ranges, self.n_points)
