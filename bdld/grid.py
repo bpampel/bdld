@@ -43,6 +43,14 @@ class Grid:
         except ValueError as e:
             raise ValueError("Data does not fit into grid points") from e
 
+    def __getitem__(self, key) -> np.ndarray:
+        """Acces data element directly"""
+        return self.data[key]
+
+    def __setitem__(self, key, value) -> None:
+        """Set data element(s) directly"""
+        self.data[key] = value
+
     def _same_points(self, other) -> bool:
         return (self.n_points == other.n_points) and (self.ranges == other.ranges)
 
