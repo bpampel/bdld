@@ -35,7 +35,7 @@ class Histogram(grid.Grid):
         if not isinstance(n_bins, list):  # single float
             n_bins = [n_bins]
         self.n_points = n_bins
-        self.stepsizes = grid.stepsizes_from_npoints(ranges, n_bins)
+        self.stepsizes = grid.stepsizes_from_npoints(ranges, [n+1 for n in n_bins])
         self.ranges = ranges
         self.n_dim = len(ranges)
         self.fes: Optional[np.ndarray] = None
