@@ -35,9 +35,9 @@ Example
 Calculate the differences between two states every 100 time steps
 ::
 
-  [delta-f]
+  [particle-distribution]
   stride: 100
-  filename: delta-f
+  filename: particle_dist
   state1_min: 0, 0
   state1_max: 1, 1
   state2_min: 0, 1
