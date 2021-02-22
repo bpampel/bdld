@@ -1,9 +1,9 @@
-.. _walker-distribution:
+.. _particle-distribution:
 
-Analyze distribution of walkers [walker-distribution]
+Analyze distribution of particles [particle-distribution]
 *****************************************************
 
-Count the number of walkers in each of the given states.
+Count the number of particles in each of the given states.
 
 
 **stride**: *int*
