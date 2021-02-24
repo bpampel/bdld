@@ -33,6 +33,7 @@ class OverdampedLD(Action):
 
     :param pot: potential to perform LD on
     :param dt: timestep
+    :param kt: thermal energy. Set to 1 to have no need to modify birth/death
     :param noise_factor: prefactor of the noise term
     :param rng: numpy.random.Generator instance for the thermostat
     """
@@ -52,6 +53,7 @@ class OverdampedLD(Action):
         self.pot: potential.Potential = pot
         self.particles: List[LDParticle] = []  # list of particles
         self.dt: float = dt
+        self.kt: float = 1.0
         self.noise_factor: float = np.sqrt(2 * self.dt)  # calculate only once
         self.rng: np.random.Generator = np.random.default_rng(seed)
         print(
