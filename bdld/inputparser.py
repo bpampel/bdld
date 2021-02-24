@@ -173,13 +173,27 @@ class Input:
 
     def parse_ld(self, section: configparser.SectionProxy) -> None:
         """Define and parse the options of the langevin dynamics"""
+        type_option = InputOption("type", str, False)
+        ld_type = cast(str, type_option.parse(section))
         options = [
+            type_option,
             InputOption("timestep", float, True, Input.positive_or_zero),
             InputOption("n_steps", int, True, Input.positive),
-            InputOption("kt", float, True, Input.positive),
-            InputOption("friction", float, True, Input.positive_or_zero),
             InputOption("seed", int, False),
         ]
+        if ld_type == "bussi-parinello":
+            options += [
+                InputOption("kt", float, True, Input.positive),
+                InputOption("friction", float, True, Input.positive_or_zero),
+            ]
+        elif ld_type == "overdamped":
+            pass
+        else:
+            raise OptionError(
+                f'Specified ld type "{ld_type}" is not implemented',
+                "type",
+                section.name,
+            )
         self.ld = self.parse_section(section, options)
 
     def parse_potential(self, section: configparser.SectionProxy) -> None:

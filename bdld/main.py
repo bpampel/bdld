@@ -16,6 +16,7 @@ from bdld.tools import pos_inside_ranges
 Action = actions.action.Action
 BirthDeath = actions.birth_death.BirthDeath
 BussiParinelloLD = actions.bussi_parinello_ld.BussiParinelloLD
+OverdampedLD = actions.overdamped_ld.OverdampedLD
 TrajectoryAction = actions.trajectory_action.TrajectoryAction
 HistogramAction = actions.histogram_action.HistogramAction
 FesAction = actions.fes_action.FesAction
@@ -151,13 +152,20 @@ def setup_potential(options: Dict) -> Potential:
 
 def setup_ld(options: Dict, pot: Potential) -> BussiParinelloLD:
     """Return Langevin Dynamics with given options on the potential"""
-    return BussiParinelloLD(
-        pot,
-        options["timestep"],
-        options["friction"],
-        options["kt"],
-        options["seed"],
-    )
+    if options["type"] == "bussi-parinello":
+        return BussiParinelloLD(
+            pot,
+            options["timestep"],
+            options["friction"],
+            options["kt"],
+            options["seed"],
+        )
+    elif options["type"] == "overdamped":
+        return OverdampedLD(
+            pot,
+            options["timestep"],
+            options["seed"],
+        )
 
 
 def init_particles(options: Dict, ld: BussiParinelloLD) -> None:
