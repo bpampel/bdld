@@ -436,7 +436,6 @@ def calc_prob_correction_kernel(
     :param conv_mode: convolution mode to use. See dens_kernel_convolution() for details.
     :return correction: grid wih the correction values
     """
-    # setup kernel grid
     conv = dens_kernel_convolution(eq_density, bw, conv_mode)
     if conv_mode == "valid":
         # "valid" convolution shrinks grid --> shrink density as well
@@ -462,8 +461,8 @@ def nd_trapz(data: np.ndarray, dx: Union[List[float], float]) -> float:
     """
     if isinstance(dx, list):
         if dx:  # list not empty
+            # recurse with last dimension integrated
             return nd_trapz(nd_trapz(data, dx=dx[-1]), dx[:-1])
-        else:  # innermost iteration gives empty list
-            return data
-    else:
-        return np.trapz(data, dx=dx)
+        return data  # innermost iteration gives empty list
+    # single dimension
+    return np.trapz(data, dx=dx)
