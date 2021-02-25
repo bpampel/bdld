@@ -390,11 +390,11 @@ def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
         for i in range(
             n_dim
         ):  # significantly faster variant than calling the kernel function
-            dist = pdist(pos[:,i].reshape(-1,1), "sqeuclidean")
+            dist = pdist(pos[:, i].reshape(-1, 1), "sqeuclidean")
             gauss_per_dim[i] = heights[i] * np.exp(-dist / (2 * bw[i] ** 2))
         # multiply directions and convert to full matrix
         gauss = squareform(np.prod(gauss_per_dim, axis=0))
-        np.fill_diagonal(gauss, np.prod(heights))  # diagonal is 0, fill with correct value
+        np.fill_diagonal(gauss, np.prod(heights))  # diagonal is 0 from squareform
     return np.mean(gauss, axis=0)
 
 
