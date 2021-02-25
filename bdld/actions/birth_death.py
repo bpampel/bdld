@@ -120,8 +120,9 @@ def walker_density(pos: np.ndarray, bw: np.ndarray, kde: bool = False) -> np.nda
 def _walker_density_manual(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
     """Calculate the local density at each walker manually for each walker
 
-    This should be slower than the other variants but requires less memory
-    because it is done on a per-walker basis
+    This should be slower than the other variants because it calculates each
+    distance twice
+    but requires less memory because it is done on a per-walker basis
 
     :param pos: positions of particles
     :param bw: bandwidth parameter of kernel
@@ -130,7 +131,7 @@ def _walker_density_manual(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
     n_part = len(pos)
     density = np.empty((n_part))
     for i in range(n_part):
-        dist = np.array([(pos[i] - pos[j]) ** 2 for j in range(n_part) if j != i])
+        dist = np.array([(pos[i] - pos[j]) ** 2 for j in range(n_part)])
         kernel_values = kernel_sq_dist(dist, bw)
         density[i] = np.mean(kernel_values)
     return density
@@ -176,21 +177,23 @@ def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
     n_dim = pos.shape[1]
     if n_dim == 1:  # faster version for 1d, otherwise identical
         dist = pdist(pos, "sqeuclidean")
-        gauss = 1 / (np.sqrt(2 * np.pi) * bw[0]) * np.exp(-dist / (2 * bw[0] ** 2))
-        return np.mean(squareform(gauss), axis=0)
+        height = 1 / (np.sqrt(2 * np.pi) * bw[0])
+        gauss = height * np.exp(-dist / (2 * bw[0] ** 2))
+        gauss = squareform(gauss)  # sparse representation into full matrix
+        np.fill_diagonal(gauss, height)  # diagonal is 0, fill with correct value
     else:
         n_part = pos.shape[0]
         gauss_per_dim = np.empty((n_dim, (n_part * (n_part - 1)) // 2), dtype=np.double)
+        heights = 1 / (np.sqrt(2 * np.pi) * bw)
         for i in range(
             n_dim
         ):  # significantly faster variant than calling the kernel function
-            dist = pdist(pos, "sqeuclidean")
-            gauss_per_dim[i] = (
-                1 / (np.sqrt(2 * np.pi) * bw[i]) * np.exp(-dist / (2 * bw[i] ** 2))
-            )
-        gauss = np.prod(gauss_per_dim, axis=0)
-        return np.mean(squareform(gauss), axis=0)
-
+            dist = pdist(pos[:,i].reshape(-1,1), "sqeuclidean")
+            gauss_per_dim[i] = heights[i] * np.exp(-dist / (2 * bw[i] ** 2))
+        # multiply directions and convert to full matrix
+        gauss = squareform(np.prod(gauss_per_dim, axis=0))
+        np.fill_diagonal(gauss, np.prod(heights))  # diagonal is 0, fill with correct value
+    return np.mean(gauss, axis=0)
 
 class BirthDeath(Action):
     """Birth death algorithm
