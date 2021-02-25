@@ -13,21 +13,21 @@ class BirthDeathTests(unittest.TestCase):
         bw = np.array([2])
         center = np.array([[0]])
         height = 1 / (np.sqrt(2 * np.pi) * 2)  # expected value
-        self.assertEqual(bd.kernel_sq_dist(center, bw), height)
+        self.assertEqual(bd.calc_kernel(center, bw), height)
 
         testdist = np.array([[1]])
-        self.assertEqual(bd.kernel_sq_dist(testdist, bw), height * np.exp(-1/8))
+        self.assertEqual(bd.calc_kernel(testdist, bw), height * np.exp(-1/8))
 
     def test_kernel_2d(self):
         """Test the gaussian kernel in 2d"""
         bw = np.array([1, 2])
         center = np.array([[0, 0]])
         height = 1 / (4 * np.pi)  # expected value
-        self.assertEqual(bd.kernel_sq_dist(center, bw), height)
+        self.assertEqual(bd.calc_kernel(center, bw), height)
 
-        testdist = np.array([[1, 2]])
+        testdist = np.array([[1, np.sqrt(2)]])
         self.assertEqual(
-            bd.kernel_sq_dist(testdist, bw), height * np.exp(-0.5) * np.exp(-0.25)
+            bd.calc_kernel(testdist, bw), height * np.exp(-0.5) * np.exp(-0.25)
         )
 
     def test_walker_density(self):
@@ -82,7 +82,7 @@ class BirthDeathTests(unittest.TestCase):
         conv = bd.dens_kernel_convolution(dens, bw, "valid")
         # calculate expected result by hand
         kernel_points = np.arange(-0.5, 0.6, 0.1).reshape(11, 1)
-        kernel = bd.kernel_sq_dist(kernel_points ** 2, bw)
+        kernel = bd.calc_kernel(kernel_points, bw)
         maxvalid = dens.n_points[0] - len(kernel) + 1
         conv_manual = (
             np.array(
