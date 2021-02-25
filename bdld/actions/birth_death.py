@@ -12,189 +12,6 @@ from bdld import grid
 from bdld.helpers.misc import initialize_file
 
 
-def dens_kernel_convolution(
-    eq_density: grid.Grid, bw: np.ndarray, conv_mode: str
-) -> grid.Grid:
-    """Return convolution of the equilibrium probability density with the kernel
-
-    If the "valid" conv_mode is used the returned grid is smaller than the original one.
-    The "same" mode will return a grid with the same ranges, but might have issues
-    due to edge effects from the convolution
-
-    :param eq_density: grid with equilibrium probability density of system
-    :param bw: bandwidths of the kernel (sigma)
-    :param conv_mode: convolution mode to use (affects output size).
-                      If 'valid' the resulting correction grid will have a
-                      smaller domain than the original eq_density one.
-                      If 'same' it will use exactly the ranges of the original grid.
-    :return conv: grid holding the convolution values
-    """
-    kernel_ranges = [(-x, x) for x in 5 * bw]  # cutoff at 5 sigma
-    kernel = grid.from_stepsizes(kernel_ranges, eq_density.stepsizes)
-    kernel.data = kernel_sq_dist(kernel.points() ** 2, bw)
-    # direct method is needed to avoid getting negative values instead of really small ones
-    return grid.convolve(eq_density, kernel, mode=conv_mode, method="direct")
-
-
-def calc_prob_correction_kernel(
-    eq_density: grid.Grid, bw: np.ndarray, conv_mode: str = "same"
-) -> grid.Grid:
-    """Additive correction for the probabilites due to the Gaussian Kernel
-
-    Calculates the following two terms from the Kernel K and equilibrium walker distribution pi
-    .. :math::
-    -log((K(x) * \pi(x)) / \pi(x)) + \int (log((K(x) * \pi(x)) / \pi(x))) \pi \mathrm{d}x
-
-    :param eq_density: grid with equilibrium probability density of system
-    :param bw: bandwidths of the kernel (sigma)
-    :param conv_mode: convolution mode to use. See dens_kernel_convolution() for details.
-    :return correction: grid wih the correction values
-    """
-    # setup kernel grid
-    conv = dens_kernel_convolution(eq_density, bw, conv_mode)
-    if conv_mode == "valid":
-        # "valid" convolution shrinks grid --> shrink density as well
-        dens_smaller = conv.copy_empty()
-        dens_smaller.data = eq_density.interpolate(dens_smaller.points(), "linear")
-        eq_density = dens_smaller
-    log_term = np.log(conv / eq_density)
-    integral_term = nd_trapz(log_term.data * eq_density.data, conv.stepsizes)
-    correction = -log_term + integral_term
-    if any(n > 101 for n in correction.n_points):
-        correction = grid.sparsify(correction, [101] * correction.n_dim, "linear")
-    return correction
-
-
-def kernel_sq_dist(dist: np.ndarray, bw: np.ndarray) -> np.ndarray:
-    """Return kernel values from the squared distances to center
-
-    Currently directly returns Gaussian kernel
-    other kernels could later be implemented via string argument
-
-    :param dist: array of shape (n_dist, n_dim) with distances per dimensions
-    :param bw: bandwidth per dimension
-    """
-    return (
-        1
-        / ((2 * np.pi) ** (len(bw) / 2) * np.prod(bw))
-        * np.exp(-np.sum(dist / (2 * bw ** 2), axis=1))
-    )
-
-
-def nd_trapz(data: np.ndarray, dx: Union[List[float], float]) -> float:
-    """Calculate a multidimensional integral via recursive usage of the trapezoidal rule
-
-    Uses numpy's trapz for the 1d integrals
-
-    :param data: values to integrate
-    :param dx: distances between datapoints per dimension
-    :return integral: integral value
-    """
-    if isinstance(dx, list):
-        if dx:  # list not empty
-            return nd_trapz(nd_trapz(data, dx=dx[-1]), dx[:-1])
-        else:  # innermost iteration gives empty list
-            return data
-    else:
-        return np.trapz(data, dx=dx)
-
-
-def walker_density(pos: np.ndarray, bw: np.ndarray, kde: bool = False) -> np.ndarray:
-    """Calculate the local density at each walker (average kernel value)
-
-    The actual calculations are done by the different _walker_density functions
-    depending on the number of walkers and the kde switch.
-
-    :param numpy.ndarray pos: positions of particles
-    :param float bw: bandwidth parameter of kernel
-    :return numpy.ndarray kernel: kernel value matrix
-    """
-    if kde:
-        return _walker_density_kde(pos, bw)
-    elif len(pos) <= 10000:  # pdist matrix with maximum 10e8 float64 values
-        return _walker_density_pdist(pos, bw)
-    else:
-        return _walker_density_manual(pos, bw)
-
-
-def _walker_density_manual(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
-    """Calculate the local density at each walker manually for each walker
-
-    This should be slower than the other variants because it calculates each
-    distance twice
-    but requires less memory because it is done on a per-walker basis
-
-    :param pos: positions of particles
-    :param bw: bandwidth parameter of kernel
-    :return density: estimated density at each walker
-    """
-    n_part = len(pos)
-    density = np.empty((n_part))
-    for i in range(n_part):
-        dist = np.array([(pos[i] - pos[j]) ** 2 for j in range(n_part)])
-        kernel_values = kernel_sq_dist(dist, bw)
-        density[i] = np.mean(kernel_values)
-    return density
-
-
-def _walker_density_kde(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
-    """Calculate the local density at each walker via KDE from statsmodels
-
-    :param pos: positions of particles
-    :param bw: bandwidth parameter of kernel
-    :return density: estimated density at each walker
-    """
-    if pos.shape[1] == 1:
-        from statsmodels.nonparametric.kde import KDEUnivariate
-
-        kde = KDEUnivariate(pos)
-        kde.fit(bw=bw)
-        return kde.evaluate(pos.T)
-    else:
-        # if I understand the code correctly the multivariate form is just doing exactly what
-        # I manually tested: just calculate all gaussian distances manually and _not_ in batches
-        from statsmodels.nonparametric.kernel_density import KDEMultivariate
-
-        var_type = "c" * pos.shape[1]  # continuous variables
-        kde = KDEMultivariate(pos, var_type, bw=bw)
-        return kde.pdf()
-
-
-def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
-    """Calculate the local density at each walker via scipy's pdist
-
-    Uses scipy to calculate a spare distance matrix between all walkers.
-    Returns the sum over the Gaussian contributions at each walker.
-    Note that the distance matrix becomes very large for many walkers,
-    so this is only recommended for up to around 10,000 walkers.
-
-    :param pos: positions of particles
-    :param bw: bandwidth parameter of kernel
-    :return density: estimated density at each walker
-    """
-    from scipy.spatial.distance import pdist, squareform
-
-    n_dim = pos.shape[1]
-    if n_dim == 1:  # faster version for 1d, otherwise identical
-        dist = pdist(pos, "sqeuclidean")
-        height = 1 / (np.sqrt(2 * np.pi) * bw[0])
-        gauss = height * np.exp(-dist / (2 * bw[0] ** 2))
-        gauss = squareform(gauss)  # sparse representation into full matrix
-        np.fill_diagonal(gauss, height)  # diagonal is 0, fill with correct value
-    else:
-        n_part = pos.shape[0]
-        gauss_per_dim = np.empty((n_dim, (n_part * (n_part - 1)) // 2), dtype=np.double)
-        heights = 1 / (np.sqrt(2 * np.pi) * bw)
-        for i in range(
-            n_dim
-        ):  # significantly faster variant than calling the kernel function
-            dist = pdist(pos[:,i].reshape(-1,1), "sqeuclidean")
-            gauss_per_dim[i] = heights[i] * np.exp(-dist / (2 * bw[i] ** 2))
-        # multiply directions and convert to full matrix
-        gauss = squareform(np.prod(gauss_per_dim, axis=0))
-        np.fill_diagonal(gauss, np.prod(heights))  # diagonal is 0, fill with correct value
-    return np.mean(gauss, axis=0)
-
 class BirthDeath(Action):
     """Birth death algorithm
 
@@ -466,3 +283,187 @@ class BirthDeath(Action):
         self.dup_attempts = 0
         self.kill_count = 0
         self.kill_attempts = 0
+
+
+def calc_kernel(dist: np.ndarray, bw: np.ndarray) -> np.ndarray:
+    """Return kernel values from the distances to center
+
+    Currently directly returns Gaussian kernel
+    other kernels could later be implemented via string argument
+
+    :param dist: array of shape (n_dist, n_dim) with distances per dimensions
+    :param bw: bandwidth per dimension
+    """
+    return (
+        1
+        / ((2 * np.pi) ** (len(bw) / 2) * np.prod(bw))
+        * np.exp(-np.sum(dist ** 2 / (2 * bw ** 2), axis=1))
+    )
+
+
+def dens_kernel_convolution(
+    eq_density: grid.Grid, bw: np.ndarray, conv_mode: str
+) -> grid.Grid:
+    """Return convolution of the equilibrium probability density with the kernel
+
+    If the "valid" conv_mode is used the returned grid is smaller than the original one.
+    The "same" mode will return a grid with the same ranges, but might have issues
+    due to edge effects from the convolution
+
+    :param eq_density: grid with equilibrium probability density of system
+    :param bw: bandwidths of the kernel (sigma)
+    :param conv_mode: convolution mode to use (affects output size).
+                      If 'valid' the resulting correction grid will have a
+                      smaller domain than the original eq_density one.
+                      If 'same' it will use exactly the ranges of the original grid.
+    :return conv: grid holding the convolution values
+    """
+    kernel_ranges = [(-x, x) for x in 5 * bw]  # cutoff at 5 sigma
+    kernel = grid.from_stepsizes(kernel_ranges, eq_density.stepsizes)
+    kernel.data = calc_kernel(kernel.points(), bw)
+    # direct method is needed to avoid getting negative values instead of really small ones
+    return grid.convolve(eq_density, kernel, mode=conv_mode, method="direct")
+
+
+def calc_prob_correction_kernel(
+    eq_density: grid.Grid, bw: np.ndarray, conv_mode: str = "same"
+) -> grid.Grid:
+    """Additive correction for the probabilites due to the Gaussian Kernel
+
+    Calculates the following two terms from the Kernel K and equilibrium walker distribution pi
+    .. :math::
+    -log((K(x) * \pi(x)) / \pi(x)) + \int (log((K(x) * \pi(x)) / \pi(x))) \pi \mathrm{d}x
+
+    :param eq_density: grid with equilibrium probability density of system
+    :param bw: bandwidths of the kernel (sigma)
+    :param conv_mode: convolution mode to use. See dens_kernel_convolution() for details.
+    :return correction: grid wih the correction values
+    """
+    # setup kernel grid
+    conv = dens_kernel_convolution(eq_density, bw, conv_mode)
+    if conv_mode == "valid":
+        # "valid" convolution shrinks grid --> shrink density as well
+        dens_smaller = conv.copy_empty()
+        dens_smaller.data = eq_density.interpolate(dens_smaller.points(), "linear")
+        eq_density = dens_smaller
+    log_term = np.log(conv / eq_density)
+    integral_term = nd_trapz(log_term.data * eq_density.data, conv.stepsizes)
+    correction = -log_term + integral_term
+    if any(n > 101 for n in correction.n_points):
+        correction = grid.sparsify(correction, [101] * correction.n_dim, "linear")
+    return correction
+
+
+def nd_trapz(data: np.ndarray, dx: Union[List[float], float]) -> float:
+    """Calculate a multidimensional integral via recursive usage of the trapezoidal rule
+
+    Uses numpy's trapz for the 1d integrals
+
+    :param data: values to integrate
+    :param dx: distances between datapoints per dimension
+    :return integral: integral value
+    """
+    if isinstance(dx, list):
+        if dx:  # list not empty
+            return nd_trapz(nd_trapz(data, dx=dx[-1]), dx[:-1])
+        else:  # innermost iteration gives empty list
+            return data
+    else:
+        return np.trapz(data, dx=dx)
+
+
+def walker_density(pos: np.ndarray, bw: np.ndarray, kde: bool = False) -> np.ndarray:
+    """Calculate the local density at each walker (average kernel value)
+
+    The actual calculations are done by the different _walker_density functions
+    depending on the number of walkers and the kde switch.
+
+    :param numpy.ndarray pos: positions of particles
+    :param float bw: bandwidth parameter of kernel
+    :return numpy.ndarray kernel: kernel value matrix
+    """
+    if kde:
+        return _walker_density_kde(pos, bw)
+    elif len(pos) <= 10000:  # pdist matrix with maximum 10e8 float64 values
+        return _walker_density_pdist(pos, bw)
+    else:
+        return _walker_density_manual(pos, bw)
+
+
+def _walker_density_manual(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
+    """Calculate the local density at each walker manually for each walker
+
+    This should be slower than the other variants because it calculates each
+    distance twice
+    but requires less memory because it is done on a per-walker basis
+
+    :param pos: positions of particles
+    :param bw: bandwidth parameter of kernel
+    :return density: estimated density at each walker
+    """
+    n_part = len(pos)
+    density = np.empty((n_part))
+    for i in range(n_part):
+        dist = np.array([(pos[i] - pos[j]) for j in range(n_part)])
+        kernel_values = calc_kernel(dist, bw)
+        density[i] = np.mean(kernel_values)
+    return density
+
+
+def _walker_density_kde(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
+    """Calculate the local density at each walker via KDE from statsmodels
+
+    :param pos: positions of particles
+    :param bw: bandwidth parameter of kernel
+    :return density: estimated density at each walker
+    """
+    if pos.shape[1] == 1:
+        from statsmodels.nonparametric.kde import KDEUnivariate
+
+        kde = KDEUnivariate(pos)
+        kde.fit(bw=bw)
+        return kde.evaluate(pos.T)
+    else:
+        # if I understand the code correctly the multivariate form is just doing exactly what
+        # I manually tested: just calculate all gaussian distances manually and _not_ in batches
+        from statsmodels.nonparametric.kernel_density import KDEMultivariate
+
+        var_type = "c" * pos.shape[1]  # continuous variables
+        kde = KDEMultivariate(pos, var_type, bw=bw)
+        return kde.pdf()
+
+
+def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
+    """Calculate the local density at each walker via scipy's pdist
+
+    Uses scipy to calculate a spare distance matrix between all walkers.
+    Returns the sum over the Gaussian contributions at each walker.
+    Note that the distance matrix becomes very large for many walkers,
+    so this is only recommended for up to around 10,000 walkers.
+
+    :param pos: positions of particles
+    :param bw: bandwidth parameter of kernel
+    :return density: estimated density at each walker
+    """
+    from scipy.spatial.distance import pdist, squareform
+
+    n_dim = pos.shape[1]
+    if n_dim == 1:  # faster version for 1d, otherwise identical
+        dist = pdist(pos, "sqeuclidean")
+        height = 1 / (np.sqrt(2 * np.pi) * bw[0])
+        gauss = height * np.exp(-dist / (2 * bw[0] ** 2))
+        gauss = squareform(gauss)  # sparse representation into full matrix
+        np.fill_diagonal(gauss, height)  # diagonal is 0, fill with correct value
+    else:
+        n_part = pos.shape[0]
+        gauss_per_dim = np.empty((n_dim, (n_part * (n_part - 1)) // 2), dtype=np.double)
+        heights = 1 / (np.sqrt(2 * np.pi) * bw)
+        for i in range(
+            n_dim
+        ):  # significantly faster variant than calling the kernel function
+            dist = pdist(pos[:,i].reshape(-1,1), "sqeuclidean")
+            gauss_per_dim[i] = heights[i] * np.exp(-dist / (2 * bw[i] ** 2))
+        # multiply directions and convert to full matrix
+        gauss = squareform(np.prod(gauss_per_dim, axis=0))
+        np.fill_diagonal(gauss, np.prod(heights))  # diagonal is 0, fill with correct value
+    return np.mean(gauss, axis=0)
