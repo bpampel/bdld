@@ -301,77 +301,6 @@ def calc_kernel(dist: np.ndarray, bw: np.ndarray) -> np.ndarray:
     )
 
 
-def dens_kernel_convolution(
-    eq_density: grid.Grid, bw: np.ndarray, conv_mode: str
-) -> grid.Grid:
-    """Return convolution of the equilibrium probability density with the kernel
-
-    If the "valid" conv_mode is used the returned grid is smaller than the original one.
-    The "same" mode will return a grid with the same ranges, but might have issues
-    due to edge effects from the convolution
-
-    :param eq_density: grid with equilibrium probability density of system
-    :param bw: bandwidths of the kernel (sigma)
-    :param conv_mode: convolution mode to use (affects output size).
-                      If 'valid' the resulting correction grid will have a
-                      smaller domain than the original eq_density one.
-                      If 'same' it will use exactly the ranges of the original grid.
-    :return conv: grid holding the convolution values
-    """
-    kernel_ranges = [(-x, x) for x in 5 * bw]  # cutoff at 5 sigma
-    kernel = grid.from_stepsizes(kernel_ranges, eq_density.stepsizes)
-    kernel.data = calc_kernel(kernel.points(), bw)
-    # direct method is needed to avoid getting negative values instead of really small ones
-    return grid.convolve(eq_density, kernel, mode=conv_mode, method="direct")
-
-
-def calc_prob_correction_kernel(
-    eq_density: grid.Grid, bw: np.ndarray, conv_mode: str = "same"
-) -> grid.Grid:
-    """Additive correction for the probabilites due to the Gaussian Kernel
-
-    Calculates the following two terms from the Kernel K and equilibrium walker distribution pi
-    .. :math::
-    -log((K(x) * \pi(x)) / \pi(x)) + \int (log((K(x) * \pi(x)) / \pi(x))) \pi \mathrm{d}x
-
-    :param eq_density: grid with equilibrium probability density of system
-    :param bw: bandwidths of the kernel (sigma)
-    :param conv_mode: convolution mode to use. See dens_kernel_convolution() for details.
-    :return correction: grid wih the correction values
-    """
-    # setup kernel grid
-    conv = dens_kernel_convolution(eq_density, bw, conv_mode)
-    if conv_mode == "valid":
-        # "valid" convolution shrinks grid --> shrink density as well
-        dens_smaller = conv.copy_empty()
-        dens_smaller.data = eq_density.interpolate(dens_smaller.points(), "linear")
-        eq_density = dens_smaller
-    log_term = np.log(conv / eq_density)
-    integral_term = nd_trapz(log_term.data * eq_density.data, conv.stepsizes)
-    correction = -log_term + integral_term
-    if any(n > 101 for n in correction.n_points):
-        correction = grid.sparsify(correction, [101] * correction.n_dim, "linear")
-    return correction
-
-
-def nd_trapz(data: np.ndarray, dx: Union[List[float], float]) -> float:
-    """Calculate a multidimensional integral via recursive usage of the trapezoidal rule
-
-    Uses numpy's trapz for the 1d integrals
-
-    :param data: values to integrate
-    :param dx: distances between datapoints per dimension
-    :return integral: integral value
-    """
-    if isinstance(dx, list):
-        if dx:  # list not empty
-            return nd_trapz(nd_trapz(data, dx=dx[-1]), dx[:-1])
-        else:  # innermost iteration gives empty list
-            return data
-    else:
-        return np.trapz(data, dx=dx)
-
-
 def walker_density(pos: np.ndarray, bw: np.ndarray, kde: bool = False) -> np.ndarray:
     """Calculate the local density at each walker (average kernel value)
 
@@ -467,3 +396,74 @@ def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
         gauss = squareform(np.prod(gauss_per_dim, axis=0))
         np.fill_diagonal(gauss, np.prod(heights))  # diagonal is 0, fill with correct value
     return np.mean(gauss, axis=0)
+
+
+def dens_kernel_convolution(
+    eq_density: grid.Grid, bw: np.ndarray, conv_mode: str
+) -> grid.Grid:
+    """Return convolution of the equilibrium probability density with the kernel
+
+    If the "valid" conv_mode is used the returned grid is smaller than the original one.
+    The "same" mode will return a grid with the same ranges, but might have issues
+    due to edge effects from the convolution
+
+    :param eq_density: grid with equilibrium probability density of system
+    :param bw: bandwidths of the kernel (sigma)
+    :param conv_mode: convolution mode to use (affects output size).
+                      If 'valid' the resulting correction grid will have a
+                      smaller domain than the original eq_density one.
+                      If 'same' it will use exactly the ranges of the original grid.
+    :return conv: grid holding the convolution values
+    """
+    kernel_ranges = [(-x, x) for x in 5 * bw]  # cutoff at 5 sigma
+    kernel = grid.from_stepsizes(kernel_ranges, eq_density.stepsizes)
+    kernel.data = calc_kernel(kernel.points(), bw)
+    # direct method is needed to avoid getting negative values instead of really small ones
+    return grid.convolve(eq_density, kernel, mode=conv_mode, method="direct")
+
+
+def calc_prob_correction_kernel(
+    eq_density: grid.Grid, bw: np.ndarray, conv_mode: str = "same"
+) -> grid.Grid:
+    """Additive correction for the probabilites due to the Gaussian Kernel
+
+    Calculates the following two terms from the Kernel K and equilibrium walker distribution pi
+    .. :math::
+    -log((K(x) * \pi(x)) / \pi(x)) + \int (log((K(x) * \pi(x)) / \pi(x))) \pi \mathrm{d}x
+
+    :param eq_density: grid with equilibrium probability density of system
+    :param bw: bandwidths of the kernel (sigma)
+    :param conv_mode: convolution mode to use. See dens_kernel_convolution() for details.
+    :return correction: grid wih the correction values
+    """
+    # setup kernel grid
+    conv = dens_kernel_convolution(eq_density, bw, conv_mode)
+    if conv_mode == "valid":
+        # "valid" convolution shrinks grid --> shrink density as well
+        dens_smaller = conv.copy_empty()
+        dens_smaller.data = eq_density.interpolate(dens_smaller.points(), "linear")
+        eq_density = dens_smaller
+    log_term = np.log(conv / eq_density)
+    integral_term = nd_trapz(log_term.data * eq_density.data, conv.stepsizes)
+    correction = -log_term + integral_term
+    if any(n > 101 for n in correction.n_points):
+        correction = grid.sparsify(correction, [101] * correction.n_dim, "linear")
+    return correction
+
+
+def nd_trapz(data: np.ndarray, dx: Union[List[float], float]) -> float:
+    """Calculate a multidimensional integral via recursive usage of the trapezoidal rule
+
+    Uses numpy's trapz for the 1d integrals
+
+    :param data: values to integrate
+    :param dx: distances between datapoints per dimension
+    :return integral: integral value
+    """
+    if isinstance(dx, list):
+        if dx:  # list not empty
+            return nd_trapz(nd_trapz(data, dx=dx[-1]), dx[:-1])
+        else:  # innermost iteration gives empty list
+            return data
+    else:
+        return np.trapz(data, dx=dx)
