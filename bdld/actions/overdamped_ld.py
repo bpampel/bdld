@@ -71,10 +71,8 @@ class OverdampedLD(Action):
 
         :param step: Not used, just to have the right function signature"""
         for p in self.particles:
-            p.pos += (
-                self.dt
-                + p.forces
-                + self.noise_factor * self.rng.standard_normal(self.pot.n_dim)
+            p.pos += self.dt * p.forces + self.noise_factor * self.rng.standard_normal(
+                self.pot.n_dim
             )
             p.energy, p.forces = self.pot.evaluate(p.pos)
 
