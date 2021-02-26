@@ -126,7 +126,7 @@ class BirthDeath(Action):
     def final_run(self, step: int) -> None:
         """Print out stats if they were not before"""
         if not self.stats_stride:
-            self.print_stats()
+            self.print_stats(step)
 
     def calculate_birth_death(self) -> List[Tuple[int, int]]:
         """Calculate which particles to kill and duplicate
