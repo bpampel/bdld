@@ -421,6 +421,12 @@ def numbered_state_options(section: configparser.SectionProxy) -> List[InputOpti
             InputOption(f"state{i+1}-min", [float], True),
             InputOption(f"state{i+1}-max", [float], True),
         ]
+    if not options:
+        raise OptionError(
+            "No state options found for action",
+            "statex-min / statex-max",
+            section.name,
+        )
     return options
 
 
