@@ -92,7 +92,7 @@ class BussiParinelloLD(Action):
             p.mom = self.c1 * p.mom + p.c2 * self.rng.standard_normal(self.pot.n_dim)
 
     def add_particle(
-        self, pos: Union[List, np.ndarray], partnum: int = -1, overwrite: bool = False
+        self, pos: Union[List, np.ndarray], mass=1.0, partnum: int = -1, overwrite: bool = False
     ) -> None:
         """Add particle to system
 
@@ -106,7 +106,7 @@ class BussiParinelloLD(Action):
                     pos, self.pot.n_dim
                 )
             )
-        p = BpldParticle(pos)
+        p = BpldParticle(pos, None, mass)
         p.energy, p.forces = self.pot.evaluate(p.pos)
         p.c2 = np.sqrt((1 - self.c1 * self.c1) * p.mass * self.kt)
         if overwrite:

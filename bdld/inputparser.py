@@ -239,6 +239,7 @@ class Input:
         """Parse the number of particles and initial distribution"""
         options = [
             InputOption("number", int, True, Input.positive),
+            InputOption("mass", float, False, Input.positive),
             InputOption("seed", int, False),
         ]
 

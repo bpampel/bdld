@@ -175,16 +175,17 @@ def init_particles(options: Dict, ld: BussiParinelloLD) -> None:
     random-pos: distribute randomly on the given positions
     fractions-pos: distribute with given fractions on the given positions
     """
+    mass = options["mass"] or 1.0  # default
     if options["initial-distribution"] == "random-global":
         rng = np.random.default_rng(options["seed"])
         for _ in range(options["number"]):
             pos = [rng.uniform(start, end) for start, end in ld.pot.ranges]
-            ld.add_particle(pos)
+            ld.add_particle(pos, mass)
     elif options["initial-distribution"] == "random-pos":
         rng = np.random.default_rng(options["seed"])
         init_pos_choices = [pos for key, pos in options.items() if "pos" in key]
         for _ in range(options["number"]):
-            ld.add_particle(rng.choice(init_pos_choices, axis=0))
+            ld.add_particle(rng.choice(init_pos_choices, axis=0), mass)
     elif options["initial-distribution"] == "fractions-pos":
         # normalize so sum of fractions is one -> allows also total number inputs
         normalized_fractions = np.array(options["fractions"]) / np.sum(
@@ -200,7 +201,7 @@ def init_particles(options: Dict, ld: BussiParinelloLD) -> None:
             raise ValueError(e)
         for i, pos in enumerate(init_pos_choices):
             for _ in range(counts[i]):
-                ld.add_particle(pos)
+                ld.add_particle(pos, mass)
 
 
 def setup_birth_death(options: Dict, ld: BussiParinelloLD) -> BirthDeath:
