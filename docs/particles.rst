@@ -29,6 +29,9 @@ For :code:`fractions-pos` also the fractions have to be given.
   The sum is normalized to one, so also absolute values can be specified.
   If the particles are not exactly distributable according to the fractions, the first position will get the remainder.
 
+**mass**: *float*, optional
+  Mass of the particles, defaults to 1.0
+
 **seed**: *int*, optional
   Starting seed for the random number generator that is used if particles are distributed randomly
 
