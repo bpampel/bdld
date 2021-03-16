@@ -74,14 +74,16 @@ class OverdampedLD(Action):
             p.pos += self.dt * p.forces + self.noise_factor * self.rng.standard_normal(
                 self.pot.n_dim
             )
+            self.pot.apply_boundary_condition(p.pos, p.mom)
             p.energy, p.forces = self.pot.evaluate(p.pos)
 
     def add_particle(
-        self, pos: Union[List, np.ndarray], partnum: int = -1, overwrite: bool = False
+        self, pos: Union[List, np.ndarray], mass=1.0, partnum: int = -1, overwrite: bool = False
     ) -> None:
         """Add particle to system
 
         :param pos: list or numpy array with initial position of the particle per dimension
+        :param mass: mass of particles (ignored in algorithm)
         :param partnum: specifies particle number (position in list). Default is -1 (at end)
         :param overwrite: overwrite existing particle instead of inserting (default False)
         """
@@ -91,7 +93,7 @@ class OverdampedLD(Action):
                     pos, self.pot.n_dim
                 )
             )
-        p = LDParticle(pos)
+        p = LDParticle(pos, None, mass)
         p.energy, p.forces = self.pot.evaluate(p.pos)
         if overwrite:
             self.particles[partnum] = p
