@@ -267,7 +267,8 @@ class Input:
         if init_dist == "fractions-pos":
             options.append(InputOption("fractions", [float], True))
 
-        self.particles = self.parse_section(section, options)
+        defaults = {"mass": 1.0}
+        self.particles = self.parse_section(section, options, defaults)
 
     def parse_birth_death(self, section: configparser.SectionProxy) -> None:
         """Define and parse the options of the potential"""

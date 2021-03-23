@@ -175,7 +175,7 @@ def init_particles(options: Dict, ld: BussiParinelloLD) -> None:
     random-pos: distribute randomly on the given positions
     fractions-pos: distribute with given fractions on the given positions
     """
-    mass = options["mass"] or 1.0  # default
+    mass = options["mass"]
     if options["initial-distribution"] == "random-global":
         rng = np.random.default_rng(options["seed"])
         for _ in range(options["number"]):
