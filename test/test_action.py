@@ -30,7 +30,7 @@ class ActionTest(unittest.TestCase):
         stride = 6  # sparsify data for writing / another action
         valid = action.get_valid_data(data, step, stride, update_stride, last_write)
 
-        expected = np.array([48, 54, 60]) # all multiplicatives of 6 since last_write
+        expected = np.array([48, 54, 60])  # all multiplicatives of 6 since last_write
         np.testing.assert_array_equal(expected, valid)
 
 

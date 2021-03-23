@@ -78,7 +78,11 @@ class OverdampedLD(Action):
             p.energy, p.forces = self.pot.evaluate(p.pos)
 
     def add_particle(
-        self, pos: Union[List, np.ndarray], mass=1.0, partnum: int = -1, overwrite: bool = False
+        self,
+        pos: Union[List, np.ndarray],
+        mass=1.0,
+        partnum: int = -1,
+        overwrite: bool = False,
     ) -> None:
         """Add particle to system
 

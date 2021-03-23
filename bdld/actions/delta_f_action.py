@@ -57,7 +57,9 @@ class DeltaFAction(Action):
             # time + (masks -1) states
             self.delta_f = np.empty((self.write_stride // self.stride, len(self.masks)))
             self.last_write: int = 0
-            print(f"Saving delta-f of every {make_ordinal(self.stride)} time step to '{filename}'")
+            print(
+                f"Saving delta-f of every {make_ordinal(self.stride)} time step to '{filename}'"
+            )
         else:  # just store one data set
             self.delta_f = np.empty((len(self.masks)))
 

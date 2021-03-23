@@ -92,7 +92,11 @@ class BussiParinelloLD(Action):
             p.mom = self.c1 * p.mom + p.c2 * self.rng.standard_normal(self.pot.n_dim)
 
     def add_particle(
-        self, pos: Union[List, np.ndarray], mass=1.0, partnum: int = -1, overwrite: bool = False
+        self,
+        pos: Union[List, np.ndarray],
+        mass=1.0,
+        partnum: int = -1,
+        overwrite: bool = False,
     ) -> None:
         """Add particle to system
 

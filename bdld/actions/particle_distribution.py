@@ -61,7 +61,9 @@ class ParticleDistributionAction(Action):
                 (self.write_stride // self.stride, len(self.states) + 1)
             )
             self.last_write: int = 0
-            print(f"Saving distribution of every {make_ordinal(self.stride)} time step to '{filename}'")
+            print(
+                f"Saving distribution of every {make_ordinal(self.stride)} time step to '{filename}'"
+            )
         else:  # just store one data set
             self.counts = np.empty((len(self.states) + 1))
 

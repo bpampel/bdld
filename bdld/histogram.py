@@ -35,15 +35,19 @@ class Histogram(grid.Grid):
         if not isinstance(n_bins, list):  # single float
             n_bins = [n_bins]
         self.n_points = n_bins
-        self.stepsizes = grid.stepsizes_from_npoints(ranges, [n+1 for n in n_bins])
+        self.stepsizes = grid.stepsizes_from_npoints(ranges, [n + 1 for n in n_bins])
         self.histo_ranges = ranges
         self.n_dim = len(ranges)
         self.fes: Optional[np.ndarray] = None
         # create bins from arbitrary value, there doesn't seem to be a function doing it
         self.data, self.bins = np.histogramdd(
-            np.zeros((1, len(self.n_points))), bins=self.n_points, range=self.histo_ranges
+            np.zeros((1, len(self.n_points))),
+            bins=self.n_points,
+            range=self.histo_ranges,
         )
-        self.ranges = [(a[0], a[-1]) for a in self.axes()]  # ranges of points in underlying grid
+        self.ranges = [
+            (a[0], a[-1]) for a in self.axes()
+        ]  # ranges of points in underlying grid
 
     def add(self, data: np.ndarray) -> None:
         """Add data to histogram
