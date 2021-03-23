@@ -3,6 +3,7 @@ kt: 1
 seed: 632683
 
 [ld]
+type: bussi-parinello
 timestep: 0.005
 friction: 10.0
 n_steps: 10000
