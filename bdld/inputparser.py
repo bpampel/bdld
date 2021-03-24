@@ -59,24 +59,27 @@ class InputOption:
         keytype: Union[Type[BuiltinType], List[Type[BuiltinType]]],
         compulsory: bool = False,
         condition: Optional[Condition] = None,
+        default: OptionType = None,
     ) -> None:
         self.key = key
         self.keytype = keytype
         self.compulsory = compulsory
         self.condition = condition
+        self.default = default
 
     def parse(self, section: configparser.SectionProxy) -> Optional[OptionType]:
         """Parse option from section in exception save way
 
         Returns either the option as the desired type or None if the key is not found
         """
+        val = self.default
         if self.key not in section.keys():
             if self.compulsory:
                 e = "Option not found, but it is required"
                 raise OptionError(e, self.key, section.name)
-            return None
+            return val
         if self.keytype == str:
-            val: OptionType = section.get(self.key)
+            val = section.get(self.key)
         try:
             if self.keytype == float:
                 val = section.getfloat(self.key)
@@ -200,7 +203,6 @@ class Input:
         """Define and parse the options of the potential"""
         type_option = InputOption("type", str, True)
         pot_type = cast(str, type_option.parse(section))
-        defaults: Dict[str, OptionType] = {}  # need default option for n_dim
         if pot_type == "polynomial":
             n_dim_option = InputOption("n_dim", int, True, Input.at_most_3dim)
             n_dim = cast(int, n_dim_option.parse(section))
@@ -224,8 +226,8 @@ class Input:
             options = [
                 type_option,
                 InputOption("scaling-factor", float, False),
+                InputOption("n_dim", int, False, default=2)
             ]
-            defaults["n_dim"] = 2
         else:
             raise OptionError(
                 f'Specified potential type "{pot_type}" is not implemented',
@@ -233,13 +235,13 @@ class Input:
                 section.name,
             )
         options.append(InputOption("boundary-condition", str, False))
-        self.potential = self.parse_section(section, options, defaults)
+        self.potential = self.parse_section(section, options)
 
     def parse_particles(self, section: configparser.SectionProxy) -> None:
         """Parse the number of particles and initial distribution"""
         options = [
             InputOption("number", int, True, Input.positive),
-            InputOption("mass", float, False, Input.positive),
+            InputOption("mass", float, False, Input.positive, 1.0),
             InputOption("seed", int, False),
         ]
 
@@ -267,8 +269,7 @@ class Input:
         if init_dist == "fractions-pos":
             options.append(InputOption("fractions", [float], True))
 
-        defaults = {"mass": 1.0}
-        self.particles = self.parse_section(section, options, defaults)
+        self.particles = self.parse_section(section, options)
 
     def parse_birth_death(self, section: configparser.SectionProxy) -> None:
         """Define and parse the options of the potential"""
@@ -365,15 +366,13 @@ class Input:
     def parse_section(
         section: configparser.SectionProxy,
         options: List[InputOption],
-        defaults: Dict[str, OptionType] = None,
     ) -> Dict[str, OptionType]:
         """Parse all options of a section
 
         :param section: section to parse
         :param options: list of InputOption to parse
-        :param defaults: optional defaults for the output dictionary
         """
-        parsed_options: Dict[str, OptionType] = defaults or {}
+        parsed_options: Dict[str, OptionType] = {}
         for o in options:
             parsed_options[o.key] = o.parse(section)
         return parsed_options
