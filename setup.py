@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="bdld",
-    version="0.2.0",
+    version="0.3.0",
     description="Simulation algorithm for Langevin dynamics with additional birth/death steps",
     author="Benjamin Pampel",
     packages=["bdld", "bdld.actions", "bdld.potential", "bdld.helpers"],
