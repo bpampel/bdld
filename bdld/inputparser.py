@@ -172,8 +172,7 @@ class Input:
 
         for sec in self.infile.sections():  # only not parsed ones left
             logging.warning("%s",
-                            f"Warning: Section {sec} did not match anything and will be ignored. \
-                             Is there a typo?"
+                            f'Warning: Section "{sec}" did not match anything and will be ignored. Is there a typo?'
                            )
 
 
@@ -224,8 +223,7 @@ class Input:
         for opt_key in self.infile.options(label):  # all remaining ones
             if opt_key not in self.infile.defaults():
                 logging.warning("%s",
-                                f'Warning: Option "{opt_key}" in section "{label} did not match anything and will be ignored. \
-                                Is there a typo?"'
+                                f'Warning: Option "{opt_key}" in section "{label} did not match anything and will be ignored. Is there a typo?"'
                                )
 
         self.data[label] = parsed_options
