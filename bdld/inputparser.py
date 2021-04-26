@@ -10,10 +10,12 @@ directly but some helper functions to do it are provided in this file.
 
 import configparser
 from typing import (
+    Any,
     cast,
     Callable,
     Dict,
     List,
+    Mapping,
     Optional,
     Union,
     Tuple,
@@ -106,11 +108,18 @@ class InputOption:
 class Input:
     """Class that parses the input file
 
-    Each section of the config is parsed in a seperate function defining the individual
-    InputOption objects. The parsed options are then stored in one dictionary per
-    section.
+    All sections are stored into the data dict with the keys being the section names.
 
-    :paam
+    Each section of the config is parsed in a seperate function defining the individual
+    InputOption objects. The parsed options are then stored as dict.
+    This dict is put as value for the respective section into the nested "data" dict.
+
+    The data dict thus looks like this (2 sections with 2 options each):
+
+        {sec1: {opt1: abc, opt2: edf}, sec2: {opt3: uvw, opt4: xyz}}
+
+    :param filename: config file to parse
+    :param data: nested dictionary containing all sections with all parsed options
     """
 
     # define conditions here
@@ -126,17 +135,17 @@ class Input:
     # return Condition(lambda x: x == n_dim, f"wrong dimensions (must be {n_dim})")
 
     def __init__(self, filename: str) -> None:
+        """Define the data members and call the parsing function"""
         self.filename = filename
-        # each config sections has it's own dictionary
-        self.ld: Dict[str, OptionType] = {}
-        self.potential: Dict[str, OptionType] = {}
-        self.particles: Dict[str, OptionType] = {}
-        self.birth_death: Optional[Dict[str, OptionType]] = None
-        self.trajectories: Optional[Dict[str, OptionType]] = None
-        self.histogram: Optional[Dict[str, OptionType]] = None
-        self.fes: Optional[Dict[str, OptionType]] = None
-        self.delta_f: Optional[Dict[str, OptionType]] = None
-        self.particle_distribution: Optional[Dict[str, OptionType]] = None
+        self.data : Dict[str, Dict[str, OptionType]] = {}
+
+        # test that file can be opened -> raises FileNotFoundError if not
+        with open(self.filename) as _:
+            pass
+
+        print(f"Parsing input from file '{self.filename}'\n")
+        self.infile = configparser.ConfigParser()
+        self.infile.read(self.filename)
 
         self.parse_all()
 
@@ -145,36 +154,79 @@ class Input:
 
         Does then launch the config for the individual sections
         """
-        # test that file can be opened -> raises FileNotFoundError if not
-        with open(self.filename) as _:
-            pass
 
-        print(f"Parsing input from file '{self.filename}'\n")
-        infile = configparser.ConfigParser()
-        infile.read(self.filename)
+        required_sections = ["ld", "potential", "particles"]
+        optional_sections = ["trajectories", "histogram", "fes", "birth-death", "delta-f", "particle-distribution"]
 
-        for required_sec in ["ld", "potential", "particles"]:
-            if not required_sec in infile.sections():
-                raise SectionError(required_sec)
+        # mandatory sections, that can be there only once
+        for sec in required_sections:
+            if not self.infile.has_section(sec):
+                raise SectionError(sec)
+            self.parse_section(sec)
 
-        self.parse_ld(infile["ld"])
-        self.parse_potential(infile["potential"])
-        self.parse_particles(infile["particles"])
+        for section_type in optional_sections:
+            # multiple of these sections are possible, get all that start with the type
+            numbered_secs = [sec for sec in self.infile.sections() if sec.find(section_type) == 0]
+            for sec in numbered_secs:
+                self.parse_section(sec)
 
-        if infile.has_section("birth-death"):
-            self.parse_birth_death(infile["birth-death"])
-        if infile.has_section("trajectories"):
-            self.parse_trajectories(infile["trajectories"])
-        if infile.has_section("histogram"):
-            self.parse_histogram(infile["histogram"])
-        if infile.has_section("fes"):
-            self.parse_fes(infile["fes"])
-        if infile.has_section("delta-f"):
-            self.parse_delta_f(infile["delta-f"])
-        if infile.has_section("particle-distribution"):
-            self.parse_particle_distribution(infile["particle-distribution"])
+        for sec in self.infile.sections():  # only not parsed ones left
+            print(f"Warning: Section {sec} did not match anything and will be ignored. \
+                  Is there a typo?")
 
-    def parse_ld(self, section: configparser.SectionProxy) -> None:
+
+    def parse_section(self, section_type: str, label: str = None) -> None:
+        """Parse a section
+
+        This maps the strings to the respective parsing functions
+        containing the actual options.
+        The received options are then stored in the "data" dict
+
+        To parse multiple sections of the same type, the "key"
+        can be used to parse a specific section of the config
+
+        The corresponding xyz_opts() functions have all the same signature
+        and might actually process the given label to decide which options
+        are valid (e.g. based on system dimension)
+
+        :param section_type: base type of section to parse
+        :param label: optional section key / label used in config
+        """
+        if not label:  # default: use just the section type
+            label = section_type
+
+        if section_type == "ld":
+            options = self.ld_opts(self.infile[label])
+        elif section_type == "potential":
+            options = self.potential_opts(self.infile[label])
+        elif section_type == "particles":
+            options = self.particles_opts(self.infile[label])
+        elif section_type == "birth-death":
+            options = self.birth_death_opts(self.infile[label])
+        elif section_type == "trajectories":
+            options = self.trajectories_opts(self.infile[label])
+        elif section_type == "histogram":
+            options = self.histogram_opts(self.infile[label])
+        elif section_type == "fes":
+            options = self.fes_opts(self.infile[label])
+        elif section_type == "delta-f":
+            options = self.delta_f_opts(self.infile[label])
+        elif section_type == "particle-distribution":
+            options = self.particle_distribution_opts(self.infile[label])
+
+        parsed_options: Dict[str, OptionType] = {}
+        for o in options:
+            parsed_options[o.key] = o.parse(self.infile[label])
+            self.infile.remove_option(label, o.key)
+
+        for opt_key in self.infile.options(label):  # all remaining ones
+            if opt_key not in self.infile.defaults():
+                print(f"Warning: option '{opt_key}' in section {label} did not match anything and will be ignored")
+
+        self.data[label] = parsed_options
+        self.infile.remove_section(label)
+
+    def ld_opts(self, section: configparser.SectionProxy) -> List[InputOption]:
         """Define and parse the options of the langevin dynamics"""
         type_option = InputOption("type", str, False)
         ld_type = cast(str, type_option.parse(section))
@@ -197,10 +249,10 @@ class Input:
                 "type",
                 section.name,
             )
-        self.ld = self.parse_section(section, options)
+        return options
 
-    def parse_potential(self, section: configparser.SectionProxy) -> None:
-        """Define and parse the options of the potential"""
+    def potential_opts(self, section: configparser.SectionProxy) -> List[InputOption]:
+        """Define the options of the potential"""
         type_option = InputOption("type", str, True)
         pot_type = cast(str, type_option.parse(section))
         if pot_type == "polynomial":
@@ -235,10 +287,10 @@ class Input:
                 section.name,
             )
         options.append(InputOption("boundary-condition", str, False))
-        self.potential = self.parse_section(section, options)
+        return options
 
-    def parse_particles(self, section: configparser.SectionProxy) -> None:
-        """Parse the number of particles and initial distribution"""
+    def particles_opts(self, section: configparser.SectionProxy) -> List[InputOption]:
+        """Define options for the particles and initial distribution"""
         options = [
             InputOption("number", int, True, Input.positive),
             InputOption("mass", float, False, Input.positive, 1.0),
@@ -269,10 +321,10 @@ class Input:
         if init_dist == "fractions-pos":
             options.append(InputOption("fractions", [float], True))
 
-        self.particles = self.parse_section(section, options)
+        return options
 
-    def parse_birth_death(self, section: configparser.SectionProxy) -> None:
-        """Define and parse the options of the potential"""
+    def birth_death_opts(self, section: configparser.SectionProxy) -> List[InputOption]:
+        """Define options of the birth-death process"""
         options = [
             InputOption("stride", int, True, Input.positive),
             InputOption("correction-variant", str, False),  # not checked here
@@ -287,9 +339,9 @@ class Input:
             options.append(
                 InputOption("kernel-bandwidth", [float], True, Input.all_positive)
             )
-        self.birth_death = self.parse_section(section, options)
+        return options
 
-    def parse_trajectories(self, section: configparser.SectionProxy) -> None:
+    def trajectories_opts(self, section: configparser.SectionProxy) -> List[InputOption]:
         """Define and parse the options for trajectory output"""
         options = [
             InputOption("filename", str, False),
@@ -297,9 +349,9 @@ class Input:
             InputOption("write-stride", int, False, Input.positive),
             InputOption("fmt", str, False),
         ]
-        self.trajectories = self.parse_section(section, options)
+        return options
 
-    def parse_histogram(self, section: configparser.SectionProxy) -> None:
+    def histogram_opts(self, section: configparser.SectionProxy) -> List[InputOption]:
         """Define and parse the options for histogramming the trajectories"""
         options = [
             InputOption("stride", int, False, Input.positive),
@@ -320,9 +372,9 @@ class Input:
                 InputOption("max", [float], True),
                 InputOption("bins", [int], True, Input.all_positive),
             ]
-        self.histogram = self.parse_section(section, options)
+        return options
 
-    def parse_fes(self, section: configparser.SectionProxy) -> None:
+    def fes_opts(self, section: configparser.SectionProxy) -> List[InputOption]:
         """Define and parse the fes section"""
         if not self.histogram:
             raise configparser.NoSectionError("histogram")
@@ -337,9 +389,9 @@ class Input:
             InputOption("plot-domain", [float], False),
             InputOption("plot-title", str, False),
         ]
-        self.fes = self.parse_section(section, options)
+        return options
 
-    def parse_delta_f(self, section: configparser.SectionProxy) -> None:
+    def delta_f_opts(self, section: configparser.SectionProxy) -> List[InputOption]:
         """Define and parse if delta f should be calculated section"""
         if not self.fes:
             raise configparser.NoSectionError("fes")
@@ -349,10 +401,9 @@ class Input:
             InputOption("write-stride", int, False, Input.positive),
             InputOption("fmt", str, False),
         ] + numbered_state_options(section)
+        return options
 
-        self.delta_f = self.parse_section(section, options)
-
-    def parse_particle_distribution(self, section: configparser.SectionProxy) -> None:
+    def particle_distribution_opts(self, section: configparser.SectionProxy) -> List[InputOption]:
         """Define and parse if statistics about particles should be printed periodically"""
         options = [
             InputOption("stride", int, True, Input.positive),
@@ -360,31 +411,16 @@ class Input:
             InputOption("write-stride", int, False, Input.positive),
             InputOption("fmt", str, False),
         ] + numbered_state_options(section)
-        self.particle_distribution = self.parse_section(section, options)
-
-    @staticmethod
-    def parse_section(
-        section: configparser.SectionProxy,
-        options: List[InputOption],
-    ) -> Dict[str, OptionType]:
-        """Parse all options of a section
-
-        :param section: section to parse
-        :param options: list of InputOption to parse
-        """
-        parsed_options: Dict[str, OptionType] = {}
-        for o in options:
-            parsed_options[o.key] = o.parse(section)
-        return parsed_options
+        return options
 
 
 # helper functions to transform the options
 def get_all_numbered_values(
-    section: Union[configparser.SectionProxy, Dict[str, OptionType]],
+    section: Mapping[str, Any],
     prefix: str = "",
     suffix: str = "",
 ) -> List[OptionType]:
-    """Returns all numbered options with the given key name
+    """Returns all numbered options/values with the given key name
 
     :param section: section/dict to search
     :param prefix: prefix of option key (string before number)
