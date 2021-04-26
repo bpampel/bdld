@@ -9,6 +9,7 @@ directly but some helper functions to do it are provided in this file.
 """
 
 import configparser
+import logging
 from typing import (
     Any,
     cast,
@@ -154,7 +155,6 @@ class Input:
 
         Does then launch the config for the individual sections
         """
-
         required_sections = ["ld", "potential", "particles"]
         optional_sections = ["trajectories", "histogram", "fes", "birth-death", "delta-f", "particle-distribution"]
 
@@ -171,8 +171,10 @@ class Input:
                 self.parse_section(sec)
 
         for sec in self.infile.sections():  # only not parsed ones left
-            print(f"Warning: Section {sec} did not match anything and will be ignored. \
-                  Is there a typo?")
+            logging.warning("%s",
+                            f"Warning: Section {sec} did not match anything and will be ignored. \
+                             Is there a typo?"
+                           )
 
 
     def parse_section(self, section_type: str, label: str = None) -> None:
@@ -221,7 +223,10 @@ class Input:
 
         for opt_key in self.infile.options(label):  # all remaining ones
             if opt_key not in self.infile.defaults():
-                print(f"Warning: option '{opt_key}' in section {label} did not match anything and will be ignored")
+                logging.warning("%s",
+                                f'Warning: Option "{opt_key}" in section "{label} did not match anything and will be ignored. \
+                                Is there a typo?"'
+                               )
 
         self.data[label] = parsed_options
         self.infile.remove_section(label)
