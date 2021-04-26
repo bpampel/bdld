@@ -79,8 +79,6 @@ def main() -> None:
 
     # optional actions in reasonable order
     try:
-        if "birth-death" in config:
-            actions_dict["birth-death"] = setup_birth_death(config["birth-death"], ld)
         if "trajectories" in config:
             actions_dict["trajectories"] = setup_trajectories(
                 config["trajectories"], ld
@@ -91,6 +89,8 @@ def main() -> None:
             )
         if "fes" in config:
             actions_dict["fes"] = setup_fes(config["fes"], actions_dict["histogram"])  # type: ignore
+        if "birth-death" in config:
+            actions_dict["birth-death"] = setup_birth_death(config["birth-death"], ld)
         if "delta-f" in config:
             actions_dict["delta-f"] = setup_delta_f(config["delta-f"], actions_dict["fes"])  # type: ignore
         if "particle-distribution" in config:
