@@ -333,7 +333,7 @@ class Input:
             InputOption("seed", int, False),
         ]
 
-        if self.potential["n_dim"] == 1:
+        if self.data['potential']["n_dim"] == 1:
             options.append(InputOption("kernel-bandwidth", float, True, Input.positive))
         else:
             options.append(
@@ -360,7 +360,7 @@ class Input:
             InputOption("write-stride", int, False, Input.positive),
             InputOption("fmt", str, False),
         ]
-        if self.potential["n_dim"] == 1:
+        if self.data["potential"]["n_dim"] == 1:
             options += [
                 InputOption("min", float, True),
                 InputOption("max", float, True),
@@ -376,7 +376,7 @@ class Input:
 
     def fes_opts(self, section: configparser.SectionProxy) -> List[InputOption]:
         """Define and parse the fes section"""
-        if not self.histogram:
+        if "histogram" not in self.data.keys():
             raise configparser.NoSectionError("histogram")
         options = [
             InputOption("kt", float, True, Input.positive),
@@ -393,7 +393,7 @@ class Input:
 
     def delta_f_opts(self, section: configparser.SectionProxy) -> List[InputOption]:
         """Define and parse if delta f should be calculated section"""
-        if not self.fes:
+        if "fes" not in self.data.keys():
             raise configparser.NoSectionError("fes")
         options = [
             InputOption("stride", int, True, Input.positive),
