@@ -56,7 +56,8 @@ def main() -> None:
 
     infile = args.input
     try:
-        config = inputparser.Input(infile)
+        inp = inputparser.Input(infile)
+        config = inp.data
     except FileNotFoundError:
         log.error("Input file '%s' could not be found", infile)
         sys.exit(1)
@@ -71,28 +72,28 @@ def main() -> None:
     # make sure actions are added after their dependencies (e.g. fes after hist)
 
     # compulsory: set up Langevin dynamics
-    pot = setup_potential(config.potential)
-    ld = setup_ld(config.ld, pot)
-    init_particles(config.particles, ld)
+    pot = setup_potential(config["potential"])
+    ld = setup_ld(config["ld"], pot)
+    init_particles(config["particles"], ld)
     actions_dict["ld"] = ld
 
     # optional actions in reasonable order
     try:
-        if config.birth_death:
-            actions_dict["birth-death"] = setup_birth_death(config.birth_death, ld)
-        if config.trajectories:
-            actions_dict["trajectories"] = setup_trajectories(config.trajectories, ld)
-        if config.histogram:
+        if "birth-death" in config:
+            actions_dict["birth-death"] = setup_birth_death(config["birth-death"], ld)
+        if "trajectories" in config:
+            actions_dict["trajectories"] = setup_trajectories(config["trajectories"], ld)
+        if "histogram" in config:
             actions_dict["histogram"] = setup_histogram(
-                config.histogram, actions_dict["trajectories"]  # type: ignore
+                config["histogram"], actions_dict["trajectories"]  # type: ignore
             )
-        if config.fes:
-            actions_dict["fes"] = setup_fes(config.fes, actions_dict["histogram"])  # type: ignore
-        if config.delta_f:
-            actions_dict["delta-f"] = setup_delta_f(config.delta_f, actions_dict["fes"])  # type: ignore
-        if config.particle_distribution:
+        if "fes" in config:
+            actions_dict["fes"] = setup_fes(config["fes"], actions_dict["histogram"])  # type: ignore
+        if "delta-f" in config:
+            actions_dict["delta-f"] = setup_delta_f(config["delta-f"], actions_dict["fes"])  # type: ignore
+        if "particle-distribution" in config:
             actions_dict["particle-distribution"] = setup_particle_distribution(
-                config.particle_distribution, actions_dict["ld"]  # type: ignore
+                config["particle-distribution"], actions_dict["ld"]  # type: ignore
             )
     except KeyError as e:
         log.error(
@@ -105,7 +106,7 @@ def main() -> None:
         log.error("Input file '%s': %s", infile, e.args[0])
         sys.exit(1)
 
-    n_steps = cast(int, config.ld["n_steps"])
+    n_steps = cast(int, config["ld"]["n_steps"])
     print(f"Setup finished, now running for {n_steps} steps")
 
     # iterating over OrderedDict is slow, cache as list
@@ -168,6 +169,12 @@ def setup_ld(options: Dict, pot: Potential) -> BussiParinelloLD:
             pot,
             options["timestep"],
             options["seed"],
+        )
+    else:
+        raise inputparser.OptionError(
+            f'Specified LD type "{options["type"]}" is not implemented',
+            "type",
+            "ld",
         )
 
 
