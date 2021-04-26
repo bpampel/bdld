@@ -82,7 +82,9 @@ def main() -> None:
         if "birth-death" in config:
             actions_dict["birth-death"] = setup_birth_death(config["birth-death"], ld)
         if "trajectories" in config:
-            actions_dict["trajectories"] = setup_trajectories(config["trajectories"], ld)
+            actions_dict["trajectories"] = setup_trajectories(
+                config["trajectories"], ld
+            )
         if "histogram" in config:
             actions_dict["histogram"] = setup_histogram(
                 config["histogram"], actions_dict["trajectories"]  # type: ignore

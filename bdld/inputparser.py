@@ -138,7 +138,7 @@ class Input:
     def __init__(self, filename: str) -> None:
         """Define the data members and call the parsing function"""
         self.filename = filename
-        self.data : Dict[str, Dict[str, OptionType]] = {}
+        self.data: Dict[str, Dict[str, OptionType]] = {}
 
         # test that file can be opened -> raises FileNotFoundError if not
         with open(self.filename) as _:
@@ -156,7 +156,14 @@ class Input:
         Does then launch the config for the individual sections
         """
         required_sections = ["ld", "potential", "particles"]
-        optional_sections = ["trajectories", "histogram", "fes", "birth-death", "delta-f", "particle-distribution"]
+        optional_sections = [
+            "trajectories",
+            "histogram",
+            "fes",
+            "birth-death",
+            "delta-f",
+            "particle-distribution",
+        ]
 
         # mandatory sections, that can be there only once
         for sec in required_sections:
@@ -166,15 +173,17 @@ class Input:
 
         for section_type in optional_sections:
             # multiple of these sections are possible, get all that start with the type
-            numbered_secs = [sec for sec in self.infile.sections() if sec.find(section_type) == 0]
+            numbered_secs = [
+                sec for sec in self.infile.sections() if sec.find(section_type) == 0
+            ]
             for sec in numbered_secs:
                 self.parse_section(sec)
 
         for sec in self.infile.sections():  # only not parsed ones left
-            logging.warning("%s",
-                            f'Warning: Section "{sec}" did not match anything and will be ignored. Is there a typo?'
-                           )
-
+            logging.warning(
+                "%s",
+                f'Warning: Section "{sec}" did not match anything and will be ignored. Is there a typo?',
+            )
 
     def parse_section(self, section_type: str, label: str = None) -> None:
         """Parse a section
@@ -222,9 +231,10 @@ class Input:
 
         for opt_key in self.infile.options(label):  # all remaining ones
             if opt_key not in self.infile.defaults():
-                logging.warning("%s",
-                                f'Warning: Option "{opt_key}" in section "{label} did not match anything and will be ignored. Is there a typo?"'
-                               )
+                logging.warning(
+                    "%s",
+                    f'Warning: Option "{opt_key}" in section "{label} did not match anything and will be ignored. Is there a typo?"',
+                )
 
         self.data[label] = parsed_options
         self.infile.remove_section(label)
@@ -281,7 +291,7 @@ class Input:
             options = [
                 type_option,
                 InputOption("scaling-factor", float, False),
-                InputOption("n_dim", int, False, default=2)
+                InputOption("n_dim", int, False, default=2),
             ]
         else:
             raise OptionError(
@@ -336,7 +346,7 @@ class Input:
             InputOption("seed", int, False),
         ]
 
-        if self.data['potential']["n_dim"] == 1:
+        if self.data["potential"]["n_dim"] == 1:
             options.append(InputOption("kernel-bandwidth", float, True, Input.positive))
         else:
             options.append(
@@ -344,7 +354,9 @@ class Input:
             )
         return options
 
-    def trajectories_opts(self, section: configparser.SectionProxy) -> List[InputOption]:
+    def trajectories_opts(
+        self, section: configparser.SectionProxy
+    ) -> List[InputOption]:
         """Define and parse the options for trajectory output"""
         options = [
             InputOption("filename", str, False),
@@ -406,7 +418,9 @@ class Input:
         ] + numbered_state_options(section)
         return options
 
-    def particle_distribution_opts(self, section: configparser.SectionProxy) -> List[InputOption]:
+    def particle_distribution_opts(
+        self, section: configparser.SectionProxy
+    ) -> List[InputOption]:
         """Define and parse if statistics about particles should be printed periodically"""
         options = [
             InputOption("stride", int, True, Input.positive),
