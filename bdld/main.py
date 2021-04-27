@@ -238,10 +238,6 @@ def setup_birth_death(options: Dict, ld: BussiParinelloLD) -> BirthDeath:
             "birth-death",
         )
 
-    if options["correction-variant"]:
-        eq_density: Optional[Grid] = bd_prob_density(ld.pot, bd_bw, ld.kt)
-    else:
-        eq_density = None
     return BirthDeath(
         ld.particles,
         ld.dt,
@@ -249,35 +245,11 @@ def setup_birth_death(options: Dict, ld: BussiParinelloLD) -> BirthDeath:
         bd_bw,
         ld.kt,
         options["correction-variant"],
-        eq_density,
+        ld.pot,
         options["seed"] + 1000 if options["seed"] else None,
         options["stats-stride"],
         options["stats-filename"],
     )
-
-
-def bd_prob_density(pot: Potential, bd_bw: List[float], kt: float) -> Grid:
-    """Return probability density grid needed for BirthDeath
-
-    This is usually a unknown quantity, so this has to be replaced by an estimate
-    in the future. E.g. enforce usage of the histogram and use that as estimate at
-    current time with iterative updates
-
-    Because of the current free choice of points, we use rather a lot and make
-    sure the Kernel grid will have at least 20 points per dimension within 5 sigma
-
-    :return prob_grid: Grid of the probability density
-    """
-    n_grid_points = []
-    for dim, r in enumerate(pot.ranges):
-        # check minimal number of points for 20 points within 5 sigma
-        min_points_gaussian = int(np.ceil((r[1] - r[0]) / (0.5 * bd_bw[dim])))
-        # the large number of points is only used to calculate the correction once
-        tmp_grid_points = max(501, min_points_gaussian)
-        if tmp_grid_points % 2 == 0:
-            tmp_grid_points += 1  # odd number is better for convolution
-        n_grid_points.append(tmp_grid_points)
-    return pot.calculate_probability_density(kt, pot.ranges, n_grid_points)
 
 
 def setup_trajectories(options: Dict, ld: BussiParinelloLD) -> TrajectoryAction:

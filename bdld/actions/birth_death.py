@@ -9,6 +9,7 @@ import numpy as np
 from bdld.actions.action import Action
 from bdld.actions.bussi_parinello_ld import BpldParticle
 from bdld import grid
+from bdld.potential import Potential
 from bdld.helpers.misc import initialize_file
 
 
@@ -31,7 +32,7 @@ class BirthDeath(Action):
         bw: Union[List[float], np.ndarray],
         kt: float,
         correction_variant: Optional[str] = None,
-        eq_density: Optional[grid.Grid] = None,
+        potential: Optional[Potential] = None,
         seed: Optional[int] = None,
         stats_stride: Optional[int] = None,
         stats_filename: Optional[str] = None,
@@ -46,7 +47,7 @@ class BirthDeath(Action):
         :param kt: thermal energy of system
         :param correction_variant: correction from original algorithm
                                    can be "additive", "multiplicative" or None
-        :param eq_density: Equilibrium probability density of system, (grid, values)
+        :param potential: Potential to calculate equilibrium density from.
         :param seed: Seed for rng (optional)
         :param stats_stride: Print statistics every n time steps
         :param stats_filename: File to print statistics to (optional, else stdout)
@@ -74,16 +75,17 @@ class BirthDeath(Action):
             print(f"  using KDE to calculate kernels")
         self.correction_variant: Optional[str] = correction_variant
         if self.correction_variant:
-            if not eq_density:
+            if not potential:
                 raise ValueError("No equilibrium density for the correction was passed")
+            rho = prob_density(potential, self.bw, kt)
             if self.correction_variant == "additive":
                 print("  using the additive correction")
                 self.correction: grid.Grid = calc_prob_correction_kernel(
-                    eq_density, self.bw, "same"
+                    rho, self.bw, "same"
                 )
             elif self.correction_variant == "multiplicative":
                 print("  using the multiplicative correction")
-                conv = dens_kernel_convolution(eq_density, self.bw, "same")
+                conv = dens_kernel_convolution(rho, self.bw, "same")
                 self.correction = -np.log(
                     grid.sparsify(conv, [101] * conv.n_dim, "linear")
                 )
@@ -466,3 +468,27 @@ def nd_trapz(data: np.ndarray, dx: Union[List[float], float]) -> float:
         return data  # innermost iteration gives empty list
     # single dimension
     return np.trapz(data, dx=dx)
+
+
+def prob_density(pot: Potential, bd_bw: List[float], kt: float) -> grid.Grid:
+    """Return probability density grid needed for BirthDeath
+
+    This is usually a unknown quantity, so this has to be replaced by an estimate
+    in the future. E.g. enforce usage of the histogram and use that as estimate at
+    current time with iterative updates
+
+    Because of the current free choice of points, we use rather a lot and make
+    sure the Kernel grid will have at least 20 points per dimension within 5 sigma
+
+    :return prob_grid: Grid of the probability density
+    """
+    n_grid_points = []
+    for dim, r in enumerate(pot.ranges):
+        # check minimal number of points for 20 points within 5 sigma
+        min_points_gaussian = int(np.ceil((r[1] - r[0]) / (0.5 * bd_bw[dim])))
+        # the large number of points is only used to calculate the correction once
+        tmp_grid_points = max(501, min_points_gaussian)
+        if tmp_grid_points % 2 == 0:
+            tmp_grid_points += 1  # odd number is better for convolution
+        n_grid_points.append(tmp_grid_points)
+    return pot.calculate_probability_density(kt, pot.ranges, n_grid_points)
