@@ -64,6 +64,7 @@ class BirthDeath(Action):
         self.dt: float = dt * stride
         self.bw: np.ndarray = np.array(bw, dtype=float)
         self.inv_kt: float = 1 / kt
+        self.correction_stride: Optional[int] = correction_stride
         self.rng: np.random.Generator = np.random.default_rng(seed)
         self.stats_stride: Optional[int] = stats_stride
         self.stats_filename: Optional[str] = stats_filename
@@ -92,7 +93,6 @@ class BirthDeath(Action):
                 rho = prob_density(potential, self.bw, kt)
             elif fes_grid:
                 self.fes_grid = fes_grid
-                self.correction_stride = correction_stride  # makes no sense otherwise
                 rho = tools.probability_from_fes(self.fes_grid, kt)
             else:
                 raise ValueError("No way of calculating the equilibrium density for the correction was passed")

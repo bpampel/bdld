@@ -90,7 +90,7 @@ def main() -> None:
         if "fes" in config:
             actions_dict["fes"] = setup_fes(config["fes"], actions_dict["histogram"])  # type: ignore
         if "birth-death" in config:
-            actions_dict["birth-death"] = setup_birth_death(config["birth-death"], ld)
+            actions_dict["birth-death"] = setup_birth_death(config["birth-death"], actions_dict)
         if "delta-f" in config:
             actions_dict["delta-f"] = setup_delta_f(config["delta-f"], actions_dict["fes"])  # type: ignore
         if "particle-distribution" in config:
@@ -99,7 +99,7 @@ def main() -> None:
             )
     except KeyError as e:
         log.error(
-            "Error: An action was specified that requires the '%s' section in input"
+            "Error: An action was specified that requires the '%s' section in input "
             "but it was not found",
             e.args[0],
         )
@@ -221,12 +221,13 @@ def init_particles(options: Dict, ld: BussiParinelloLD) -> None:
     print()
 
 
-def setup_birth_death(options: Dict, ld: BussiParinelloLD) -> BirthDeath:
+def setup_birth_death(options: Dict, actions_dict: OrderedDict[str, Action]) -> BirthDeath:
     """Setup BirthDeath instance from options
 
     Currently this requires to get the true probability density values from the
     potential for the corrections of the algorithm, so this is also set up here
     """
+    ld = cast(BussiParinelloLD, actions_dict["ld"])
     if ld.pot.n_dim == 1:
         bd_bw = np.array([options["kernel-bandwidth"]])
     else:
@@ -238,6 +239,20 @@ def setup_birth_death(options: Dict, ld: BussiParinelloLD) -> BirthDeath:
             "birth-death",
         )
 
+    fes = None
+    pot = None
+    if options["fes"]:
+        try:
+            fes = actions_dict[options["fes"]].get_fes_grid
+        except KeyError as e:
+            raise inputparser.OptionError(
+                f'Specified fes action "{options["fes"]}" could not be found',
+                "fes",
+                "birth-death",
+            ) from e
+    else:
+        pot = ld.pot  # use potential if no FES was specified
+
     return BirthDeath(
         ld.particles,
         ld.dt,
@@ -245,7 +260,9 @@ def setup_birth_death(options: Dict, ld: BussiParinelloLD) -> BirthDeath:
         bd_bw,
         ld.kt,
         options["correction-variant"],
-        ld.pot,
+        pot,
+        fes,
+        options["correction-stride"],
         options["seed"] + 1000 if options["seed"] else None,
         options["stats-stride"],
         options["stats-filename"],
