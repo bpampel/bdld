@@ -4,7 +4,7 @@ import enum
 from typing import Callable, List, Union, Tuple
 import numpy as np
 
-from bdld import grid
+from bdld import grid, tools
 
 
 class BoundaryCondition(enum.Enum):
@@ -83,8 +83,7 @@ class Potential:
         :param kt: Thermal energy of system
         :param ranges: List of ranges of the grid per dimension (min, max)
         :param grid_points: number of points per dimension
-        :return grid: meshgrid with the positions of the points
-        :return prob: normalized probablities at the grid points
+        :return prob: grid holding the probability density
         """
         if len(ranges) != self.n_dim:
             raise ValueError("Dimension of ranges do not match potential")
@@ -92,10 +91,7 @@ class Potential:
             raise ValueError("Dimension of grid_points do not match potential")
         fes = grid.from_npoints(ranges, grid_points)
         fes.set_from_func(self.energy)
-        prob = np.exp(-fes / kt)
-        # normalize with volume element from stepsizes
-        prob /= np.sum(prob.data) * np.prod(prob.stepsizes)
-        return prob
+        return tools.probability_from_fes(fes, kt)
 
     def get_fields(self) -> List[str]:
         """Return list of identifiers for the potential dimensions

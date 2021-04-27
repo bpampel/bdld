@@ -1,6 +1,10 @@
+"""Module holding misc functions that didn't fit in anywhere else"""
+
 from typing import List, Tuple
 
 import numpy as np
+
+from bdld.grid import Grid
 
 
 def pos_inside_ranges(
@@ -19,3 +23,15 @@ def pos_inside_ranges(
             inside = inside & (pos[:, i] >= state[i][0]) & (pos[:, i] <= state[i][1])
         inside_list.append(inside)
     return inside_list
+
+
+def probability_from_fes(fes: Grid, kt: float) -> Grid:
+    """Calculate probability density from FES grid
+
+    :param fes: Grid with the FES values
+    :param kt: thermal energy of system
+    """
+    prob = np.exp(-fes / kt)
+    # normalize with volume element from stepsizes
+    prob /= np.sum(prob.data) * np.prod(prob.stepsizes)
+    return prob
