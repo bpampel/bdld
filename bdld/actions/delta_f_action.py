@@ -91,7 +91,7 @@ class DeltaFAction(Action):
             row = (step % self.write_stride) // self.stride - 1
             self.delta_f[row, 0] = step * self.dt
             self.delta_f[row, 1:] = analysis.calculate_delta_f(
-                self.fes_action.histo_action.histo.fes, self.kt, self.masks
+                self.fes_action.fes_grid.data, self.kt, self.masks
             )
         if self.write_stride and step % self.write_stride == 0:
             self.write(step)
@@ -100,7 +100,7 @@ class DeltaFAction(Action):
         if not self.stride:  # perform analysis once
             self.delta_f[0] = step * self.dt
             self.delta_f[1:] = analysis.calculate_delta_f(
-                self.fes_action.histo_action.histo.fes, self.kt, self.masks
+                self.fes_action.fes_grid.data, self.kt, self.masks
             )
         self.write(step)
 

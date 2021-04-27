@@ -6,7 +6,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 
-from bdld import analysis
+from bdld import analysis, histogram
 from bdld.actions.action import Action
 from bdld.actions.histogram_action import HistogramAction
 from bdld.helpers.misc import backup_if_exists
@@ -52,8 +52,8 @@ class FesAction(Action):
         self.histo_action = histo_action
         self.kt = self.histo_action.traj_action.ld.kt
         print(f"  kt = {self.kt}")
-        self.histo_action.histo.calculate_fes(self.kt)  # initialize fes grid
-        self.get_fes_grid = self.histo_action.histo.get_fes_grid
+        self.fes_grid = self.histo_action.histo.copy_empty()  # initialize fes grid
+        self.fes_grid.data = calculate_fes(histo_action.histo, self.kt)
         self.stride = stride
         if self.stride:
             if self.stride % histo_action.update_stride != 0:
@@ -113,7 +113,7 @@ class FesAction(Action):
         :param step: current simulation step, optional
         """
         if self.stride and step % self.stride == 0:
-            self.histo_action.histo.calculate_fes(self.kt)
+            self.fes_grid.data = calculate_fes(self.histo_action.histo, self.kt)
         if self.write_stride and step % self.write_stride == 0:
             self.write(step)
         if self.plot_stride and step % self.plot_stride == 0:
@@ -140,7 +140,7 @@ class FesAction(Action):
             else:
                 filename = self.filename
             backup_if_exists(filename)
-            self.get_fes_grid().write_to_file(
+            self.fes_grid.write_to_file(
                 filename, self.write_fmt, str(self.fileheader)
             )
 
@@ -160,10 +160,31 @@ class FesAction(Action):
                 plot_filename = self.plot_filename
                 plot_title = self.plot_title
             analysis.plot_fes(
-                self.histo_action.histo.fes,
-                self.histo_action.histo.bin_centers(),
+                self.fes_grid.data,
+                self.fes_grid.axes(),
                 ref=self.ref,
                 plot_domain=self.plot_domain,
                 filename=plot_filename,
                 title=plot_title,
             )
+
+
+def calculate_fes(histo: histogram.Histogram, kt: float, mintozero: bool = True) -> np.ndarray:
+    """Calculate free energy surface from histogram
+
+    Returns a numpy array of the same shape as the histogram
+
+    :param histo: histogram to process
+    :param float kt: thermal energy of the system
+    :param bool mintozero: shift FES to have minimum at zero
+
+    :return fes: numpy array with the FES values
+    """
+    fes = np.where(
+        histo.data == 0, np.inf, -kt * np.log(histo.data, where=(histo.data != 0))
+    )
+    if mintozero:
+        minimum = np.min(fes)
+        if minimum != np.inf:  # otherwise all values become nan
+            fes -= np.min(fes)
+    return fes

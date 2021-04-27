@@ -243,7 +243,7 @@ def setup_birth_death(options: Dict, actions_dict: OrderedDict[str, Action]) -> 
     pot = None
     if options["fes"]:
         try:
-            fes = actions_dict[options["fes"]].get_fes_grid
+            fes = actions_dict[options["fes"]].fes_grid
         except KeyError as e:
             raise inputparser.OptionError(
                 f'Specified fes action "{options["fes"]}" could not be found',
