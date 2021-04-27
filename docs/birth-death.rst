@@ -17,6 +17,14 @@ Perform birth-death events during the simulation.
   * *additive*: the first proposed correction
   * *multiplicative*: the second proposed correction
 
+**fes**: *string*, optional
+  Specify fes action to use for calculating the equilibrium density
+  If not given, the true density from the potential will be used
+
+**correction-stride**: *int*, optional
+  Number of time steps between updates of the equilibrium density
+  Will only be used if **fes** was specified
+
 **seed**: *int*, optional
   Starting seed for the random number generator used to accept/decline the birth-death probabilities
   Internally 1000 is added to this seed value to have different seeds for the LD and birth-death when specifying a seed in DEFAULT

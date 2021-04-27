@@ -196,7 +196,7 @@ class Input:
         can be used to parse a specific section of the config
 
         The corresponding xyz_opts() functions have all the same signature
-        and might actually process the given label to decide which options
+        and might actually parse the given section to decide which options
         are valid (e.g. based on system dimension)
 
         :param section_type: base type of section to parse
@@ -341,6 +341,8 @@ class Input:
         options = [
             InputOption("stride", int, True, Input.positive),
             InputOption("correction-variant", str, False),  # not checked here
+            InputOption("fes", str, False),
+            InputOption("correction-stride", int, False, Input.positive),
             InputOption("stats-stride", int, False, Input.positive),
             InputOption("stats-filename", str, False),
             InputOption("seed", int, False),
