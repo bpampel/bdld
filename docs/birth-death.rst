@@ -19,6 +19,7 @@ Perform birth-death events during the simulation.
 
 **seed**: *int*, optional
   Starting seed for the random number generator used to accept/decline the birth-death probabilities
+  Internally 1000 is added to this seed value to have different seeds for the LD and birth-death when specifying a seed in DEFAULT
 
 **stats-stride**: *int*, optional
   Write statistics about the birth-death events every n time steps.
