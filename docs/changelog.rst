@@ -4,6 +4,12 @@ Changelog
 ***************************************
 This file documents the bigger changes between versions
 
+[0.3.1] - upcoming
+^^^^^^^^^^^^^^^^^^^^^^^
+
+- multiple actions of the same type can now be specified
+- Birth-death: equilibrium density can be estimated from a fes action
+
 
 [0.3.0] - 2021-03-23
 ^^^^^^^^^^^^^^^^^^^^^^^
