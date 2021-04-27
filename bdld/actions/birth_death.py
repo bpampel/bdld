@@ -2,7 +2,7 @@
 
 from collections import OrderedDict
 import copy
-from typing import List, Optional, Union, Tuple
+from typing import Callable, List, Optional, Union, Tuple
 
 import numpy as np
 
@@ -33,7 +33,7 @@ class BirthDeath(Action):
         kt: float,
         correction_variant: Optional[str] = None,
         potential: Optional[Potential] = None,
-        fes_grid: Optional[grid.Grid] = None,
+        get_fes_grid: Optional[Callable] = None,
         correction_stride: Optional[int] = None,
         seed: Optional[int] = None,
         stats_stride: Optional[int] = None,
@@ -50,10 +50,10 @@ class BirthDeath(Action):
         :param correction_variant: correction from original algorithm
                                    can be "additive", "multiplicative" or None
         :param potential: Potential to calculate equilibrium density from.
-        :param fes_grid: FES to calculate equilibrium desity from
-                         Will be ignored if potential was also given
+        :param get_fes_grid: Method to get FES grid from fes action
+                             Will be ignored if potential was also given
         :param correction_stride: Number of time steps between updates of the correction
-                                  will only be used if fes_grid was specified
+                                  will only be used if get_fes_grid was specified
         :param seed: Seed for rng (optional)
         :param stats_stride: Print statistics every n time steps
         :param stats_filename: File to print statistics to (optional, else stdout)
@@ -91,9 +91,9 @@ class BirthDeath(Action):
             # use potential if it was given, otherwise set up periodic update from fes
             if potential:
                 rho = prob_density(potential, self.bw, kt)
-            elif fes_grid:
-                self.fes_grid = fes_grid
-                rho = tools.probability_from_fes(self.fes_grid, kt)
+            elif get_fes_grid:
+                self.get_fes_grid = get_fes_grid
+                rho = tools.probability_from_fes(self.get_fes_grid(), kt)
             else:
                 raise ValueError("No way of calculating the equilibrium density for the correction was passed")
             self.update_correction(rho)
@@ -119,7 +119,7 @@ class BirthDeath(Action):
         :param step: current timestep of simulation
         """
         if self.correction_stride and step % self.correction_stride == 0:
-            rho = tools.probability_from_fes(self.fes_grid, 1 / self.inv_kt)
+            rho = tools.probability_from_fes(self.get_fes_grid(), 1 / self.inv_kt)
             self.update_correction(rho)
         if step % self.stride == 0:
             bd_events = self.calculate_birth_death()
