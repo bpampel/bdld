@@ -9,7 +9,7 @@ import numpy as np
 from bdld.actions.action import Action
 from bdld.actions.bussi_parinello_ld import BpldParticle
 from bdld import grid
-from bdld.potential import Potential
+from bdld.potential.potential import Potential
 from bdld.helpers.misc import initialize_file
 
 
