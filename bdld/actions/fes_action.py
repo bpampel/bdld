@@ -52,6 +52,7 @@ class FesAction(Action):
         self.histo_action = histo_action
         self.kt = self.histo_action.traj_action.ld.kt
         print(f"  kt = {self.kt}")
+        self.histo_action.histo.calculate_fes(self.kt)  # initialize fes grid
         self.get_fes_grid = self.histo_action.histo.get_fes_grid
         self.stride = stride
         if self.stride:

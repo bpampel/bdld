@@ -8,7 +8,7 @@ import numpy as np
 
 from bdld.actions.action import Action
 from bdld.actions.bussi_parinello_ld import BpldParticle
-from bdld import grid
+from bdld import grid, tools
 from bdld.potential.potential import Potential
 from bdld.helpers.misc import initialize_file
 
@@ -33,6 +33,8 @@ class BirthDeath(Action):
         kt: float,
         correction_variant: Optional[str] = None,
         potential: Optional[Potential] = None,
+        fes_grid: Optional[grid.Grid] = None,
+        correction_stride: Optional[int] = None,
         seed: Optional[int] = None,
         stats_stride: Optional[int] = None,
         stats_filename: Optional[str] = None,
@@ -48,6 +50,10 @@ class BirthDeath(Action):
         :param correction_variant: correction from original algorithm
                                    can be "additive", "multiplicative" or None
         :param potential: Potential to calculate equilibrium density from.
+        :param fes_grid: FES to calculate equilibrium desity from
+                         Will be ignored if potential was also given
+        :param correction_stride: Number of time steps between updates of the correction
+                                  will only be used if fes_grid was specified
         :param seed: Seed for rng (optional)
         :param stats_stride: Print statistics every n time steps
         :param stats_filename: File to print statistics to (optional, else stdout)
@@ -75,24 +81,22 @@ class BirthDeath(Action):
             print(f"  using KDE to calculate kernels")
         self.correction_variant: Optional[str] = correction_variant
         if self.correction_variant:
-            if not potential:
-                raise ValueError("No equilibrium density for the correction was passed")
-            rho = prob_density(potential, self.bw, kt)
-            if self.correction_variant == "additive":
-                print("  using the additive correction")
-                self.correction: grid.Grid = calc_prob_correction_kernel(
-                    rho, self.bw, "same"
-                )
-            elif self.correction_variant == "multiplicative":
-                print("  using the multiplicative correction")
-                conv = dens_kernel_convolution(rho, self.bw, "same")
-                self.correction = -np.log(
-                    grid.sparsify(conv, [101] * conv.n_dim, "linear")
-                )
+            if self.correction_variant in ["additive", "multiplicative"]:
+                print(f"  using the {self.correction_variant} correction")
             else:
                 raise ValueError(
                     f"Specified correction variant {self.correction_variant} was not understood"
                 )
+            # use potential if it was given, otherwise set up periodic update from fes
+            if potential:
+                rho = prob_density(potential, self.bw, kt)
+            elif fes_grid:
+                self.fes_grid = fes_grid
+                self.correction_stride = correction_stride  # makes no sense otherwise
+                rho = tools.probability_from_fes(self.fes_grid, kt)
+            else:
+                raise ValueError("No way of calculating the equilibrium density for the correction was passed")
+            self.update_correction(rho)
 
         if self.stats_filename:
             fields = [
@@ -114,6 +118,9 @@ class BirthDeath(Action):
 
         :param step: current timestep of simulation
         """
+        if self.correction_stride and step % self.correction_stride == 0:
+            rho = tools.probability_from_fes(self.fes_grid, 1 / self.inv_kt)
+            self.update_correction(rho)
         if step % self.stride == 0:
             bd_events = self.calculate_birth_death()
             for dup, kill in bd_events:
@@ -226,6 +233,14 @@ class BirthDeath(Action):
             beta.append(beta_g[0] - np.mean(beta_g[beta_g != -np.inf]))
 
         return np.c_[grid, rho, beta]
+
+    def update_correction(self, rho: grid.Grid) -> None:
+        """Calculate the correction from the equilibrium density rho"""
+        if self.correction_variant == "additive":
+            self.correction = calc_prob_correction_kernel(rho, self.bw, "same")
+        elif self.correction_variant == "multiplicative":
+            conv = dens_kernel_convolution(rho, self.bw, "same")
+            self.correction = -np.log(grid.sparsify(conv, [101] * conv.n_dim, "linear"))
 
     def print_stats(self, step: int = None, reset: bool = False) -> None:
         """Print birth/death probabilities to screen"""
