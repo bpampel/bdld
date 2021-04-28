@@ -18,7 +18,6 @@ class Histogram(grid.Grid):
     :param histo_ranges: extent of histogram (min, max) per dimension
     :param bins: bin edges of the histogram per dimension
     :param data: histogram data
-    :param fes: the free energy values corresponding to the histogram stored in data
     """
 
     def __init__(
@@ -38,7 +37,6 @@ class Histogram(grid.Grid):
         self.stepsizes = grid.stepsizes_from_npoints(ranges, [n + 1 for n in n_bins])
         self.histo_ranges = ranges
         self.n_dim = len(ranges)
-        self.fes: Optional[np.ndarray] = None
         # create bins from arbitrary value, there doesn't seem to be a function doing it
         self.data, self.bins = np.histogramdd(
             np.zeros((1, len(self.n_points))),
