@@ -95,7 +95,9 @@ class BirthDeath(Action):
                 self.fes_grid = fes_grid
                 rho = tools.probability_from_fes(self.fes_grid, kt)
             else:
-                raise ValueError("No way of calculating the equilibrium density for the correction was passed")
+                raise ValueError(
+                    "No way of calculating the equilibrium density for the correction was passed"
+                )
             self.update_correction(rho)
 
         if self.stats_filename:

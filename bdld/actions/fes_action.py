@@ -140,9 +140,7 @@ class FesAction(Action):
             else:
                 filename = self.filename
             backup_if_exists(filename)
-            self.fes_grid.write_to_file(
-                filename, self.write_fmt, str(self.fileheader)
-            )
+            self.fes_grid.write_to_file(filename, self.write_fmt, str(self.fileheader))
 
     def plot(self, step: int = None) -> None:
         """Plot fes with reference and optionally save to file
@@ -169,7 +167,9 @@ class FesAction(Action):
             )
 
 
-def calculate_fes(histo: histogram.Histogram, kt: float, mintozero: bool = True) -> np.ndarray:
+def calculate_fes(
+    histo: histogram.Histogram, kt: float, mintozero: bool = True
+) -> np.ndarray:
     """Calculate free energy surface from histogram
 
     Returns a numpy array of the same shape as the histogram

@@ -90,7 +90,9 @@ def main() -> None:
         if "fes" in config:
             actions_dict["fes"] = setup_fes(config["fes"], actions_dict["histogram"])  # type: ignore
         if "birth-death" in config:
-            actions_dict["birth-death"] = setup_birth_death(config["birth-death"], actions_dict)
+            actions_dict["birth-death"] = setup_birth_death(
+                config["birth-death"], actions_dict
+            )
         if "delta-f" in config:
             actions_dict["delta-f"] = setup_delta_f(config["delta-f"], actions_dict["fes"])  # type: ignore
         if "particle-distribution" in config:
@@ -221,7 +223,9 @@ def init_particles(options: Dict, ld: BussiParinelloLD) -> None:
     print()
 
 
-def setup_birth_death(options: Dict, actions_dict: OrderedDict[str, Action]) -> BirthDeath:
+def setup_birth_death(
+    options: Dict, actions_dict: OrderedDict[str, Action]
+) -> BirthDeath:
     """Setup BirthDeath instance from options
 
     Currently this requires to get the true probability density values from the
