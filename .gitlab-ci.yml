@@ -8,7 +8,7 @@ before_script:
 
 .acquire-project-dependencies:
   before_script:
-    - 'pip install -r requirements.txt
+    - pip install -r requirements.txt
 
 
 # Columns of the pipeline
@@ -17,8 +17,9 @@ stages:
   - test
   - deploy
 
-build:
-  stage: install
+# test installation
+install:
+  stage: build
   extends:
     - .acquire-project-dependencies
   script:
@@ -35,6 +36,7 @@ static analysis:
     - pylint bdld
   allow_failure: true
 
+# run all unittests
 unittests:
   stage: test
   extends:
@@ -53,7 +55,6 @@ module tests:
     - coverage run -m unittest discover > /dev/null
     - coverage report
   coverage: /\d+\%\s*$/
-
 
 # Test building package (make package)
 package:
