@@ -43,6 +43,7 @@ class Histogram(grid.Grid):
             bins=self.n_points,
             range=self.histo_ranges,
         )
+        self.clear()  # creation of the histogram resulted in one count at 0
         self.ranges = [
             (a[0], a[-1]) for a in self.axes()
         ]  # ranges of points in underlying grid
