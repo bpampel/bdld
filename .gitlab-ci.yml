@@ -1,4 +1,5 @@
 test-job1:
   stage: test
   script:
-    - make coverage
+    - coverage run -m unittest discover
+    - coverage report
