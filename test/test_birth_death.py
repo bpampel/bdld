@@ -35,7 +35,6 @@ class BirthDeathTests(unittest.TestCase):
         bw = np.array([0.5])
         positions = np.array([[0], [0.5], [1]])
         dens_pdist = bd.walker_density(positions, bw)  # chooses pdist variant
-        dens_kde = bd.walker_density(positions, bw, kde=True)
         dens_manual = bd._walker_density_manual(positions, bw)
 
         # expected: (kernel values from Wolfram alpha "N(0,0.25) at x=0 / 0.5 / x=1")
@@ -46,7 +45,6 @@ class BirthDeathTests(unittest.TestCase):
         expected[2] = expected[0]  # reversed positions -> same density as first
 
         np.testing.assert_allclose(dens_pdist, expected, rtol=1e-6)
-        np.testing.assert_allclose(dens_kde, expected, rtol=1e-6)
         np.testing.assert_allclose(dens_manual, expected, rtol=1e-6)
 
     def test_walker_density_2d(self):
@@ -54,7 +52,6 @@ class BirthDeathTests(unittest.TestCase):
         bw = np.array([0.5, 2])
         positions = np.array([[0, 0], [0.5, -1], [1, -2]])
         dens_pdist = bd.walker_density(positions, bw)  # chooses pdist variant
-        dens_kde = bd.walker_density(positions, bw, kde=True)
         dens_manual = bd._walker_density_manual(positions, bw)
 
         # expected: (kernel values from Wolfram alpha "N(0,0.25) at x=0 / 0.5 / x=1")
@@ -71,7 +68,6 @@ class BirthDeathTests(unittest.TestCase):
         expected[2] = expected[0]  # reversed positions -> same density as first
 
         np.testing.assert_allclose(dens_pdist, expected, rtol=1e-6)
-        np.testing.assert_allclose(dens_kde, expected, rtol=1e-6)
         np.testing.assert_allclose(dens_manual, expected, rtol=1e-6)
 
     def test_kernel_convolution(self):
