@@ -4,8 +4,7 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
 default:
-    before_script:
-    - pip install -r requirements.txt
+
 
 # Columns of the pipeline
 stages:
@@ -16,6 +15,8 @@ stages:
 # test installation
 install:
   stage: build
+  before_script:
+    - pip install -r requirements.txt
   script:
     - pip install .
 
@@ -24,6 +25,7 @@ static analysis:
   stage: test
   before_script:
     - pip install pylint
+    - pip install -r requirements.txt
   script:
     - pylint bdld
   allow_failure: true
@@ -31,6 +33,8 @@ static analysis:
 # run all unittests
 unittests:
   stage: test
+  before_script:
+    - pip install -r requirements.txt
   script:
     - python3 -m unittest discover
 
@@ -39,6 +43,7 @@ module tests:
   stage: test
   before_script:
     - pip install coverage
+    - pip install -r requirements.txt
   script:
     - coverage run -m unittest discover > /dev/null
     - coverage report
@@ -49,5 +54,6 @@ package:
   stage: deploy
   before_script:
    - pip install wheel
+   - pip install -r requirements.txt
   script:
     - python setup.py sdist bdist_wheel
