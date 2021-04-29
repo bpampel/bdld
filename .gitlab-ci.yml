@@ -1,5 +1,8 @@
 image: python
 
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
 before_script:
   - python --version
   - pip install -r requirements.txt
