@@ -35,7 +35,6 @@ class BirthDeath(Action):
         seed: Optional[int] = None,
         stats_stride: Optional[int] = None,
         stats_filename: Optional[str] = None,
-        kde: Optional[bool] = None,
     ) -> None:
         """Set arguments
 
@@ -50,7 +49,6 @@ class BirthDeath(Action):
         :param seed: Seed for rng (optional)
         :param stats_stride: Print statistics every n time steps
         :param stats_filename: File to print statistics to (optional, else stdout)
-        :param kde: Use KDE from statsmodels to estimate walker density
         """
         self.particles: List[BpldParticle] = particles
         self.stride: int = stride
@@ -60,7 +58,6 @@ class BirthDeath(Action):
         self.rng: np.random.Generator = np.random.default_rng(seed)
         self.stats_stride: Optional[int] = stats_stride
         self.stats_filename: Optional[str] = stats_filename
-        self.kde: bool = kde or False
         print(
             f"Setting up birth/death scheme\n"
             f"Parameters:\n"
@@ -70,8 +67,6 @@ class BirthDeath(Action):
         )
         if seed:
             print(f"  seed = {seed}")
-        if kde:
-            print(f"  using KDE to calculate kernels")
         self.correction_variant: Optional[str] = correction_variant
         if self.correction_variant:
             if not eq_density:
@@ -171,7 +166,7 @@ class BirthDeath(Action):
         pos = np.array([p.pos for p in self.particles])
         with np.errstate(divide="ignore"):
             # density can be zero and make beta -inf. Filter when averaging in next step
-            beta = np.log(walker_density(pos, self.bw, self.kde))
+            beta = np.log(walker_density(pos, self.bw))
 
         # if outside of corrections grid: doesn't throw error but sets correction to 0
         if self.correction_variant == "additive" or not self.correction_variant:
@@ -301,19 +296,17 @@ def calc_kernel(dist: np.ndarray, bw: np.ndarray) -> np.ndarray:
     )
 
 
-def walker_density(pos: np.ndarray, bw: np.ndarray, kde: bool = False) -> np.ndarray:
+def walker_density(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
     """Calculate the local density at each walker (average kernel value)
 
     The actual calculations are done by the different _walker_density functions
-    depending on the number of walkers and the kde switch.
+    depending on the number of walkers
 
     :param numpy.ndarray pos: positions of particles
     :param float bw: bandwidth parameter of kernel
     :return numpy.ndarray kernel: kernel value matrix
     """
-    if kde:
-        return _walker_density_kde(pos, bw)
-    elif len(pos) <= 10000:  # pdist matrix with maximum 10e8 float64 values
+    if len(pos) <= 10000:  # pdist matrix with maximum 10e8 float64 values
         return _walker_density_pdist(pos, bw)
     else:
         return _walker_density_manual(pos, bw)
@@ -337,29 +330,6 @@ def _walker_density_manual(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
         kernel_values = calc_kernel(dist, bw)
         density[i] = np.mean(kernel_values)
     return density
-
-
-def _walker_density_kde(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
-    """Calculate the local density at each walker via KDE from statsmodels
-
-    :param pos: positions of particles
-    :param bw: bandwidth parameter of kernel
-    :return density: estimated density at each walker
-    """
-    if pos.shape[1] == 1:
-        from statsmodels.nonparametric.kde import KDEUnivariate
-
-        kde = KDEUnivariate(pos)
-        kde.fit(bw=bw)
-        return kde.evaluate(pos.T)
-    else:
-        # if I understand the code correctly the multivariate form is just doing exactly what
-        # I manually tested: just calculate all gaussian distances manually and _not_ in batches
-        from statsmodels.nonparametric.kernel_density import KDEMultivariate
-
-        var_type = "c" * pos.shape[1]  # continuous variables
-        kde = KDEMultivariate(pos, var_type, bw=bw)
-        return kde.pdf()
 
 
 def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
