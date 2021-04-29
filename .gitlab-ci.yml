@@ -3,13 +3,9 @@ image: python
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
-before_script:
-  - python --version
-
-.acquire-project-dependencies:
-  before_script:
+default:
+    before_script:
     - pip install -r requirements.txt
-
 
 # Columns of the pipeline
 stages:
@@ -20,8 +16,6 @@ stages:
 # test installation
 install:
   stage: build
-  extends:
-    - .acquire-project-dependencies
   script:
     - pip install .
 
@@ -30,8 +24,6 @@ static analysis:
   stage: test
   before_script:
     - pip install pylint
-  extends:
-    - .acquire-project-dependencies
   script:
     - pylint bdld
   allow_failure: true
@@ -39,8 +31,6 @@ static analysis:
 # run all unittests
 unittests:
   stage: test
-  extends:
-    - .acquire-project-dependencies
   script:
     - python3 -m unittest discover
 
@@ -49,8 +39,6 @@ module tests:
   stage: test
   before_script:
     - pip install coverage
-  extends:
-    - .acquire-project-dependencies
   script:
     - coverage run -m unittest discover > /dev/null
     - coverage report
@@ -60,8 +48,6 @@ module tests:
 package:
   stage: deploy
   before_script:
-    - pip install wheel
-  extends:
-    - .acquire-project-dependencies
+   - pip install wheel
   script:
     - python setup.py sdist bdist_wheel
