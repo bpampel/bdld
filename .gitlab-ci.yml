@@ -1,5 +1,45 @@
-test-job1:
+image: python
+
+before_script:
+  - python --version
+  - pip install -r requirements.txt
+
+# Columns of the pipeline
+stages:
+  - static analysis
+  - test
+  - package
+
+
+# Static code analysis job via Pylint
+static analysis:
+  stage: static analysis
+  before_script:
+    - pip install pylint
+  script:
+    - pylint bdld/*.pdf bdld/**/*.pdf
+  allow_failure: true
+
+unittests:
   stage: test
   script:
-    - coverage run -m unittest discover
+    - python3 unittest discover
+
+# code coverage reporting
+module tests:
+  stage: test
+  before_script:
+    - pip install coverage
+  script:
+    - coverage run -m unittest discover > /dev/null
     - coverage report
+  coverage: /\d+\%\s*$/
+
+
+# Test building package (make package)
+package:
+  stage: package
+  before_script:
+    - pip install wheel
+  script:
+    - python setup.py sdist bdist_wheel
