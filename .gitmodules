@@ -1,3 +1,3 @@
 [submodule "bdld/helpers"]
 	path = bdld/helpers
-	url = git@github.com:bpampel/python-helpers.git
+	url = https://github.com/bpampel/python-helpers.git
