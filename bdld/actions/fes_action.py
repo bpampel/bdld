@@ -121,7 +121,7 @@ class FesAction(Action):
 
     def final_run(self, step: int) -> None:
         """Same as run without stride checks"""
-        self.histo_action.histo.calculate_fes(self.kt)
+        self.fes_grid.data = calculate_fes(self.histo_action.histo, self.kt)
         self.write()
         self.plot()
 
