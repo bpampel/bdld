@@ -33,5 +33,7 @@ def probability_from_fes(fes: Grid, kt: float) -> Grid:
     """
     prob = np.exp(-fes / kt)
     # normalize with volume element from stepsizes
+    if np.all(prob.data == 0):  # no probability anywhere: avoid having invalid density
+        prob.data.fill(1)
     prob /= np.sum(prob.data) * np.prod(prob.stepsizes)
     return prob
