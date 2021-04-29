@@ -6,10 +6,15 @@ before_script:
 
 # Columns of the pipeline
 stages:
+  - install
   - static analysis
   - test
   - package
 
+install:
+  stage: install
+  script:
+    - pip install .
 
 # Static code analysis job via Pylint
 static analysis:
