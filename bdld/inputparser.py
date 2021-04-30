@@ -294,6 +294,7 @@ class Input:
         options = [
             InputOption("filename", str, False),
             InputOption("stride", int, False, Input.positive),
+            InputOption("momentum", bool, False),
             InputOption("write-stride", int, False, Input.positive),
             InputOption("fmt", str, False),
         ]

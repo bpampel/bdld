@@ -277,6 +277,7 @@ def setup_trajectories(options: Dict, ld: BussiParinelloLD) -> TrajectoryAction:
         ld,
         options["stride"],
         options["filename"],
+        options["momentum"],
         options["write-stride"],
         options["fmt"],
     )
