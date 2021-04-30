@@ -54,7 +54,7 @@ class HistogramAction(Action):
             f"  ranges = {ranges}\n"
             f"  n_bins = {n_bins}"
         )
-        n_dim = traj_action.traj.shape[-1]  # last dimension of traj array is dim of pot
+        n_dim = traj_action.positions.shape[-1]  # last dimension of traj array is dim of pot
         if n_dim != len(n_bins):
             e = (
                 "Dimensions of histogram bins don't match dimensions of system"
@@ -131,7 +131,7 @@ class HistogramAction(Action):
             else self.traj_action.last_write - self.traj_action.write_stride
         )
         return get_valid_data(
-            self.traj_action.traj,
+            self.traj_action.positions,
             step,
             self.stride,
             1,  # assumes that traj data is stored even if not written
