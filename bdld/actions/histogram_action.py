@@ -119,7 +119,7 @@ class HistogramAction(Action):
         if self.filename:
             self.write()
 
-    def get_traj_data(self, step: int) -> np.array:
+    def get_traj_data(self, step: int) -> np.ndarray:
         """Get the right data from the trajectory array
 
         :param step: current simulation step
