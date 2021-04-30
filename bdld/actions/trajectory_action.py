@@ -109,7 +109,7 @@ class TrajectoryAction(Action):
                 save_momentum = get_valid_data(self.momentum, step, self.stride, 1, self.last_write)
             for i, filename in enumerate(self.filenames):
                 # 3d (times, walkers, pot_dims) to 2d array (times, pot_dims) for saving
-                if self.momentum:
+                if self.store_momentum:
                     save_data = np.c_[save_times, save_pos[:, i], save_momentum[:,i]]
                 else:
                     save_data = np.c_[save_times, save_pos[:, i]]
