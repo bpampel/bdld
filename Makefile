@@ -24,7 +24,7 @@ docs-pdf: docs
 	@cd docs && make latexpdf
 
 test:
-	python3 -m unittest discover
+	python3 -m unittest -b discover
 
 coverage: coverage_installed
 	@coverage run -m unittest discover > /dev/null
