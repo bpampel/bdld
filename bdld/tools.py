@@ -25,7 +25,7 @@ def pos_inside_ranges(
     return inside_list
 
 
-def probability_from_fes(fes: grid.Grid, kt: float) -> Grid:
+def probability_from_fes(fes: Grid, kt: float) -> Grid:
     """Calculate probability density from FES grid
 
     :param fes: Grid with the FES values
