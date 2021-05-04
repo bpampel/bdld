@@ -341,8 +341,8 @@ class Input:
         options = [
             InputOption("stride", int, True, Input.positive),
             InputOption("correction-variant", str, False),  # not checked here
-            InputOption("fes", str, False),
-            InputOption("correction-stride", int, False, Input.positive),
+            InputOption("density-estimate-histogram", str, False),
+            InputOption("density-estimate-stride", int, False, Input.positive),
             InputOption("stats-stride", int, False, Input.positive),
             InputOption("stats-filename", str, False),
             InputOption("seed", int, False),

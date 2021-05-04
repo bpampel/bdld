@@ -9,7 +9,6 @@ import sys
 import numpy as np
 
 from bdld import actions, inputparser, potential
-from bdld.grid import Grid
 from bdld.tools import pos_inside_ranges
 
 # alias shortcuts
@@ -245,13 +244,13 @@ def setup_birth_death(
 
     fes = None
     pot = None
-    if options["fes"]:
+    if options["density-estimate-histogram"]:
         try:
-            fes = actions_dict[options["fes"]].fes_grid
+            histogram = actions_dict[options["density-estimate-histogram"]].histo # type: ignore
         except KeyError as e:
             raise inputparser.OptionError(
-                f'Specified fes action "{options["fes"]}" could not be found',
-                "fes",
+                f'Specified histogram action "{options["density-estimate-histogram"]}" could not be found',
+                "density-estimate-histogram",
                 "birth-death",
             ) from e
     else:
@@ -265,8 +264,8 @@ def setup_birth_death(
         ld.kt,
         options["correction-variant"],
         pot,
-        fes,
-        options["correction-stride"],
+        histogram,
+        options["density-estimate-stride"],
         options["seed"] + 1000 if options["seed"] else None,
         options["stats-stride"],
         options["stats-filename"],

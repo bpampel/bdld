@@ -33,8 +33,8 @@ class BirthDeath(Action):
         kt: float,
         correction_variant: Optional[str] = None,
         potential: Optional[Potential] = None,
-        fes_grid: Optional[grid.Grid] = None,
-        correction_stride: Optional[int] = None,
+        histogram: Optional[grid.Grid] = None,
+        density_estimate_stride: Optional[int] = None,
         seed: Optional[int] = None,
         stats_stride: Optional[int] = None,
         stats_filename: Optional[str] = None,
@@ -49,10 +49,11 @@ class BirthDeath(Action):
         :param correction_variant: correction from original algorithm
                                    can be "additive", "multiplicative" or None
         :param potential: Potential to calculate equilibrium density from.
-        :param fes_grid: FES grid from fes action
-                         Will be ignored if potential was also given
-        :param correction_stride: Number of time steps between updates of the correction
-                                  will only be used if fes_grid was specified
+        :param histogram: Histogram used to calculate the equilibrium density.
+                          Will be ignored if potential was also given
+        :param density_estimate_stride: Number of time steps between updates of the density
+                                        estimate used for the corrections.
+                                        Will only be used if histogram was specified
         :param seed: Seed for rng (optional)
         :param stats_stride: Print statistics every n time steps
         :param stats_filename: File to print statistics to (optional, else stdout)
@@ -62,7 +63,7 @@ class BirthDeath(Action):
         self.dt: float = dt * stride
         self.bw: np.ndarray = np.array(bw, dtype=float)
         self.inv_kt: float = 1 / kt
-        self.correction_stride: Optional[int] = correction_stride
+        self.density_estimate_stride: Optional[int] = density_estimate_stride
         self.rng: np.random.Generator = np.random.default_rng(seed)
         self.stats_stride: Optional[int] = stats_stride
         self.stats_filename: Optional[str] = stats_filename
@@ -86,9 +87,9 @@ class BirthDeath(Action):
             # use potential if it was given, otherwise set up periodic update from fes
             if potential:
                 rho = prob_density(potential, self.bw, kt)
-            elif fes_grid:
-                self.fes_grid = fes_grid
-                rho = tools.probability_from_fes(self.fes_grid, kt)
+            elif histogram:
+                self.histogram = histogram
+                rho = histogram.normalize(ensure_valid=True)
             else:
                 raise ValueError(
                     "No way of calculating the equilibrium density for the correction was passed"
@@ -115,8 +116,8 @@ class BirthDeath(Action):
 
         :param step: current timestep of simulation
         """
-        if self.correction_stride and step % self.correction_stride == 0:
-            rho = tools.probability_from_fes(self.fes_grid, 1 / self.inv_kt)
+        if self.density_estimate_stride and step % self.density_estimate_stride == 0:
+            rho = self.histogram.normalize(ensure_valid=True)
             self.update_correction(rho)
         if step % self.stride == 0:
             bd_events = self.calculate_birth_death()
