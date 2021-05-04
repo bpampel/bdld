@@ -104,7 +104,7 @@ class Grid:
         """Logarithm of data, relies on numpy"""
         return self._perform_math_on_self(np.log)
 
-    def _perform_math_on_self(self, oper: Callable[..., Any]):  # -> Grid:
+    def _perform_math_on_self(self, oper: Callable[..., Any]) -> "Grid":
         new_grid = self.copy_empty()
         new_grid.data = oper(self.data)
         return new_grid
@@ -168,7 +168,7 @@ class Grid:
             self.points(), self.data.flatten(), points, method, fill_value
         )
 
-    def sparsify(self, max_points: List[int], method: str = "linear") -> Grid:
+    def sparsify(self, max_points: List[int], method: str = "linear") -> "Grid":
         """Return sparser version of grid (same range but fewer points)
 
         If the specified number of points is larger than the datapoints
@@ -185,7 +185,7 @@ class Grid:
         sparse_grid.data = self.interpolate(sparse_grid.points(), method)
         return sparse_grid
 
-    def normalize(self, integral: float = 1.0, ensure_valid: bool = False) -> Grid:
+    def normalize(self, integral: float = 1.0, ensure_valid: bool = False) -> "Grid":
         """Return normalized version of grid
 
         This is normalized such that the integral (i.e. sum / grid range) is the given integral value
