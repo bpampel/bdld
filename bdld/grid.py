@@ -168,6 +168,45 @@ class Grid:
             self.points(), self.data.flatten(), points, method, fill_value
         )
 
+    def sparsify(self, max_points: List[int], method: str = "linear") -> Grid:
+        """Return sparser version of grid (same range but fewer points)
+
+        If the specified number of points is larger than the datapoints
+        in the original grid, this will leave the number of points unchanged
+
+        :param max_points: desired number of points per dimension
+        :param method: interpolation method to use, default "linear"
+        :return sparse_grid: sparsified Grid instance
+        """
+        sparse_n_points = [
+            n if n <= max_points[i] else max_points[i] for i, n in enumerate(self.n_points)
+        ]
+        sparse_grid = from_npoints(self.ranges, sparse_n_points)
+        sparse_grid.data = self.interpolate(sparse_grid.points(), method)
+        return sparse_grid
+
+    def normalize(self, integral: float = 1.0, ensure_valid: bool = False) -> Grid:
+        """Return normalized version of grid
+
+        This is normalized such that the integral (i.e. sum / grid range) is the given integral value
+
+        If the grid is zero everywhere it can't be normalized.
+        If the "ensure_valid" flag is set the grid is assumed to be uniform and then properly normalized
+        This is helpful for example to calculate probabilities
+
+        :param g: grid to normalize
+        :param normfactor: integral value to normalize to, default 1
+        :param ensure_valid: assumes uniform grid if zero everywhere, default False
+        :return normalized_grid
+        """
+        norm_grid = self.copy_empty()
+        if ensure_valid and np.all(self.data == 0):  # avoid having invalid values
+            norm_grid.data = np.full(self.n_points, integral * np.prod(self.n_points) * np.prod(self.stepsizes))
+        else:
+            normfac = integral / (np.sum(self.data) * np.prod(self.stepsizes))
+            norm_grid.data = self.data * normfac
+        return norm_grid
+
     def write_to_file(
         self, filename: str, fmt: str = "%.18e", header: str = ""
     ) -> None:
@@ -300,45 +339,3 @@ def from_stepsizes(
         grid.ranges.append((float(r[0]), r[0] + stepsizes[i] * (n_points_tmp - 1)))
         grid.n_points.append(n_points_tmp)
     return grid
-
-
-def sparsify(g: Grid, max_points: List[int], method: str = "linear") -> Grid:
-    """Return sparser version of grid (same range but fewer points)
-
-    If the specified number of points is larger than the datapoints
-    in the original grid, this will leave the number of points unchanged
-
-    :param g: grid to sparsify
-    :param max_points: desired number of points per dimension
-    :param method: interpolation method to use, default "linear"
-    :return sparse_grid: sparsified Grid instance
-    """
-    sparse_n_points = [
-        n if n <= max_points[i] else max_points[i] for i, n in enumerate(g.n_points)
-    ]
-    sparse_grid = from_npoints(g.ranges, sparse_n_points)
-    sparse_grid.data = g.interpolate(sparse_grid.points(), method)
-    return sparse_grid
-
-
-def normalize(g: Grid, integral: float = 1.0, ensure_valid: bool = False) -> Grid:
-    """Return normalized version of grid
-
-    This is normalized such that the integral (i.e. sum / grid range) is the given integral value
-
-    If the grid is zero everywhere it can't be normalized.
-    If the "ensure_valid" flag is set the grid is assumed to be uniform and then properly normalized
-    This is helpful for example to calculate probabilities
-
-    :param g: grid to normalize
-    :param normfactor: integral value to normalize to, default 1
-    :param ensure_valid: assumes uniform grid if zero everywhere, default False
-    :return normalized_grid
-    """
-    norm_grid = g.copy_empty()
-    if ensure_valid and np.all(g.data == 0):  # avoid having invalid values
-        norm_grid.data = np.full(g.n_points, integral * np.prod(g.n_points) * np.prod(g.stepsizes))
-    else:
-        normfac = integral / (np.sum(g.data) * np.prod(g.stepsizes))
-        norm_grid.data = g.data * normfac
-    return norm_grid
