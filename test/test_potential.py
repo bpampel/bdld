@@ -41,7 +41,7 @@ class PotentialTests(unittest.TestCase):
         pot = polynomial.PolynomialPotential([0, 0, 1])
         prob = pot.calculate_probability_density(0.5, [(-1, 1)], [3])
         expect = np.array([np.exp(-2), 1, np.exp(-2)])  # not yet normalized
-        np.testing.assert_array_equal(prob.data, expect / np.sum(expect))
+        np.testing.assert_array_almost_equal(prob.data, expect / np.sum(expect))
 
 
 if __name__ == "__main__":
