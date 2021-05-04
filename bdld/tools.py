@@ -4,7 +4,7 @@ from typing import List, Tuple
 
 import numpy as np
 
-from bdld.grid import Grid
+from bdld import grid
 
 
 def pos_inside_ranges(
@@ -25,15 +25,11 @@ def pos_inside_ranges(
     return inside_list
 
 
-def probability_from_fes(fes: Grid, kt: float) -> Grid:
+def probability_from_fes(fes: grid.Grid, kt: float) -> grid.Grid:
     """Calculate probability density from FES grid
 
     :param fes: Grid with the FES values
     :param kt: thermal energy of system
     """
     prob = np.exp(-fes / kt)
-    # normalize with volume element from stepsizes
-    if np.all(prob.data == 0):  # no probability anywhere: avoid having invalid density
-        prob.data.fill(1)
-    prob /= np.sum(prob.data) * np.prod(prob.stepsizes)
-    return prob
+    return grid.normalize(prob, ensure_valid=True)

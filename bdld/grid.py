@@ -319,3 +319,26 @@ def sparsify(g: Grid, max_points: List[int], method: str = "linear") -> Grid:
     sparse_grid = from_npoints(g.ranges, sparse_n_points)
     sparse_grid.data = g.interpolate(sparse_grid.points(), method)
     return sparse_grid
+
+
+def normalize(g: Grid, integral: float = 1.0, ensure_valid: bool = False) -> Grid:
+    """Return normalized version of grid
+
+    This is normalized such that the integral (i.e. sum / grid range) is the given integral value
+
+    If the grid is zero everywhere it can't be normalized.
+    If the "ensure_valid" flag is set the grid is assumed to be uniform and then properly normalized
+    This is helpful for example to calculate probabilities
+
+    :param g: grid to normalize
+    :param normfactor: integral value to normalize to, default 1
+    :param ensure_valid: assumes uniform grid if zero everywhere, default False
+    :return normalized_grid
+    """
+    norm_grid = g.copy_empty()
+    if ensure_valid and np.all(g.data == 0):  # avoid having invalid values
+        norm_grid.data = np.full(g.n_points, integral * np.prod(g.n_points) * np.prod(g.stepsizes))
+    else:
+        normfac = integral / (np.sum(g.data) * np.prod(g.stepsizes))
+        norm_grid.data = g.data * normfac
+    return norm_grid
