@@ -76,7 +76,7 @@ class GridTests(unittest.TestCase):
         """Test the linear interpolation and sparsify"""
         g1 = grid.from_npoints([(0, 10)], 11)
         g1.data = np.arange(11)
-        g2 = grid.sparsify(g1, [5], "linear")
+        g2 = g1.sparsify([5], "linear")
         expected = np.array([0, 2.5, 5, 7.5, 10])
         np.testing.assert_array_equal(g2.data, expected)
 

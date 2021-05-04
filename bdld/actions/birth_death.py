@@ -237,7 +237,7 @@ class BirthDeath(Action):
             self.correction = calc_prob_correction_kernel(rho, self.bw, "same")
         elif self.correction_variant == "multiplicative":
             conv = dens_kernel_convolution(rho, self.bw, "same")
-            self.correction = -np.log(grid.sparsify(conv, [101] * conv.n_dim, "linear"))
+            self.correction = -np.log(conv.sparsify([101] * conv.n_dim, "linear"))
 
     def print_stats(self, step: int = None, reset: bool = False) -> None:
         """Print birth/death probabilities to screen"""
@@ -435,7 +435,7 @@ def calc_prob_correction_kernel(
     integral_term = nd_trapz(log_term.data * eq_density.data, conv.stepsizes)
     correction = -log_term + integral_term
     if any(n > 101 for n in correction.n_points):
-        correction = grid.sparsify(correction, [101] * correction.n_dim, "linear")
+        correction = correction.sparsify([101] * correction.n_dim, "linear")
     return correction
 
 
