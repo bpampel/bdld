@@ -80,6 +80,15 @@ class GridTests(unittest.TestCase):
         expected = np.array([0, 2.5, 5, 7.5, 10])
         np.testing.assert_array_equal(g2.data, expected)
 
+    def test_normalize(self):
+        """Test grid normalization"""
+        g1 = grid.from_npoints([(0, 1)], 5)
+        g1.data = np.arange(5)
+        integral = 2.0
+        g2 = g1.normalize(integral)
+        normfactor = 10 / 4  # sum of values / values per integer
+        expected = np.arange(5) / normfactor * integral
+        np.testing.assert_array_almost_equal(g2.data, expected)
 
 if __name__ == "__main__":
     unittest.main()
