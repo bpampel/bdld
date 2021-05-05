@@ -8,6 +8,23 @@ from bdld.potential import polynomial
 class BpldTests(unittest.TestCase):
     """Test dynamics of BussiParinelloLD"""
 
+    def test_setup(self):
+        """Setup the LD, add and remove particles"""
+        pot = polynomial.PolynomialPotential([0])
+        ld = bp_ld.BussiParinelloLD(pot, 1, 1, 1)
+
+        with self.assertRaises(ValueError):
+            ld.add_particle([0,1])  # potential has dim 1
+
+        ld.add_particle([0])  # add single particle at origin
+        ld.add_particle([1], partnum=0)  # insert before
+        self.assertEqual(ld.particles[0].pos, [1])
+
+        ld.add_particle([2], mass=2, partnum=0, overwrite=True)
+        self.assertEqual(len(ld.particles), 2)
+        ld.remove_particle(0)
+        self.assertEqual(ld.particles[0].pos, [0])  # first particle again
+
     def test_run(self):
         """Setup dynamics on simple potential with just 1 particle and run for one step"""
         # first define the parameters
