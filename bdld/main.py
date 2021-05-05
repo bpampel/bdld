@@ -255,6 +255,7 @@ def setup_birth_death(
             ) from e
     else:
         pot = ld.pot  # use potential if no FES was specified
+        histogram = None
 
     return BirthDeath(
         ld.particles,

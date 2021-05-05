@@ -2,6 +2,7 @@
 
 from collections import OrderedDict
 import copy
+import logging
 from typing import List, Optional, Union, Tuple
 
 import numpy as np
@@ -87,6 +88,10 @@ class BirthDeath(Action):
             # use potential if it was given, otherwise set up periodic update from fes
             if potential:
                 rho = prob_density(potential, self.bw, kt)
+                if self.density_estimate_stride:
+                    logging.warning("The specified density-estimate-stride will be ignored "
+                                    "as the density is estimated directly from the potential.")
+                    self.density_estimate_stride = None
             elif histogram:
                 self.histogram = histogram
                 rho = histogram.normalize(ensure_valid=True)
