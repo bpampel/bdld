@@ -36,7 +36,7 @@ unittests:
   before_script:
     - pip install -r requirements.txt
   script:
-    - python3 -m unittest -b discover
+    - python3 -m unittest discover -b
 
 # code coverage reporting
 module tests:
