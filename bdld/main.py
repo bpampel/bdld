@@ -8,7 +8,7 @@ import sys
 
 import numpy as np
 
-from bdld import actions, inputparser, potential
+from bdld import actions, grid, inputparser, potential
 from bdld.tools import pos_inside_ranges
 
 # alias shortcuts for typing
@@ -242,8 +242,20 @@ def setup_birth_death(
             "birth-death",
         )
 
-    prob_density = None
-    if options["density-estimate-histogram"]:
+    if options["equilibrium-density-method"] in [None, "potential", "uniform"]:
+        # warn if histogram options were also specified
+        for opt in ["density-estimate-histogram", "density-estimate-stride"]:
+            if options[opt]:
+                logging.warning("birth-death: option %s specified but will not be used", opt)
+        if options["equilibrium-density-method"] == "uniform":
+            # create "grid" with just 2 points at the edges, will be linearly interpolated anyway
+            prob_density = grid.from_npoints(ld.pot.ranges, 2)
+            prob_density.data = np.ones(prob_density.points().shape)
+            prob_density.normalize(in_place=True)
+        else:  # exact eq_density from potential as default
+            prob_density = actions.birth_death.prob_density(ld.pot, bd_bw, ld.kt)
+        histogram = None
+    elif options["equilibrium-density-method"] == "histogram":
         try:
             histogram = actions_dict[options["density-estimate-histogram"]].histo  # type: ignore
         except KeyError as e:
@@ -252,9 +264,6 @@ def setup_birth_death(
                 "density-estimate-histogram",
                 "birth-death",
             ) from e
-    else:
-        prob_density = actions.birth_death.prob_density(ld.pot, bd_bw, ld.kt)
-        histogram = None
 
     return BirthDeath(
         ld.particles,

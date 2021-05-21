@@ -338,9 +338,22 @@ class Input:
 
     def birth_death_opts(self, section: configparser.SectionProxy) -> List[InputOption]:
         """Define options of the birth-death process"""
+        # specify allowed density estimation methods
+        eq_dens_methods = [
+            None,  # default, will be same as potential
+            "potential",
+            "uniform",
+            "histogram",
+        ]
+        allowed_eq_dens_methods = Condition(
+            lambda x: x in eq_dens_methods,
+            f"must be one of {eq_dens_methods}",
+        )
+
         options = [
             InputOption("stride", int, True, Input.positive),
             InputOption("correction-variant", str, False),  # not checked here
+            InputOption("equilibrium-density-method", str, False, allowed_eq_dens_methods),
             InputOption("density-estimate-histogram", str, False),
             InputOption("density-estimate-stride", int, False, Input.positive),
             InputOption("stats-stride", int, False, Input.positive),

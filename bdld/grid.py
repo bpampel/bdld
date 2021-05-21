@@ -168,7 +168,7 @@ class Grid:
             self.points(), self.data.flatten(), points, method, fill_value
         )
 
-    def sparsify(self, max_points: List[int], method: str = "linear") -> "Grid":
+    def sparsify(self, max_points: List[int], method: str = "linear", in_place: bool = False) -> "Grid":
         """Return sparser version of grid (same range but fewer points)
 
         If the specified number of points is larger than the datapoints
@@ -176,6 +176,7 @@ class Grid:
 
         :param max_points: desired number of points per dimension
         :param method: interpolation method to use, default "linear"
+        :param in_place: also sparsify the data of the original grid instance
         :return sparse_grid: sparsified Grid instance
         """
         sparse_n_points = [
@@ -184,9 +185,13 @@ class Grid:
         ]
         sparse_grid = from_npoints(self.ranges, sparse_n_points)
         sparse_grid.data = self.interpolate(sparse_grid.points(), method)
+        if in_place:
+            self.n_points = sparse_grid.n_points
+            self.stepsizes = sparse_grid.stepsizes
+            self.data = sparse_grid.data
         return sparse_grid
 
-    def normalize(self, integral: float = 1.0, ensure_valid: bool = False) -> "Grid":
+    def normalize(self, integral: float = 1.0, ensure_valid: bool = False, in_place: bool = False) -> "Grid":
         """Return normalized version of grid
 
         This is normalized such that the integral (i.e. sum / grid range) is the given integral value
@@ -198,6 +203,7 @@ class Grid:
         :param g: grid to normalize
         :param normfactor: integral value to normalize to, default 1
         :param ensure_valid: assumes uniform grid if zero everywhere, default False
+        :param in_place: also normalize the data of the original grid instance
         :return normalized_grid
         """
         norm_grid = self.copy_empty()
@@ -209,6 +215,8 @@ class Grid:
         else:
             normfac = integral / (np.sum(self.data) * np.prod(self.stepsizes))
             norm_grid.data = self.data * normfac
+        if in_place:
+            self.data = norm_grid.data
         return norm_grid
 
     def write_to_file(
