@@ -245,7 +245,7 @@ def setup_birth_death(
     prob_density = None
     if options["density-estimate-histogram"]:
         try:
-            histogram = actions_dict[options["density-estimate-histogram"]].histo # type: ignore
+            histogram = actions_dict[options["density-estimate-histogram"]].histo  # type: ignore
         except KeyError as e:
             raise inputparser.OptionError(
                 f'Specified histogram action "{options["density-estimate-histogram"]}" could not be found',

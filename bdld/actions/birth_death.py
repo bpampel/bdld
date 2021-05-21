@@ -88,8 +88,10 @@ class BirthDeath(Action):
             # use potential if it was given, otherwise set up periodic update from fes
             if eq_density:
                 if self.density_estimate_stride:
-                    logging.warning("The specified density-estimate-stride will be ignored "
-                                    "as the density is estimated directly from the potential.")
+                    logging.warning(
+                        "The specified density-estimate-stride will be ignored "
+                        "as the density is estimated directly from the potential."
+                    )
                     self.density_estimate_stride = None
             elif histogram:
                 self.histogram = histogram

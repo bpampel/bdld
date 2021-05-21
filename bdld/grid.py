@@ -179,7 +179,8 @@ class Grid:
         :return sparse_grid: sparsified Grid instance
         """
         sparse_n_points = [
-            n if n <= max_points[i] else max_points[i] for i, n in enumerate(self.n_points)
+            n if n <= max_points[i] else max_points[i]
+            for i, n in enumerate(self.n_points)
         ]
         sparse_grid = from_npoints(self.ranges, sparse_n_points)
         sparse_grid.data = self.interpolate(sparse_grid.points(), method)
@@ -201,7 +202,10 @@ class Grid:
         """
         norm_grid = self.copy_empty()
         if ensure_valid and np.all(self.data == 0):  # avoid having invalid values
-            norm_grid.data = np.full(self.n_points, integral * np.prod(self.n_points) * np.prod(self.stepsizes))
+            norm_grid.data = np.full(
+                self.n_points,
+                integral * np.prod(self.n_points) * np.prod(self.stepsizes),
+            )
         else:
             normfac = integral / (np.sum(self.data) * np.prod(self.stepsizes))
             norm_grid.data = self.data * normfac
