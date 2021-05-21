@@ -33,7 +33,7 @@ class BirthDeath(Action):
         bw: Union[List[float], np.ndarray],
         kt: float,
         correction_variant: Optional[str] = None,
-        potential: Optional[Potential] = None,
+        eq_density: Optional[grid.Grid] = None,
         histogram: Optional[grid.Grid] = None,
         density_estimate_stride: Optional[int] = None,
         seed: Optional[int] = None,
@@ -49,7 +49,7 @@ class BirthDeath(Action):
         :param kt: thermal energy of system
         :param correction_variant: correction from original algorithm
                                    can be "additive", "multiplicative" or None
-        :param potential: Potential to calculate equilibrium density from.
+        :param eq_desity: Static equilibrium density
         :param histogram: Histogram used to calculate the equilibrium density.
                           Will be ignored if potential was also given
         :param density_estimate_stride: Number of time steps between updates of the density
@@ -86,20 +86,19 @@ class BirthDeath(Action):
                     f"Specified correction variant {self.correction_variant} was not understood"
                 )
             # use potential if it was given, otherwise set up periodic update from fes
-            if potential:
-                rho = prob_density(potential, self.bw, kt)
+            if eq_density:
                 if self.density_estimate_stride:
                     logging.warning("The specified density-estimate-stride will be ignored "
                                     "as the density is estimated directly from the potential.")
                     self.density_estimate_stride = None
             elif histogram:
                 self.histogram = histogram
-                rho = histogram.normalize(ensure_valid=True)
+                eq_density = histogram.normalize(ensure_valid=True)
             else:
                 raise ValueError(
                     "No way of calculating the equilibrium density for the correction was passed"
                 )
-            self.update_correction(rho)
+            self.update_correction(eq_density)
 
         if self.stats_filename:
             fields = [
@@ -122,8 +121,8 @@ class BirthDeath(Action):
         :param step: current timestep of simulation
         """
         if self.density_estimate_stride and step % self.density_estimate_stride == 0:
-            rho = self.histogram.normalize(ensure_valid=True)
-            self.update_correction(rho)
+            eq_density = self.histogram.normalize(ensure_valid=True)
+            self.update_correction(eq_density)
         if step % self.stride == 0:
             bd_events = self.calculate_birth_death()
             for dup, kill in bd_events:
@@ -237,12 +236,12 @@ class BirthDeath(Action):
 
         return np.c_[grid, rho, beta]
 
-    def update_correction(self, rho: grid.Grid) -> None:
-        """Calculate the correction from the equilibrium density rho"""
+    def update_correction(self, eq_density: grid.Grid) -> None:
+        """Calculate the correction from the equilibrium density"""
         if self.correction_variant == "additive":
-            self.correction = calc_prob_correction_kernel(rho, self.bw, "same")
+            self.correction = calc_prob_correction_kernel(eq_density, self.bw, "same")
         elif self.correction_variant == "multiplicative":
-            conv = dens_kernel_convolution(rho, self.bw, "same")
+            conv = dens_kernel_convolution(eq_density, self.bw, "same")
             self.correction = -np.log(conv.sparsify([101] * conv.n_dim, "linear"))
 
     def print_stats(self, step: int = None, reset: bool = False) -> None:
@@ -463,7 +462,7 @@ def nd_trapz(data: np.ndarray, dx: Union[List[float], float]) -> float:
     return np.trapz(data, dx=dx)
 
 
-def prob_density(pot: Potential, bd_bw: List[float], kt: float) -> grid.Grid:
+def prob_density(pot: Potential, bd_bw: np.ndarray, kt: float) -> grid.Grid:
     """Return probability density grid needed for BirthDeath
 
     This is usually a unknown quantity, so this has to be replaced by an estimate

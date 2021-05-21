@@ -11,7 +11,7 @@ import numpy as np
 from bdld import actions, inputparser, potential
 from bdld.tools import pos_inside_ranges
 
-# alias shortcuts
+# alias shortcuts for typing
 Action = actions.action.Action
 BirthDeath = actions.birth_death.BirthDeath
 BussiParinelloLD = actions.bussi_parinello_ld.BussiParinelloLD
@@ -242,8 +242,7 @@ def setup_birth_death(
             "birth-death",
         )
 
-    fes = None
-    pot = None
+    prob_density = None
     if options["density-estimate-histogram"]:
         try:
             histogram = actions_dict[options["density-estimate-histogram"]].histo # type: ignore
@@ -254,7 +253,7 @@ def setup_birth_death(
                 "birth-death",
             ) from e
     else:
-        pot = ld.pot  # use potential if no FES was specified
+        prob_density = actions.birth_death.prob_density(ld.pot, bd_bw, ld.kt)
         histogram = None
 
     return BirthDeath(
@@ -264,7 +263,7 @@ def setup_birth_death(
         bd_bw,
         ld.kt,
         options["correction-variant"],
-        pot,
+        prob_density,
         histogram,
         options["density-estimate-stride"],
         options["seed"] + 1000 if options["seed"] else None,
