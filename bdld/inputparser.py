@@ -353,7 +353,9 @@ class Input:
         options = [
             InputOption("stride", int, True, Input.positive),
             InputOption("correction-variant", str, False),  # not checked here
-            InputOption("equilibrium-density-method", str, False, allowed_eq_dens_methods),
+            InputOption(
+                "equilibrium-density-method", str, False, allowed_eq_dens_methods
+            ),
             InputOption("density-estimate-histogram", str, False),
             InputOption("density-estimate-stride", int, False, Input.positive),
             InputOption("stats-stride", int, False, Input.positive),

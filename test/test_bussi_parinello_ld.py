@@ -14,7 +14,7 @@ class BpldTests(unittest.TestCase):
         ld = bp_ld.BussiParinelloLD(pot, 1, 1, 1)
 
         with self.assertRaises(ValueError):
-            ld.add_particle([0,1])  # potential has dim 1
+            ld.add_particle([0, 1])  # potential has dim 1
 
         ld.add_particle([0])  # add single particle at origin
         ld.add_particle([1], partnum=0)  # insert before
@@ -28,7 +28,7 @@ class BpldTests(unittest.TestCase):
     def test_run(self):
         """Setup dynamics on simple potential with just 1 particle and run for one step"""
         # first define the parameters
-        coeffs = [0,-1] # linear slope moving particle to the right
+        coeffs = [0, -1]  # linear slope moving particle to the right
         dt = 0.1
         friction = 1
         kt = 1
@@ -50,8 +50,8 @@ class BpldTests(unittest.TestCase):
         self.assertEqual(c2, ld.particles[0].c2)
 
         noise_values = c2 * rand_values
-        pos = noise_values[0]*0.1 + 1*0.5*0.1**2  # momentum + force
-        mom = c1*1*0.1 + c1*noise_values[0] + noise_values[1]
+        pos = noise_values[0] * 0.1 + 1 * 0.5 * 0.1 ** 2  # momentum + force
+        mom = c1 * 1 * 0.1 + c1 * noise_values[0] + noise_values[1]
 
         self.assertAlmostEqual(pos, ld.particles[0].pos[0])
         self.assertAlmostEqual(mom, ld.particles[0].mom[0])

@@ -246,7 +246,9 @@ def setup_birth_death(
         # warn if histogram options were also specified
         for opt in ["density-estimate-histogram", "density-estimate-stride"]:
             if options[opt]:
-                logging.warning("birth-death: option %s specified but will not be used", opt)
+                logging.warning(
+                    "birth-death: option %s specified but will not be used", opt
+                )
         if options["equilibrium-density-method"] == "uniform":
             # create "grid" with just 2 points at the edges, will be linearly interpolated anyway
             prob_density = grid.from_npoints(ld.pot.ranges, 2)

@@ -168,7 +168,9 @@ class Grid:
             self.points(), self.data.flatten(), points, method, fill_value
         )
 
-    def sparsify(self, max_points: List[int], method: str = "linear", in_place: bool = False) -> "Grid":
+    def sparsify(
+        self, max_points: List[int], method: str = "linear", in_place: bool = False
+    ) -> "Grid":
         """Return sparser version of grid (same range but fewer points)
 
         If the specified number of points is larger than the datapoints
@@ -191,7 +193,9 @@ class Grid:
             self.data = sparse_grid.data
         return sparse_grid
 
-    def normalize(self, integral: float = 1.0, ensure_valid: bool = False, in_place: bool = False) -> "Grid":
+    def normalize(
+        self, integral: float = 1.0, ensure_valid: bool = False, in_place: bool = False
+    ) -> "Grid":
         """Return normalized version of grid
 
         This is normalized such that the integral (i.e. sum / grid range) is the given integral value

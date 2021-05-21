@@ -90,5 +90,6 @@ class GridTests(unittest.TestCase):
         expected = np.arange(5) / normfactor * integral
         np.testing.assert_array_almost_equal(g2.data, expected)
 
+
 if __name__ == "__main__":
     unittest.main()
