@@ -16,14 +16,21 @@ Perform birth-death events during the simulation.
 
   * *additive*: the first proposed correction
   * *multiplicative*: the second proposed correction
+    p
 
-**fes**: *string*, optional
-  Specify fes action to use for calculating the equilibrium density
-  If not given, the true density from the potential will be used
+**equilibrium-density-method**: *string*, optional
+  Specify the method to calculate the equilibrium density. Must be one of:
 
-**correction-stride**: *int*, optional
+  * *potential*: the true equilibrium density from the potential (default)
+  * *histogram*: estimate from sampling via an histogram. Requires specifying the associated histogram with **density-estimate-histogram**
+  * *uniform*: a flat distribution
+
+**density-estimate-histogram**: *string*, optional
+  Specify histogram action to use for calculating the equilibrium density
+
+**density-estimate-stride**: *int*, optional
   Number of time steps between updates of the equilibrium density
-  Will only be used if **fes** was specified
+  Will only be used if **density-estimate-histogram** was specified
 
 **seed**: *int*, optional
   Starting seed for the random number generator used to accept/decline the birth-death probabilities
