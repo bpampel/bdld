@@ -44,7 +44,7 @@ class BirthDeath(Action):
         :param stride: number of timesteps between birth-death exectutions
         :param bw: bandwidth for gaussian kernels per direction
         :param kt: thermal energy of system
-        :param exp_factor: factor of probabilities in exponential
+        :param exp_factor: factor of probabilities in exponential, default 1
         :param correction_variant: correction from original algorithm
                                    can be "additive", "multiplicative" or None
         :param eq_density: Equilibrium probability density of system, (grid, values)
@@ -57,7 +57,7 @@ class BirthDeath(Action):
         self.dt: float = dt * stride
         self.bw: np.ndarray = np.array(bw, dtype=float)
         self.inv_kt: float = 1 / kt
-        self.exp_fac: float = exp_factor
+        self.exp_fac: float = exp_factor or 1.
         self.rng: np.random.Generator = np.random.default_rng(seed)
         self.stats_stride: Optional[int] = stats_stride
         self.stats_filename: Optional[str] = stats_filename

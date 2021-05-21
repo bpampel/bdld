@@ -276,6 +276,7 @@ class Input:
         options = [
             InputOption("stride", int, True, Input.positive),
             InputOption("correction-variant", str, False),  # not checked here
+            InputOption("exponential-factor", float, False, Input.positive),
             InputOption("stats-stride", int, False, Input.positive),
             InputOption("stats-filename", str, False),
             InputOption("seed", int, False),
