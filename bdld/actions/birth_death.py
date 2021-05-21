@@ -30,6 +30,7 @@ class BirthDeath(Action):
         stride: int,
         bw: Union[List[float], np.ndarray],
         kt: float,
+        exp_factor: float,
         correction_variant: Optional[str] = None,
         eq_density: Optional[grid.Grid] = None,
         seed: Optional[int] = None,
@@ -43,6 +44,7 @@ class BirthDeath(Action):
         :param stride: number of timesteps between birth-death exectutions
         :param bw: bandwidth for gaussian kernels per direction
         :param kt: thermal energy of system
+        :param exp_factor: factor of probabilities in exponential
         :param correction_variant: correction from original algorithm
                                    can be "additive", "multiplicative" or None
         :param eq_density: Equilibrium probability density of system, (grid, values)
@@ -55,6 +57,7 @@ class BirthDeath(Action):
         self.dt: float = dt * stride
         self.bw: np.ndarray = np.array(bw, dtype=float)
         self.inv_kt: float = 1 / kt
+        self.exp_fac: float = exp_factor
         self.rng: np.random.Generator = np.random.default_rng(seed)
         self.stats_stride: Optional[int] = stats_stride
         self.stats_filename: Optional[str] = stats_filename
@@ -142,7 +145,7 @@ class BirthDeath(Action):
 
         # evaluate all at same time not sequentially as in original paper
         # does it matter?
-        prob = 1 - np.exp(-np.abs(beta) * self.dt)
+        prob = 1 - np.exp(-np.abs(beta) * self.dt * self.exp_fac)
         rand = self.rng.random(num_part)
         event_particles = np.where(rand <= prob)[0]
         self.rng.shuffle(event_particles)
