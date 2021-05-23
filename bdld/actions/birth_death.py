@@ -66,7 +66,8 @@ class BirthDeath(Action):
             f"Parameters:\n"
             f"  dt = {self.dt}\n"
             f"  bw = {self.bw}\n"
-            f"  kt = {kt}"
+            f"  kt = {kt}\n"
+            f"  fac = {exp_factor}"
         )
         if seed:
             print(f"  seed = {seed}")
