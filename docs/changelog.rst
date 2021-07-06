@@ -5,6 +5,13 @@ Changelog
 This file documents the bigger changes between versions
 
 
+[0.3.1] - 2021-07-06
+^^^^^^^^^^^^^^^^^^^^^^^
+
+- added option to output momentum to trajectory files
+- added optional factor for birth-death probabilities
+- tuning to use gitlab CI, cleanup of some old code
+
 [0.3.0] - 2021-03-23
 ^^^^^^^^^^^^^^^^^^^^^^^
 
