@@ -170,7 +170,7 @@ class Potential:
         can be changed in place
 
         :param pos: position of particle per direction
-        :param mom: momentum of particle per direction (not actually changed
+        :param mom: momentum of particle per direction (not actually changed)
         """
         for i, x in enumerate(pos):
             if x < self.ranges[i][0]:

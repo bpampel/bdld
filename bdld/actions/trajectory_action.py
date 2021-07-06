@@ -26,6 +26,7 @@ class TrajectoryAction(Action):
         ld: BussiParinelloLD,
         stride: Optional[int] = None,
         filename: Optional[str] = None,
+        momentum: Optional[bool] = None,
         write_stride: Optional[int] = None,
         write_fmt: Optional[str] = None,
     ) -> None:
@@ -34,6 +35,7 @@ class TrajectoryAction(Action):
         :param ld: Langevin Dynamics to track
         :param stride: write every nth time step to file, default 1
         :param filename: base of filename(s) to write to
+        :param momentum: also save the momentum of the particles, default False
         :param write_stride: write to file every n time steps, default 100
         :param write_fmt: numeric format for saving the data, default "%14.9f"
         """
@@ -44,7 +46,10 @@ class TrajectoryAction(Action):
         self.stride: int = stride or 1
         self.write_stride: int = write_stride or 100
         # two data members for storing positions and time
-        self.traj = np.empty((self.write_stride, n_particles, ld.pot.n_dim))
+        self.positions = np.empty((self.write_stride, n_particles, ld.pot.n_dim))
+        self.store_momentum = momentum
+        if self.store_momentum:
+            self.momentum = np.empty((self.write_stride, n_particles, ld.pot.n_dim))
         self.times = np.empty((self.write_stride, 1))
         self.last_write: int = 0
         # write headers
@@ -53,7 +58,9 @@ class TrajectoryAction(Action):
             self.write_fmt = write_fmt or "%14.9f"
             fields = ld.pot.get_fields()
             for i, fname in enumerate(self.filenames):
-                ifields = [f"{f}.{i}" for f in fields]
+                ifields = ["time"] + [f"pos_{f}.{i}" for f in fields]
+                if self.store_momentum:
+                    ifields += [f"mom_{f}.{i}" for f in fields]
                 initialize_file(fname, ifields)
             if self.stride == 1:
                 logstr = f"Saving all positions to the files '{filename}.{{i}}'"
@@ -72,7 +79,9 @@ class TrajectoryAction(Action):
         """
         row = (step % self.write_stride) - 1  # saving starts at step 1
         self.times[row] = step * self.ld.dt
-        self.traj[row] = [p.pos for p in self.ld.particles]
+        self.positions[row] = [p.pos for p in self.ld.particles]
+        if self.store_momentum:
+            self.momentum[row] = [p.mom for p in self.ld.particles]
 
         if step % self.write_stride == 0:
             self.write(step)
@@ -94,16 +103,20 @@ class TrajectoryAction(Action):
         :param step: current simulation step
         """
         if self.filenames:
-            save_traj = get_valid_data(self.traj, step, self.stride, 1, self.last_write)
-            save_times = get_valid_data(
-                self.times, step, self.stride, 1, self.last_write
-            )
+            save_times = get_valid_data(self.times, step, self.stride, 1, self.last_write)
+            save_pos = get_valid_data(self.positions, step, self.stride, 1, self.last_write)
+            if self.store_momentum:
+                save_momentum = get_valid_data(self.momentum, step, self.stride, 1, self.last_write)
             for i, filename in enumerate(self.filenames):
+                # 3d (times, walkers, pot_dims) to 2d array (times, pot_dims) for saving
+                if self.store_momentum:
+                    save_data = np.c_[save_times, save_pos[:, i], save_momentum[:,i]]
+                else:
+                    save_data = np.c_[save_times, save_pos[:, i]]
                 with open(filename, "ab") as f:
                     np.savetxt(
                         f,
-                        # 3d (times, walkers, pot_dims) to 2d array (times, pot_dims)
-                        np.c_[save_times, save_traj[:, i]],
+                        save_data,
                         delimiter=" ",
                         newline="\n",
                         fmt=self.write_fmt,

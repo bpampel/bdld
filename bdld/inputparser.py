@@ -86,7 +86,7 @@ class InputOption:
             if self.keytype == int:
                 val = section.getint(self.key)
             if self.keytype == bool:
-                val = section.getbool(self.key)
+                val = section.getboolean(self.key)
         except ValueError as e:
             raise OptionError(
                 f"could not be converted to {self.keytype.__name__}",
@@ -295,6 +295,7 @@ class Input:
         options = [
             InputOption("filename", str, False),
             InputOption("stride", int, False, Input.positive),
+            InputOption("momentum", bool, False),
             InputOption("write-stride", int, False, Input.positive),
             InputOption("fmt", str, False),
         ]
