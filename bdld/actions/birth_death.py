@@ -74,6 +74,8 @@ class BirthDeath(Action):
         )
         if seed:
             print(f"  seed = {seed}")
+        if recalc_probs:
+            print("  recalculating the probabilities after every successful event")
         self.correction_variant: Optional[str] = correction_variant
         if self.correction_variant:
             if not eq_density:
