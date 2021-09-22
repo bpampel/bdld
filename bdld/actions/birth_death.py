@@ -31,6 +31,7 @@ class BirthDeath(Action):
         bw: Union[List[float], np.ndarray],
         kt: float,
         exp_factor: float,
+        recalc_probs: bool = False,
         correction_variant: Optional[str] = None,
         eq_density: Optional[grid.Grid] = None,
         seed: Optional[int] = None,
@@ -47,6 +48,7 @@ class BirthDeath(Action):
         :param exp_factor: factor of probabilities in exponential, default 1
         :param correction_variant: correction from original algorithm
                                    can be "additive", "multiplicative" or None
+        :param recalc_probs: Recalculate probabilities after each event
         :param eq_density: Equilibrium probability density of system, (grid, values)
         :param seed: Seed for rng (optional)
         :param stats_stride: Print statistics every n time steps
@@ -58,6 +60,7 @@ class BirthDeath(Action):
         self.bw: np.ndarray = np.array(bw, dtype=float)
         self.inv_kt: float = 1 / kt
         self.exp_fac: float = exp_factor or 1.
+        self.recalc_probs: bool = recalc_probs
         self.rng: np.random.Generator = np.random.default_rng(seed)
         self.stats_stride: Optional[int] = stats_stride
         self.stats_filename: Optional[str] = stats_filename
@@ -112,13 +115,7 @@ class BirthDeath(Action):
         :param step: current timestep of simulation
         """
         if step % self.stride == 0:
-            bd_events = self.calculate_birth_death()
-            for dup, kill in bd_events:
-                self.particles[kill] = copy.deepcopy(self.particles[dup])
-                # this copies all properties: is this desired?
-                # what should be done with the momentum? Keep? Set to 0?
-                # -> violates energy conservation!
-                # keep the old random number for the initial thermostat step or generate new?
+            self.calculate_birth_death()
         if self.stats_stride and step % self.stats_stride == 0:
             self.print_stats(step)
 
@@ -127,42 +124,36 @@ class BirthDeath(Action):
         if not self.stats_stride:
             self.print_stats(step)
 
-    def calculate_birth_death(self) -> List[Tuple[int, int]]:
-        """Calculate which particles to kill and duplicate
+    def calculate_birth_death(self) -> None:
+        """Calculate which particles to kill and duplicate and perform the task
 
-        The returned tuples are ordered, so the first particle in the tuple
-        should be replaced by a copy of the second one
-
-        :return bd_events: list of tuples with particles to duplicate and kill per event
+        The particles will be processed in random order
+        By default the beta values will be evaluated only once at the beginning,
+        set recalc_probs to change this behavior
         """
         num_part = len(self.particles)
-        dup_list: List[int] = []
-        kill_list: List[int] = []
-        beta = self.calc_betas()
-        # get number of attempts from betas
-        curr_kill_attempts = np.count_nonzero(beta > 0)
-        self.kill_attempts += curr_kill_attempts
-        self.dup_attempts += num_part - curr_kill_attempts
 
-        # evaluate all at same time not sequentially as in original paper
-        # does it matter?
-        prob = 1 - np.exp(-np.abs(beta) * self.dt * self.exp_fac)
-        rand = self.rng.random(num_part)
-        event_particles = np.where(rand <= prob)[0]
-        self.rng.shuffle(event_particles)
-        for i in event_particles:
-            if i not in kill_list:
+        beta = self.calc_betas()  # initial calculation of betas
+        rand = self.rng.random(num_part)  # rng for all at once
+
+        particle_indices = np.arange(num_part)
+        self.rng.shuffle(particle_indices)
+        for i in particle_indices:
+            if beta[i] > 0:
+                self.kill_attempts += 1
+            if beta[i] < 0:
+                self.dup_attempts += 1
+            prob = 1 - np.exp(-np.abs(beta[i]) * self.dt * self.exp_fac)
+            if rand[i] <= prob:
+                rand_other = self.random_particle(num_part, i)
                 if beta[i] > 0:
-                    kill_list.append(i)
-                    dup_list.append(self.random_particle(num_part, i))
                     self.kill_count += 1
+                    self.particles[i] = copy.deepcopy(self.particles[rand_other])
                 elif beta[i] < 0:
-                    dup_list.append(i)
-                    # prevent killing twice
-                    kill_list.append(self.random_particle(num_part, i))
                     self.dup_count += 1
-
-        return list(zip(dup_list, kill_list))
+                    self.particles[rand_other] = copy.deepcopy(self.particles[i])
+                if self.recalc_probs:
+                    beta = self.calc_betas()
 
     def calc_betas(self) -> np.ndarray:
         """Calculate the birth/death rate for every particle"""
