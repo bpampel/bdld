@@ -240,6 +240,7 @@ def setup_birth_death(options: Dict, ld: BussiParinelloLD) -> BirthDeath:
         bd_bw,
         ld.kt,
         options["exponential-factor"],
+        options["recalculate-probabilities"],
         options["correction-variant"],
         eq_density,
         options["seed"] + 1000 if options["seed"] else None,
