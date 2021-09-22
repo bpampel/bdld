@@ -11,6 +11,9 @@ Perform birth-death events during the simulation.
 **kernel-bandwidth**: *float* or *list of floats*
   Bandwidth of the Gaussian kernel per dimension
 
+**recalculate-probabilities**: *bool*, optional
+  Recalculate the probabilities after each succesful birth-death event
+
 **correction-variant**: *string*, optional
   use a correction to deviate from the original algorithm. Possible values are:
 
