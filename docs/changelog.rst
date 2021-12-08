@@ -4,6 +4,10 @@ Changelog
 ***************************************
 This file documents the bigger changes between versions
 
+[0.3.2] - upcoming
+^^^^^^^^^^^^^^^^^^^^^^
+
+- fixed periodic boundary conditions
 
 [0.3.1] - 2021-07-06
 ^^^^^^^^^^^^^^^^^^^^^^^
