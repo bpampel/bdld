@@ -1,6 +1,8 @@
 # Simple langevin dynamics with additional birth-death processes
 
-Quickstart:
+[![DOI](https://zenodo.org/badge/444764309.svg)](https://zenodo.org/badge/latestdoi/444764309)
+
+## Quickstart:
 Download one of the package archives under [dist/](dist/) and install it e.g. with `pip install`
 
 You can then execute the program with `python -m bdld your_input_file`
