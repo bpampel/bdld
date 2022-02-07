@@ -63,6 +63,6 @@ Example
 References
 ^^^^^^^^^^
 
-.. [#2] Giovanni Bussi and Michele Parrinello. Accurate sampling using Langevin dynamics. Physical Review E, 75(5):056707, May 2007. doi: 10.1103/PhysRevE.75.056707
+.. [#1] Giovanni Bussi and Michele Parrinello. Accurate sampling using Langevin dynamics. Physical Review E, 75(5):056707, May 2007. doi: 10.1103/PhysRevE.75.056707
 .. [#2] Gisiro Maruyama. Continuous Markov Processes and Stochastic Equations. Rendiconti del Circolo Matematico di Palermo 4(1):48–90. 1955. doi: 10.1007/10.1007/BF02846028
-.. [#2] Yulong Lu, Jianfeng Lu, and James Nolen. Accelerated Langevin Sampling with Birth-Death. arXiv:1905.09863v1
+.. [#3] Yulong Lu, Jianfeng Lu, and James Nolen. Accelerated Langevin Sampling with Birth-Death. arXiv:1905.09863v1
