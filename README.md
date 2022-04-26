@@ -1,6 +1,6 @@
 # Simple langevin dynamics with additional birth-death processes
 
-[![DOI](https://zenodo.org/badge/444764309.svg)](https://zenodo.org/badge/latestdoi/444764309)
+v0.3.1: [![DOI](https://zenodo.org/badge/444764309.svg)](https://zenodo.org/badge/latestdoi/444764309)
 
 ## Quickstart:
 Download one of the package archives under [dist/](dist/) and install it e.g. with `pip install`
