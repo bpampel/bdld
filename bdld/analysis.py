@@ -1,6 +1,6 @@
 """Misc analysis functions"""
 
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 
 def plot_fes(fes, axes, ref=None, plot_domain=None, filename=None, title=None):
     """Show fes with matplotlib
+
+    Does work with 1D and 2D fes, higher dimensions will be ignored without error
 
     :param fes: the fes to plot
     :param axes: axes of plot
@@ -17,7 +19,7 @@ def plot_fes(fes, axes, ref=None, plot_domain=None, filename=None, title=None):
     :param title: optional title for the legend
     """
     fig = plt.figure(figsize=(8, 4), dpi=100)
-    if plt.get_backend() == "Qt5Agg":
+    if plt.get_backend() == "Qt5Agg": # fix for Qt5Agg
         fig.canvas.setFixedSize(
             *fig.get_size_inches() * fig.dpi
         )  # ensure we really have that size
@@ -76,14 +78,13 @@ def save_fig_interactive(fig):
             print(f"Could not save: {e}")
 
 
-def calculate_delta_f(fes, kt, masks):
+def calculate_delta_f(fes: np.ndarray, kt: float, masks: List[np.ndarray]):
     """Calculates the free energy difference between states
 
     If more than two are specified, this returns the difference to the first state for all others
 
     :param fes: free energy surface to examine
-    :type fes: list or numpy.ndarray
-    :param float kt: energy in units of kT
+    :param kt: energy in units of kT
     :param masks: a list of boolean numpy arrays resembling the states
 
     :return delta_F: a list of doubles containing the free energy difference to the first state

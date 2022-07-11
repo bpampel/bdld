@@ -7,8 +7,8 @@ from typing import List, Optional, Tuple
 import numpy as np
 
 from bdld.actions.action import Action, get_valid_data
-from bdld.actions.bussi_parinello_ld import BpldParticle
 from bdld.helpers.misc import initialize_file, make_ordinal
+from bdld.particle import Particle
 from bdld.tools import pos_inside_ranges
 
 
@@ -26,7 +26,7 @@ class ParticleDistributionAction(Action):
 
     def __init__(
         self,
-        particles: List[BpldParticle],
+        particles: List[Particle],
         states: List[List[Tuple[float, float]]],
         stride: Optional[int] = None,
         filename: Optional[str] = None,

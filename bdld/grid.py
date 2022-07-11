@@ -104,6 +104,7 @@ class Grid:
         """Logarithm of data, relies on numpy"""
         return self._perform_math_on_self(np.log)
 
+    # Helper function to shorten implementations"""
     def _perform_math_on_self(self, oper: Callable[..., Any]):  # -> Grid:
         new_grid = self.copy_empty()
         new_grid.data = oper(self.data)
@@ -217,7 +218,7 @@ def convolve(g1: Grid, g2: Grid, mode: str = "valid", method: str = "auto") -> G
         raise ValueError("Spacing of grids does not match")
     stepsizes = g1.stepsizes
     n_dim = g1.n_dim
-    # to get the same values in the continuous limit: multiply by stepsizes
+    # to get the correct values in the continuous limit: multiply by stepsizes
     conv = signal.convolve(g1.data, g2.data, mode=mode, method=method) * np.prod(
         g1.stepsizes
     )

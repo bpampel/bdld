@@ -35,7 +35,6 @@ class Particle:
             self.mom = np.array(mom, dtype=float)
         if len(self.pos) != len(self.mom):
             raise ValueError(
-                "Dimensions of position and momentum do not match: {} vs {}".format(
-                    len(self.pos), len(self.mom)
-                )
+                "Dimensions of position and momentum do not match: %d vs %d"
+                % (len(self.pos), len(self.mom))
             )

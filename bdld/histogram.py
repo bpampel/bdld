@@ -10,6 +10,7 @@ class Histogram(grid.Grid):
     """Histogram data and calculate FES from the histogram
 
     This uses the Grid class for underlying structure and only adds some histogram functions
+    Note that this is actually a bad way to do it from an OOP perspective (--> Liskov broken)
     Also explicitely stores the bin edges (as opposed to only the n_points of the Grid class)
 
     Also allows histogramming over time, i.e. adding more data to the existing histogram

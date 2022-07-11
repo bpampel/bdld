@@ -51,7 +51,11 @@ class InputOption:
     """Bundle information about a config option into class
 
     :param key: keyword in config
-    :param keytype: expected type (one of OptionType)"""
+    :param keytype: expected type (one of OptionType)
+    :param compulsory: if the key is required
+    :param condition: optional Condition the value must satisfy
+    :param default: optional default value
+    """
 
     def __init__(
         self,
@@ -109,11 +113,9 @@ class Input:
     Each section of the config is parsed in a seperate function defining the individual
     InputOption objects. The parsed options are then stored in one dictionary per
     section.
-
-    :paam
     """
 
-    # define conditions here
+    # define some conditions here
     positive = Condition(lambda x: x > 0, "must be greater than zero")
     all_positive = Condition(
         lambda lst: all(x > 0 for x in lst), "all values must be greater than zero"
@@ -131,6 +133,7 @@ class Input:
         self.ld: Dict[str, OptionType] = {}
         self.potential: Dict[str, OptionType] = {}
         self.particles: Dict[str, OptionType] = {}
+        # optional sections
         self.birth_death: Optional[Dict[str, OptionType]] = None
         self.trajectories: Optional[Dict[str, OptionType]] = None
         self.histogram: Optional[Dict[str, OptionType]] = None
