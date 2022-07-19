@@ -10,6 +10,10 @@ from scipy import interpolate as sp_interpolate
 from bdld.helpers.misc import write_2d_sliced_to_file
 
 
+# types for arithmetic operations
+arith_types = Union[float, int, np.ndarray, "Grid"]
+
+
 class Grid:
     """Rectangular grid with evenly distributed points
 
@@ -20,7 +24,10 @@ class Grid:
     """
 
     def __init__(self) -> None:
-        """Create empty, uninitialized class. Should usually not invoked directly"""
+        """Create empty, uninitialized class.
+
+        Should usually not be invoked directly
+        """
         self._data: np.ndarray = np.empty(0)
         self.ranges: List[Tuple[float, float]] = []
         self.n_points: List[int] = []
@@ -66,33 +73,33 @@ class Grid:
         return self._perform_math_on_self(operator.neg)
 
     # allow arithmetic operators to manipulate data directly
-    def __add__(self, other: Union[float, int, np.ndarray]):
+    def __add__(self, other: arith_types):
         return self._perform_arithmetic_operation(other, operator.add)
 
-    def __radd__(self, other: Union[float, int, np.ndarray]):
+    def __radd__(self, other: arith_types):
         return self.__add__(other)
 
-    def __sub__(self, other: Union[float, int, np.ndarray]):
+    def __sub__(self, other: arith_types):
         return self._perform_arithmetic_operation(other, operator.sub)
 
     # no __rsub__ or __rdiv__ as that is ambiguous
 
-    def __mul__(self, other: Union[float, int, np.ndarray]):
+    def __mul__(self, other: arith_types):
         return self._perform_arithmetic_operation(other, operator.mul)
 
-    def __rmul__(self, other: Union[float, int, np.ndarray]):
+    def __rmul__(self, other: arith_types):
         return self.__mul__(other)
 
-    def __truediv__(self, other: Union[float, int, np.ndarray]):
+    def __truediv__(self, other: arith_types):
         return self._perform_arithmetic_operation(other, operator.truediv)
 
-    def __floordiv__(self, other: Union[float, int, np.ndarray]):
+    def __floordiv__(self, other: arith_types):
         return self._perform_arithmetic_operation(other, operator.floordiv)
 
-    def __mod__(self, other: Union[float, int, np.ndarray]):
+    def __mod__(self, other: arith_types):
         return self._perform_arithmetic_operation(other, operator.mod)
 
-    def __pow__(self, other: Union[float, int, np.ndarray]):
+    def __pow__(self, other: arith_types):
         return self._perform_arithmetic_operation(other, operator.pow)
 
     # exp and log implementations allow usage of e.g. np.exp(my_grid)
@@ -105,14 +112,14 @@ class Grid:
         return self._perform_math_on_self(np.log)
 
     # Helper function to shorten implementations"""
-    def _perform_math_on_self(self, oper: Callable[..., Any]):  # -> Grid:
+    def _perform_math_on_self(self, oper: Callable[..., Any]) -> "Grid":
         new_grid = self.copy_empty()
         new_grid.data = oper(self.data)
         return new_grid
 
     def _perform_arithmetic_operation(
-        self, other: Union[float, int, np.ndarray], oper: Callable[..., Any]
-    ):  # -> Grid::
+        self, other: arith_types, oper: Callable[..., Any]
+    ) -> "Grid":
         new_grid = self.copy_empty()
         if isinstance(other, (float, int, np.ndarray)):
             new_grid.data = oper(self.data, other)
