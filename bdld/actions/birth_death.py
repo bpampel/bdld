@@ -20,16 +20,14 @@ class BirthDeath(Action):
     :param particles: list of Particles shared with MD
     :param stride: number of MD timesteps between birth-death exectutions
     :param dt: time between subsequent birth-death evaluations
+    :param kt: thermal energy of system
+    :param inv_kt: inverse of kt for faster access
     :param bw: bandwidth for gaussian kernels per direction
     :param rate_fac: factor for b/d probabilities in exponential
+    :param correction_variant: correction from original algorithm
     :param correction: Grid holding the correction values
     :param rng: random number generator instance for birth-death moves
-    :param stats_stride: Print statistics every n time steps
-    :param stats_filename: File to print statistics to (optional, else stdout)
-    :param kill_count: number of succesful death events
-    :param kill_attempts: number of attempted death events
-    :param dup_count: number of succesful birth events
-    :param dup_attempts: number of succesful birth events
+    :param stats: Stats class instance collecting statistics
     """
 
     def __init__(
@@ -65,18 +63,19 @@ class BirthDeath(Action):
         self.stride: int = stride
         self.dt: float = md_dt * stride
         self.bw: np.ndarray = np.array(bw, dtype=float)
+        self.kt: float = kt
         self.inv_kt: float = 1 / kt
         self.rate_fac: float = rate_factor
         self.rng: np.random.Generator = np.random.default_rng(seed)
         self.stats_stride: Optional[int] = stats_stride
-        self.stats_filename: Optional[str] = stats_filename
+        self.stats = self.Stats(self, stats_filename)
         print(
             f"Setting up birth/death scheme\n"
             f"Parameters:\n"
             f"  dt = {self.dt}\n"
             f"  bw = {self.bw}\n"
-            f"  kt = {kt}\n"
-            f"  rate_fac = {rate_factor}"
+            f"  kt = {self.kt}\n"
+            f"  rate_fac = {self.rate_fac}"
         )
         if seed:
             print(f"  seed = {seed}")
@@ -100,19 +99,6 @@ class BirthDeath(Action):
                     f"Specified correction variant {self.correction_variant} was not understood"
                 )
 
-        if self.stats_filename:
-            fields = [
-                "timestep",
-                "dup_succ",
-                "dup_attempts",
-                "kill_succ",
-                "kill_attempts",
-            ]
-            constants = OrderedDict(
-                [("timestep", self.dt), ("kernel_bandwidth", self.bw), ("kt", kt)]
-            )
-            initialize_file(self.stats_filename, fields, constants)
-        self.reset_stats()
         print()
 
     def run(self, step: int) -> None:
@@ -129,12 +115,12 @@ class BirthDeath(Action):
                 # -> violates energy conservation!
                 # keep the old random number for the initial thermostat step or generate new?
         if self.stats_stride and step % self.stats_stride == 0:
-            self.print_stats(step)
+            self.stats.print(step)
 
     def final_run(self, step: int) -> None:
         """Print out stats if they were not before"""
         if not self.stats_stride:
-            self.print_stats(step)
+            self.stats.print(step)
 
     def calculate_birth_death(self) -> List[Tuple[int, int]]:
         """Calculate which particles to kill and duplicate
@@ -150,8 +136,8 @@ class BirthDeath(Action):
         beta = self.calc_betas()
         # get number of attempts from betas
         curr_kill_attempts = np.count_nonzero(beta > 0)
-        self.kill_attempts += curr_kill_attempts
-        self.dup_attempts += num_part - curr_kill_attempts
+        self.stats.kill_attempts += curr_kill_attempts
+        self.stats.dup_attempts += num_part - curr_kill_attempts
 
         # evaluate all at same time not sequentially as in original paper
         # does it matter?
@@ -164,12 +150,12 @@ class BirthDeath(Action):
                 if beta[i] > 0:
                     kill_list.append(i)
                     dup_list.append(self.random_particle(num_part, i))
-                    self.kill_count += 1
+                    self.stats.kill_count += 1
                 elif beta[i] < 0:
                     dup_list.append(i)
                     # prevent killing twice
                     kill_list.append(self.random_particle(num_part, i))
-                    self.dup_count += 1
+                    self.stats.dup_count += 1
 
         return list(zip(dup_list, kill_list))
 
@@ -235,64 +221,103 @@ class BirthDeath(Action):
 
         return np.c_[grid, rho, beta]
 
-    def print_stats(self, step: int = None, reset: bool = False) -> None:
-        """Print birth/death probabilities to file or screen"""
-        if self.stats_filename:
-            stats = np.array(
-                [
-                    step,
-                    self.dup_count,
-                    self.dup_attempts,
-                    self.kill_count,
-                    self.kill_attempts,
-                ]
-            ).reshape(1, 5)
-            with open(self.stats_filename, "ab") as f:
-                np.savetxt(
-                    f,
-                    stats,
-                    delimiter=" ",
-                    newline="\n",
-                    fmt="%d",
-                )
-        else:  # calculate percentages and ratios and write to output
-            try:
-                kill_perc = 100 * self.kill_count / self.kill_attempts
-            except ZeroDivisionError:
-                kill_perc = np.nan
-            try:
-                dup_perc = 100 * self.dup_count / self.dup_attempts
-            except ZeroDivisionError:
-                dup_perc = np.nan
-            try:
-                ratio_succ = self.dup_count / self.kill_count
-            except ZeroDivisionError:
-                ratio_succ = np.nan
-            try:
-                ratio_attempts = self.dup_attempts / self.kill_attempts
-            except ZeroDivisionError:
-                ratio_attempts = np.nan
-            if step:
-                print(f"After {step} time steps:")
-            print(
-                f"Succesful birth events: {self.dup_count}/{self.dup_attempts} ({dup_perc:.4}%)"
-            )
-            print(
-                f"Succesful death events: {self.kill_count}/{self.kill_attempts} ({kill_perc:.4}%)"
-            )
-            print(
-                f"Ratio birth/death: {ratio_succ:.4} (succesful)  {ratio_attempts:.4} (attemps)"
-            )
-            print()
-        if reset:
-            self.reset_stats()
+    class Stats:
+        """Simple data class for grouping the stats
 
-    def reset_stats(self) -> None:
-        """Set all logging counters to zero"""
-        self.dup_count = 0
-        self.dup_attempts = 0
-        self.kill_count = 0
-        self.kill_attempts = 0
+        :param dup_count: number of accepted duplication events
+        :param dup_atempts: number of attempted duplication events
+        :param kill_count: number of accepted kill events
+        :param kill_atempts: number of attempted kill events
+
+        """
+
+        def __init__(
+            self, bd_action: BirthDeath, filename: Optional[str] = None
+        ) -> None:
+            self.dup_count: int = 0
+            self.dup_attempts: int = 0
+            self.kill_count: int = 0
+            self.kill_attempts: int = 0
+            self.stats_filename: Optional[str] = filename
+
+            if self.stats_filename:
+                fields = [
+                    "timestep",
+                    "dup_succ",
+                    "dup_attempts",
+                    "kill_succ",
+                    "kill_attempts",
+                ]
+                constants = OrderedDict(
+                    [
+                        ("timestep", bd_action.dt),
+                        ("kernel_bandwidth", bd_action.bw),
+                        ("kt", bd_action.kt),
+                    ]
+                )
+                initialize_file(self.stats_filename, fields, constants)
+
+        def reset(self) -> None:
+            """Set all logging counters to zero"""
+            self.dup_count = 0
+            self.dup_attempts = 0
+            self.kill_count = 0
+            self.kill_attempts = 0
+
+        def print(self, step: int = None, reset: bool = False) -> None:
+            """Print birth/death probabilities to file or screen"""
+            if self.stats_filename:
+                stats = np.array(
+                    [
+                        step,
+                        self.dup_count,
+                        self.dup_attempts,
+                        self.kill_count,
+                        self.kill_attempts,
+                    ]
+                ).reshape(1, 5)
+                with open(self.stats_filename, "ab") as f:
+                    np.savetxt(
+                        f,
+                        stats,
+                        delimiter=" ",
+                        newline="\n",
+                        fmt="%d",
+                    )
+            else:  # calculate percentages and ratios and write to output
+                try:
+                    kill_perc = 100 * self.kill_count / self.kill_attempts
+                except ZeroDivisionError:
+                    kill_perc = np.nan
+                try:
+                    dup_perc = 100 * self.dup_count / self.dup_attempts
+                except ZeroDivisionError:
+                    dup_perc = np.nan
+                try:
+                    ratio_succ = self.dup_count / self.kill_count
+                except ZeroDivisionError:
+                    ratio_succ = np.nan
+                try:
+                    ratio_attempts = self.dup_attempts / self.kill_attempts
+                except ZeroDivisionError:
+                    ratio_attempts = np.nan
+                if step:
+                    print(f"After {step} time steps:")
+                print(
+                    "Succesful birth events:"
+                    + f"{self.dup_count}/{self.dup_attempts} ({dup_perc:.4}%)"
+                )
+                print(
+                    "Succesful death events:"
+                    + f"{self.kill_count}/{self.kill_attempts} ({kill_perc:.4}%)"
+                )
+                print(
+                    "Ratio birth/death:"
+                    + f"{ratio_succ:.4} (succesful)  {ratio_attempts:.4} (attemps)"
+                )
+                print()
+            if reset:
+                self.reset()
 
 
 def calc_kernel(dist: np.ndarray, bw: np.ndarray) -> np.ndarray:
@@ -307,7 +332,7 @@ def calc_kernel(dist: np.ndarray, bw: np.ndarray) -> np.ndarray:
     return (
         1
         / ((2 * np.pi) ** (len(bw) / 2) * np.prod(bw))
-        * np.exp(-np.sum(dist ** 2 / (2 * bw ** 2), axis=1))
+        * np.exp(-np.sum(dist**2 / (2 * bw**2), axis=1))
     )
 
 
@@ -359,7 +384,7 @@ def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
     :param bw: bandwidth parameter of kernel
     :return density: estimated density at each walker
     """
-    from scipy.spatial.distance import pdist, squareform
+    from scipy.spatial.distance import pdist, squareform  # type: ignore
 
     n_dim = pos.shape[1]
     if n_dim == 1:  # faster version for 1d, otherwise identical
