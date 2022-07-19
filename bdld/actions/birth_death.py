@@ -13,10 +13,19 @@ from bdld.helpers.misc import initialize_file
 
 
 class BirthDeath(Action):
-    """Birth death algorithm
+    """Birth death algorithm.
 
-    :param correction: Grid holding the correction values
+    This has a lot of instance attributes, containing also some statistics.
+
+    :param particles: list of Particles shared with MD
+    :param stride: number of MD timesteps between birth-death exectutions
     :param dt: time between subsequent birth-death evaluations
+    :param bw: bandwidth for gaussian kernels per direction
+    :param exp_fac: factor for b/d probabilities in exponential
+    :param correction: Grid holding the correction values
+    :param rng: random number generator instance for birth-death moves
+    :param stats_stride: Print statistics every n time steps
+    :param stats_filename: File to print statistics to (optional, else stdout)
     :param kill_count: number of succesful death events
     :param kill_attempts: number of attempted death events
     :param dup_count: number of succesful birth events
@@ -26,38 +35,38 @@ class BirthDeath(Action):
     def __init__(
         self,
         particles: List[BpldParticle],
-        dt: float,
+        md_dt: float,
         stride: int,
         bw: Union[List[float], np.ndarray],
         kt: float,
-        exp_factor: float,
+        exp_factor: float = 1.0,
         correction_variant: Optional[str] = None,
         eq_density: Optional[grid.Grid] = None,
         seed: Optional[int] = None,
         stats_stride: Optional[int] = None,
         stats_filename: Optional[str] = None,
     ) -> None:
-        """Set arguments
+        """Provide all arguments, set up correction if desired
 
         :param particles: list of Particles shared with MD
-        :param dt: timestep of MD
+        :param md_dt: timestep of MD
         :param stride: number of timesteps between birth-death exectutions
         :param bw: bandwidth for gaussian kernels per direction
         :param kt: thermal energy of system
         :param exp_factor: factor of probabilities in exponential, default 1
         :param correction_variant: correction from original algorithm
                                    can be "additive", "multiplicative" or None
-        :param eq_density: Equilibrium probability density of system, (grid, values)
+        :param eq_density: Equilibrium probability density of system
         :param seed: Seed for rng (optional)
         :param stats_stride: Print statistics every n time steps
         :param stats_filename: File to print statistics to (optional, else stdout)
         """
         self.particles: List[BpldParticle] = particles
         self.stride: int = stride
-        self.dt: float = dt * stride
+        self.dt: float = md_dt * stride
         self.bw: np.ndarray = np.array(bw, dtype=float)
         self.inv_kt: float = 1 / kt
-        self.exp_fac: float = exp_factor or 1.
+        self.exp_fac: float = exp_factor
         self.rng: np.random.Generator = np.random.default_rng(seed)
         self.stats_stride: Optional[int] = stats_stride
         self.stats_filename: Optional[str] = stats_filename
@@ -202,6 +211,8 @@ class BirthDeath(Action):
     def walker_density_grid(self, grid: np.ndarray, energy: np.ndarray) -> np.ndarray:
         """Calculate the density of walkers and bd-probabilities on a grid
 
+        This function is a relict and currently not used anywhere in the code
+
         :param grid: positions to calculate the kernel values
         :param grid: energies of the grid values
         :return array: grid rho beta
@@ -225,7 +236,7 @@ class BirthDeath(Action):
         return np.c_[grid, rho, beta]
 
     def print_stats(self, step: int = None, reset: bool = False) -> None:
-        """Print birth/death probabilities to screen"""
+        """Print birth/death probabilities to file or screen"""
         if self.stats_filename:
             stats = np.array(
                 [

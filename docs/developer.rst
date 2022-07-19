@@ -49,8 +49,8 @@ Langevin dynamics, the birth-death steps but also the data storage
 and analysis (e.g. calculating and storing the FES).
 
 All actions are subclasses of the `bdld.action.Action <source/bdld.actions.html#module-bdld.actions.action>`_
-class, and have to implement at least the `run()` and `final_run()` methods to
-be useable in the main loop.
+class, and have to implement at least the `run()` method to be useable in the main
+loop.
 
 The core of this code is surely the `BirthDeath <source/bdld.actions.html#module-bdld.actions.birth_death>`_
 action, see there for how the algorithm is implemented.
