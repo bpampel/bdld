@@ -17,6 +17,9 @@ Perform birth-death events during the simulation.
   * *additive*: the first proposed correction
   * *multiplicative*: the second proposed correction
 
+**exponential-factor**: *float*, optional
+  factor in the exponential of the birth-death probabilities, also referred to as *rate factor*
+
 **seed**: *int*, optional
   Starting seed for the random number generator used to accept/decline the birth-death probabilities
 
