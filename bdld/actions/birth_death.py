@@ -25,7 +25,9 @@ class BirthDeath(Action):
     :param bw: bandwidth for gaussian kernels per direction
     :param rate_fac: factor for b/d probabilities in exponential
     :param correction_variant: correction from original algorithm
-    :param correction: Grid holding the correction values
+    :param correction: Grid holding the correction values.
+                       Note that these have different meaning depending on the
+                       variant (additive / multiplicative)
     :param rng: random number generator instance for birth-death moves
     :param stats: Stats class instance collecting statistics
     """
@@ -37,7 +39,7 @@ class BirthDeath(Action):
         stride: int,
         bw: Union[List[float], np.ndarray],
         kt: float,
-        rate_factor: float = 1.0,
+        rate_factor: Optional[float] = None,
         correction_variant: Optional[str] = None,
         eq_density: Optional[grid.Grid] = None,
         seed: Optional[int] = None,
@@ -65,7 +67,8 @@ class BirthDeath(Action):
         self.bw: np.ndarray = np.array(bw, dtype=float)
         self.kt: float = kt
         self.inv_kt: float = 1 / kt
-        self.rate_fac: float = rate_factor
+        # set default only here to allow passing None as argument
+        self.rate_fac: float = rate_factor or 1.0
         self.rng: np.random.Generator = np.random.default_rng(seed)
         self.stats_stride: Optional[int] = stats_stride
         self.stats = self.Stats(self, stats_filename)
@@ -80,16 +83,18 @@ class BirthDeath(Action):
         if seed:
             print(f"  seed = {seed}")
         self.correction_variant: Optional[str] = correction_variant
+        self.correction: Optional[grid.Grid] = None
         if self.correction_variant:
             if not eq_density:
                 raise ValueError("No equilibrium density for the correction was passed")
             if self.correction_variant == "additive":
                 print("  using the additive correction")
-                self.correction: grid.Grid = calc_prob_correction_kernel(
-                    eq_density, self.bw, "same"
-                )
+                # multiplicative: correction grid holds
+                # -log(K*pi) + log(pi) - {average of the first two terms}
+                self.correction = calc_additive_correction(eq_density, self.bw, "same")
             elif self.correction_variant == "multiplicative":
                 print("  using the multiplicative correction")
+                # multiplicative: correction grid holds -log(K*pi)
                 conv = dens_kernel_convolution(eq_density, self.bw, "same")
                 self.correction = -np.log(
                     grid.sparsify(conv, [101] * conv.n_dim, "linear")
@@ -232,7 +237,7 @@ class BirthDeath(Action):
         """
 
         def __init__(
-            self, bd_action: BirthDeath, filename: Optional[str] = None
+            self, bd_action: "BirthDeath", filename: Optional[str] = None
         ) -> None:
             self.dup_count: int = 0
             self.dup_attempts: int = 0
@@ -264,7 +269,7 @@ class BirthDeath(Action):
             self.kill_count = 0
             self.kill_attempts = 0
 
-        def print(self, step: int = None, reset: bool = False) -> None:
+        def print(self, step: int, reset: bool = False) -> None:
             """Print birth/death probabilities to file or screen"""
             if self.stats_filename:
                 stats = np.array(
@@ -304,16 +309,16 @@ class BirthDeath(Action):
                 if step:
                     print(f"After {step} time steps:")
                 print(
-                    "Succesful birth events:"
+                    "Birth events: "
                     + f"{self.dup_count}/{self.dup_attempts} ({dup_perc:.4}%)"
                 )
                 print(
-                    "Succesful death events:"
+                    "Death events: "
                     + f"{self.kill_count}/{self.kill_attempts} ({kill_perc:.4}%)"
                 )
                 print(
-                    "Ratio birth/death:"
-                    + f"{ratio_succ:.4} (succesful)  {ratio_attempts:.4} (attemps)"
+                    "Ratio birth/death: "
+                    + f"{ratio_succ:.4} (succesful) / {ratio_attempts:.4} (attemps)"
                 )
                 print()
             if reset:
@@ -411,7 +416,11 @@ def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
 def dens_kernel_convolution(
     eq_density: grid.Grid, bw: np.ndarray, conv_mode: str
 ) -> grid.Grid:
-    """Return convolution of the equilibrium probability density with the kernel
+    """Return convolution of the a probability density with the kernel
+
+    This is equivalent to doing a kernel density estimation
+
+    In practice only used to calculate K * pi, i.e. the KDE of the equilibrium density
 
     If the "valid" conv_mode is used the returned grid is smaller than the original one.
     The "same" mode will return a grid with the same ranges, but might have issues
@@ -432,7 +441,7 @@ def dens_kernel_convolution(
     return grid.convolve(eq_density, kernel, mode=conv_mode, method="direct")
 
 
-def calc_prob_correction_kernel(
+def calc_additive_correction(
     eq_density: grid.Grid, bw: np.ndarray, conv_mode: str = "same"
 ) -> grid.Grid:
     """Additive correction for the probabilites due to the Gaussian Kernel
@@ -473,6 +482,6 @@ def nd_trapz(data: np.ndarray, dx: Union[List[float], float]) -> float:
         if dx:  # list not empty
             # recurse with last dimension integrated
             return nd_trapz(nd_trapz(data, dx=dx[-1]), dx[:-1])
-        return data  # innermost iteration gives empty list
+        return data  # innermost iteration gives empty list --> recursion finished
     # single dimension
     return np.trapz(data, dx=dx)
