@@ -402,9 +402,8 @@ def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
         n_part = pos.shape[0]
         gauss_per_dim = np.empty((n_dim, (n_part * (n_part - 1)) // 2), dtype=np.double)
         heights = 1 / (np.sqrt(2 * np.pi) * bw)
-        for i in range(
-            n_dim
-        ):  # significantly faster variant than calling the kernel function
+        for i in range(n_dim):
+            # significantly faster variant than calling the kernel function
             dist = pdist(pos[:, i].reshape(-1, 1), "sqeuclidean")
             gauss_per_dim[i] = heights[i] * np.exp(-dist / (2 * bw[i] ** 2))
         # multiply directions and convert to full matrix
