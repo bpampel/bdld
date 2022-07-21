@@ -160,6 +160,7 @@ class BirthDeath(Action):
                     dup_list.append(i)
                     # prevent killing twice
                     kill_list.append(self.random_particle(num_part, i))
+                    # import pdb; pdb.set_trace()
                     self.stats.dup_count += 1
 
         return list(zip(dup_list, kill_list))
@@ -306,8 +307,7 @@ class BirthDeath(Action):
                     ratio_attempts = self.dup_attempts / self.kill_attempts
                 except ZeroDivisionError:
                     ratio_attempts = np.nan
-                if step:
-                    print(f"After {step} time steps:")
+                print(f"After {step} time steps:")
                 print(
                     "Birth events: "
                     + f"{self.dup_count}/{self.dup_attempts} ({dup_perc:.4}%)"

@@ -1,5 +1,8 @@
+"""Test the birth-deat action"""
 import os
 import unittest
+
+from typing import List, Tuple
 
 import numpy as np
 
@@ -8,7 +11,8 @@ from bdld import grid  # needed for some inputs
 from bdld.actions.overdamped_ld import LDParticle
 
 
-def setup_bd_action(t) -> bd.BirthDeath:
+# some helper functions, could also be passed into the setUp() method of the test class
+def setup_bd_action(t: "BirthDeathTests") -> bd.BirthDeath:
     """Function that returns a BirthDeath action from the parameters of the class
 
     :param t: the BirthDeathTests instance
@@ -27,6 +31,27 @@ def setup_bd_action(t) -> bd.BirthDeath:
         t.stats_filename,
     )
 
+def setup_eq_dens_and_particles(t: "BirthDeathTests") -> None:
+    """Set eq_density and particles of test to some actual values
+
+    The actual values are set here somewhat arbitrary, it's just for
+    reusing the same code more often
+    """
+    eq_density = grid.from_npoints([(0, 1)], [11])
+    eq_density.data = np.arange(1,12) * 0.1
+    eq_density.data /= np.sum(eq_density.data)
+
+    # set up 4 particles
+    particles = []
+    positions = np.array([np.array([p]) for p in [0, 0.5, 0.5, 1]])
+    # energies from density (only relevant for corrections)
+    energies = -np.log(eq_density.interpolate(positions).reshape(4,)) / t.kt
+    for pos, ene in zip(positions, energies):
+        part = LDParticle(pos)
+        part.energy = ene
+        particles.append(part)
+    t.particles = particles
+    t.eq_density = eq_density
 
 class BirthDeathTests(unittest.TestCase):
     """Test BirthDeath class and associated functions"""
@@ -58,7 +83,6 @@ class BirthDeathTests(unittest.TestCase):
 
         Tests for the grids of the corrections are in individual functions
         """
-        self.seed = 1234  # also test seed
         self.correction_variant = "additive"
         with self.assertRaises(ValueError):
             setup_bd_action(self)  # no eq_density
@@ -168,24 +192,11 @@ class BirthDeathTests(unittest.TestCase):
     # test if the algorithm does what we expect
 
     def test_calc_beta(self):
-        # define some eq_density
-
-        # import pdb; pdb.set_trace()
-        self.eq_density = grid.from_npoints([(0, 1)], [11])
-        self.eq_density.data = np.arange(1,12) * 0.1
-        self.eq_density.data /= np.sum(self.eq_density.data)
-
-        # set up 4 particles
-        particles = []
-        positions = np.array([np.array([p]) for p in [0, 0.5, 0.5, 1]])
-        # energies from density (only relevant for corrections)
-        energies = -np.log(self.eq_density.interpolate(positions).reshape(4,)) / self.kt
-        for pos, ene in zip(positions, energies):
-            part = LDParticle(pos)
-            part.energy = ene
-            particles.append(part)
-        self.particles = particles
-        pos = [p.pos for p in particles]
+        # setup the particles and eq_density
+        setup_eq_dens_and_particles(self)
+        # copy values for manual calculation
+        positions = np.array([p.pos for p in self.particles])
+        energies = np.array([p.energy for p in self.particles])
 
         # now alterate over the variants
         self.correction_variant = None
@@ -193,13 +204,12 @@ class BirthDeathTests(unittest.TestCase):
         beta_no_corr = bd_action.calc_betas()
 
         self.correction_variant = "additive"
-        # import pdb; pdb.set_trace()
         bd_action = setup_bd_action(self)
         beta_add_corr = bd_action.calc_betas()
 
-        # self.correction_variant = "multiplicative"
-        # bd_action = setup_bd_action(self)
-        # beta_no_corr = bd_action.calc_betas()
+        self.correction_variant = "multiplicative"
+        bd_action = setup_bd_action(self)
+        beta_mult_corr = bd_action.calc_betas()
 
         # calculate semi-manually
         K_rho = bd.walker_density(positions, self.bw)
@@ -215,13 +225,49 @@ class BirthDeathTests(unittest.TestCase):
         beta_add_corr_man = beta_man + correction.interpolate(positions).reshape(4,)
         np.testing.assert_array_almost_equal(beta_add_corr, beta_add_corr_man)
 
-        # for the multiplicative correction everything has to be recalculated
-        # self.correction_variant = "multiplicative"
+        # for the multiplicative correction: recombine the calculated values
+        self.correction_variant = "multiplicative"
+        beta_mult_corr_man = np.log(K_rho) - np.log(K_pi.interpolate(positions).reshape(4,))
+        beta_mult_corr_man -= np.mean(beta_mult_corr_man)
+        np.testing.assert_array_almost_equal(beta_mult_corr, beta_mult_corr_man)
+
+    def test_calculate_birth_death(self):
+        """Test if birth_death evaluation works correctly
+
+        This is a regtest instead of a unittest as otherwise we'd simply repeat the code
+
+        This needs to be run after the previous one, as we use the same particles
+        """
+        self.correction_variant = None
+        self.seed = 1111  # fix seed
+        setup_eq_dens_and_particles(self)
+        bd_action = setup_bd_action(self)
+        bd_events = bd_action.calculate_birth_death()
+
+        # this is from running it once by hand: kill 0 and duplicate 3
+        # might fail if the rng implementation is different?
+        bd_events_ref = [(2,0), (3,1)]
+        self.assertEqual(bd_events, bd_events_ref)
+
+    def test_run(self):
+        """Test if everything can be run
+
+        Individual functions have been tested before, so only "does it work"
+        """
+        self.stats_stride = 5
+        self.seed = 1234  # fix seed as before
+        setup_eq_dens_and_particles(self)
+        bd_action = setup_bd_action(self)
+        # import pdb; pdb.set_trace()
+        bd_action.run(5)  # test also if stats are printed
+        # test some stats (known from running the last test by hand)
+        np.testing.assert_equal(bd_action.stats.dup_count, 1)
+        np.testing.assert_equal(bd_action.stats.dup_attempts, 3)
 
     def test_stats(self):
         """Test the Stats class"""
         f_name = "stats"
-        self.stats_stride = 100
+        self.stats_stride = 5
         self.stats_filename = f_name
         stats = setup_bd_action(self).stats
 
@@ -235,6 +281,7 @@ class BirthDeathTests(unittest.TestCase):
         # check if reset has worked
         self.assertEqual(stats.dup_count, 0)
 
+        # test other branch (print to screen)
         self.stats_filename = None
         stats = setup_bd_action(self).stats
         stats.print(1)
