@@ -6,7 +6,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 
-from bdld import analysis
+from bdld import analysis, grid, histogram
 from bdld.actions.action import Action
 from bdld.actions.histogram_action import HistogramAction
 from bdld.helpers.misc import backup_if_exists
@@ -172,3 +172,28 @@ class FesAction(Action):
                 filename=plot_filename,
                 title=plot_title,
             )
+
+
+def calculate_fes(
+    histo: histogram.Histogram, kt: float, mintozero: bool = True
+) -> grid.Grid:
+    """Calculate free energy surface from histogram
+
+    :param histo: Histogram instance to calculate FES from
+    :param kt: thermal energy of the system
+    :param mintozero: shift FES to have minimum at zero
+
+    :return fes: Grid with the fes values as data
+    """
+    # set bins with 0 count to inf
+    fes = np.where(
+        histo.data == 0, np.inf, -kt * np.log(histo.data, where=(histo.data != 0))
+    )
+    if mintozero:
+        minimum = np.min(fes)
+        if minimum != np.inf:  # otherwise all values become nan
+            fes -= np.min(fes)
+    # store in new grid instance and return
+    fes_grid = histo.copy_empty()
+    fes_grid.data = fes
+    return fes_grid
