@@ -14,7 +14,13 @@ from bdld.helpers.plumed_header import PlumedHeader
 
 
 class FesAction(Action):
-    """Calculate fes from histogram and save to file"""
+    """Calculate fes from histogram and save to file
+
+    The actual FES is not a data member of this class but rather a member of the
+    Histogram instance of the passed histo_action.
+    This is mostly for historical reasons, as the Histogram class existed before
+    the code was restructured into actions
+    """
 
     def __init__(
         self,

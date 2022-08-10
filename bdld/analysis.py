@@ -1,4 +1,7 @@
-"""Misc analysis functions"""
+"""Misc analysis functions
+
+Historically these were all grouped here, but could be moved to their own modules if desired
+"""
 
 from typing import List, Tuple, Union
 
@@ -88,6 +91,7 @@ def calculate_delta_f(fes: np.ndarray, kt: float, masks: List[np.ndarray]):
     :param masks: a list of boolean numpy arrays resembling the states
 
     :return delta_F: a list of doubles containing the free energy difference to the first state
+    :raises IndexError: if the dimensions of the FES and any of the masks do not match
     """
     probabilities = np.exp(-fes / float(kt)).reshape((-1))
     state_probs = [np.sum(probabilities[m]) for m in masks]

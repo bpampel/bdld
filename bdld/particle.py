@@ -27,7 +27,7 @@ class Particle:
         if not isinstance(pos, (list, np.ndarray)):  # single float
             pos = [pos]
         self.pos = np.array(pos, dtype=float)
-        self.mom = None
+        self.mom = np.empty(0)
         self.mass = mass
         self.init_momentum(mom)
 

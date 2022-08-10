@@ -9,11 +9,16 @@ from bdld import grid
 class Histogram(grid.Grid):
     """Histogram data and calculate FES from the histogram
 
-    This uses the Grid class for underlying structure and only adds some histogram functions
+    This uses the Grid class for underlying structure and adds some histogram functions
+    The main difference is that the Histogram stores values for the intervals between the
+    grid points instead of the values *at* the grid points.
     Note that this is actually a bad way to do it from an OOP perspective (--> Liskov broken)
     Also explicitely stores the bin edges (as opposed to only the n_points of the Grid class)
 
     Also allows histogramming over time, i.e. adding more data to the existing histogram
+
+    This also contains the logic for calculating an associated FES and also stores it as a
+    data member for later access
 
     :param n_points: number of bins for histogramming per dimension
     :param histo_ranges: extent of histogram (min, max) per dimension

@@ -12,12 +12,12 @@ from bdld.helpers.misc import initialize_file, make_ordinal
 
 
 class DeltaFAction(Action):
-    """Calculate Delta F from fes and save to file"""
+    """Calculate Delta F from fes and print or save it to file"""
 
     def __init__(
         self,
         fes_action: FesAction,
-        masks: np.ndarray,
+        masks: List[np.ndarray],
         stride: Optional[int] = None,
         filename: Optional[str] = None,
         write_stride: Optional[int] = None,
@@ -32,7 +32,7 @@ class DeltaFAction(Action):
         FesAction to make sense
 
         :param fes_action: Fes action to analyise
-        :param masks: masks that define the states
+        :param masks: List of masks that define the states
         :param stride: calculate delta f every n time steps, optional
         :param filename: filename to save fes to, optional
         :param fileheader: header for wiles
@@ -46,7 +46,7 @@ class DeltaFAction(Action):
         self.stride = stride
         if self.stride:
             if not self.fes_action.stride or self.stride % self.fes_action.stride != 0:
-                print("Warning: the FES stride is no multiple of the Histogram stride.")
+                print("Warning: the DeltaF stride is no multiple of the FES stride.")
             self.write_stride = write_stride or self.stride * 100
             if self.write_stride % self.stride != 0:
                 e = "The write stride must be a multiple of the update stride."
