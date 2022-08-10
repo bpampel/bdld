@@ -165,8 +165,8 @@ class FesAction(Action):
                 plot_filename = self.plot_filename
                 plot_title = self.plot_title
             analysis.plot_fes(
-                self.histo_action.histo.fes,
-                self.histo_action.histo.bin_centers(),
+                self.fes.data,
+                self.fes.points(),
                 ref=self.ref,
                 plot_domain=self.plot_domain,
                 filename=plot_filename,
