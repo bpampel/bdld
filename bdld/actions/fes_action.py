@@ -1,4 +1,7 @@
-"""Module holding the FesAction class"""
+"""Module holding the FesAction class
+
+Also holds functions for calculating and plotting the FES
+"""
 
 from collections import OrderedDict
 import logging

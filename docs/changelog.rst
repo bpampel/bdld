@@ -8,6 +8,12 @@ This file documents the bigger changes between versions
 ^^^^^^^^^^^^^^^^^^^^^^
 
 - fixed periodic boundary conditions
+- FES is no longer data member of Histogram class but stored as separate grid in the FesAction
+- helper functions required only by single action moved to the respective modules
+- a lot of added / changed code documentation
+- improved / extended tests (BirthDeathAction)
+- cosmetic improvements of code
+
 
 [0.3.1] - 2021-07-06
 ^^^^^^^^^^^^^^^^^^^^^^^
