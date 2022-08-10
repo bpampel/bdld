@@ -192,6 +192,7 @@ class BirthDeathTests(unittest.TestCase):
     # test if the algorithm does what we expect
 
     def test_calc_beta(self):
+        """Test if the birth-death probabilities are calculated correctly"""
         # setup the particles and eq_density
         setup_eq_dens_and_particles(self)
         # copy values for manual calculation

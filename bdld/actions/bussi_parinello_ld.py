@@ -1,4 +1,12 @@
-"""Simple Langevin Dynamics with Bussi-Parinello thermostat"""
+"""Simple Langevin Dynamics with Bussi-Parinello thermostat
+
+This is an implementation of the algorithm introduced in
+https://doi.org/10.1103/PhysRevE.75.056707
+see there for reasoning and further details
+
+It works by introducing thermostat steps between the velocity Verlet ones, the
+algorithm is designed to yield also the correct sampling in the overdamped limit
+"""
 
 from enum import Enum, auto
 from typing import List, Optional, Union

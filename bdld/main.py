@@ -256,7 +256,7 @@ def setup_birth_death(options: Dict, ld: BussiParinelloLD) -> BirthDeath:
     )
 
 
-def bd_prob_density(pot: Potential, bd_bw: List[float], kt: float) -> Grid:
+def bd_prob_density(pot: Potential, bd_bw: np.ndarray, kt: float) -> Grid:
     """Return probability density grid needed for BirthDeath
 
     This is usually a unknown quantity, so this has to be replaced by an estimate
