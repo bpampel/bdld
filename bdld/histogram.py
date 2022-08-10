@@ -1,13 +1,13 @@
-"""Implement a simple histogramming and FES calculation class"""
+"""Implement a simple histogramming class"""
 
-from typing import List, Optional, Union, Tuple
+from typing import List, Union, Tuple
 import numpy as np
 
 from bdld import grid
 
 
 class Histogram(grid.Grid):
-    """Histogram data and calculate FES from the histogram
+    """Histogram data into grid bins by using numpy's histogramdd
 
     This uses the Grid class for underlying structure and adds some histogram functions
     The main difference is that the Histogram stores values for the intervals between the
@@ -17,14 +17,10 @@ class Histogram(grid.Grid):
 
     Also allows histogramming over time, i.e. adding more data to the existing histogram
 
-    This also contains the logic for calculating an associated FES and also stores it as a
-    data member for later access
-
     :param n_points: number of bins for histogramming per dimension
     :param histo_ranges: extent of histogram (min, max) per dimension
     :param bins: bin edges of the histogram per dimension
     :param data: histogram data
-    :param fes: the free energy values corresponding to the histogram stored in data
     """
 
     def __init__(
@@ -44,7 +40,6 @@ class Histogram(grid.Grid):
         self.stepsizes = grid.stepsizes_from_npoints(ranges, [n + 1 for n in n_bins])
         self.histo_ranges = ranges
         self.n_dim = len(ranges)
-        self.fes: Optional[np.ndarray] = None
         # create bins from arbitrary value, there doesn't seem to be a function doing it
         self.data, self.bins = np.histogramdd(
             np.zeros((1, len(self.n_points))),
@@ -86,25 +81,3 @@ class Histogram(grid.Grid):
 
         The base function would return them with points at the borders"""
         return self.bin_centers()
-
-def calculate_fes(histo: Histogram, kt: float, mintozero: bool = True) -> grid.Grid:
-    """Calculate free energy surface from histogram
-
-    :param histo: Histogram instance to calculate FES from
-    :param kt: thermal energy of the system
-    :param mintozero: shift FES to have minimum at zero
-
-    :return fes: Grid with the fes values as data
-    """
-    # set bins with 0 count to inf
-    fes = np.where(
-        histo.data == 0, np.inf, -kt * np.log(histo.data, where=(histo.data != 0))
-    )
-    if mintozero:
-        minimum = np.min(fes)
-        if minimum != np.inf:  # otherwise all values become nan
-            fes -= np.min(fes)
-    # store in new grid instance and return
-    fes_grid = histo.copy_empty()
-    fes_grid.data = fes
-    return fes_grid

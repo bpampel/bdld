@@ -20,6 +20,9 @@ class FesAction(Action):
     Histogram instance of the passed histo_action.
     This is mostly for historical reasons, as the Histogram class existed before
     the code was restructured into actions
+
+    :param fes: Grid instance hosting the FES
+    :param kt: thermal energy in units of kT
     """
 
     def __init__(
@@ -35,7 +38,7 @@ class FesAction(Action):
         plot_title: str = None,
         ref: Optional[np.ndarray] = None,
     ) -> None:
-        """Set up fes action for a Histogram
+        """Set up fes calculation for a Histogram
 
         If no stride is given, this action is not run periodically
         but can manually be triggered.
@@ -45,7 +48,6 @@ class FesAction(Action):
         not represent the current state of the simulation.
 
         :param histo_action: the histogram to use for the calculations
-        :param kt: thermal energy in units of kT
         :param stride: calculate fes every n time steps, optional
         :param filename: filename to save fes to, optional
         :param write_stride: write to file every n time steps, default None (never)
@@ -54,11 +56,11 @@ class FesAction(Action):
         :param plot_domain: specify domain for plots, optional
         :param ref: reference fes for plot, optional
         """
-        print("Setting up FES calculation for the histogram\n" "Parameters:")
+        print("Setting up FES calculation for the histogram\n" + "Parameters:")
         self.histo_action = histo_action
         self.kt = self.histo_action.traj_action.ld.kt
         print(f"  kt = {self.kt}")
-        self.get_fes_grid = self.histo_action.histo.get_fes_grid
+        self.fes = histo_action.histo.copy_empty()  # empty Grid with correct points
         self.stride = stride
         if self.stride:
             if self.stride % histo_action.update_stride != 0:
@@ -118,15 +120,15 @@ class FesAction(Action):
         :param step: current simulation step, optional
         """
         if self.stride and step % self.stride == 0:
-            self.histo_action.histo.calculate_fes(self.kt)
+            self.fes = calculate_fes(self.histo_action.histo, self.kt)
         if self.write_stride and step % self.write_stride == 0:
             self.write(step)
         if self.plot_stride and step % self.plot_stride == 0:
             self.plot(step)
 
     def final_run(self, step: int) -> None:
-        """Same as run without stride checks"""
-        self.histo_action.histo.calculate_fes(self.kt)
+        """Same as run() but without stride checks and passing the step number"""
+        self.fes = calculate_fes(self.histo_action.histo, self.kt)
         self.write()
         self.plot()
 
@@ -145,9 +147,7 @@ class FesAction(Action):
             else:
                 filename = self.filename
             backup_if_exists(filename)
-            self.get_fes_grid().write_to_file(
-                filename, self.write_fmt, str(self.fileheader)
-            )
+            self.fes.write_to_file(filename, self.write_fmt, str(self.fileheader))
 
     def plot(self, step: int = None) -> None:
         """Plot fes with reference and optionally save to file

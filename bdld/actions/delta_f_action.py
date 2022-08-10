@@ -63,7 +63,7 @@ class DeltaFAction(Action):
         else:  # just store one data set
             self.delta_f = np.empty((len(self.masks)))
 
-        # copy temp and timestep from LD, shortcut for FES grid
+        # copy temp and timestep from LD
         self.kt = self.fes_action.histo_action.traj_action.ld.kt
         self.dt = self.fes_action.histo_action.traj_action.ld.dt
 
@@ -91,7 +91,7 @@ class DeltaFAction(Action):
             row = (step % self.write_stride) // self.stride - 1
             self.delta_f[row, 0] = step * self.dt
             self.delta_f[row, 1:] = analysis.calculate_delta_f(
-                self.fes_action.histo_action.histo.fes, self.kt, self.masks
+                self.fes_action.fes, self.kt, self.masks
             )
         if self.write_stride and step % self.write_stride == 0:
             self.write(step)
@@ -100,16 +100,14 @@ class DeltaFAction(Action):
         if not self.stride:  # perform analysis once
             self.delta_f[0] = step * self.dt
             self.delta_f[1:] = analysis.calculate_delta_f(
-                self.fes_action.histo_action.histo.fes, self.kt, self.masks
+                self.fes_action.fes, self.kt, self.masks
             )
         self.write(step)
 
     def write(self, step: int) -> None:
-        """Write fes to file
+        """Write delta F values to file to file
 
-        If a step is specified it will be appended to the filename, i.e. it is written
-        to a new file.
-        If no filename is set, this will do nothing.
+        Does nothing if self.filename is empty
 
         :param step: current simulation step
         """
