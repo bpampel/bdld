@@ -5,7 +5,6 @@ from typing import List, Optional
 
 import numpy as np
 
-from bdld import analysis
 from bdld.actions.action import Action, get_valid_data
 from bdld.actions.fes_action import FesAction
 from bdld.helpers.misc import initialize_file, make_ordinal
@@ -42,6 +41,7 @@ class DeltaFAction(Action):
         """
         print("Setting up delta-f action")
         self.fes_action = fes_action
+        check_mask_shapes(masks, fes_action.fes.data)
         self.masks = masks
         self.stride = stride
         if self.stride:
@@ -54,7 +54,7 @@ class DeltaFAction(Action):
             if not filename:
                 e = "Specifying a write_stride but no filename makes no sense"
                 raise ValueError(e)
-            # time + (masks -1) states
+            # time + (masks -1) values per evaluation
             self.delta_f = np.empty((self.write_stride // self.stride, len(self.masks)))
             self.last_write: int = 0
             print(
@@ -68,7 +68,7 @@ class DeltaFAction(Action):
         self.dt = self.fes_action.histo_action.traj_action.ld.dt
 
         if ref:
-            self.ref_values = analysis.calculate_delta_f(ref, self.kt, self.masks)
+            self.ref_values = calculate_delta_f(ref, self.kt, self.masks)
 
         # writing
         self.filename = filename
@@ -90,8 +90,8 @@ class DeltaFAction(Action):
         if self.stride and step % self.stride == 0:
             row = (step % self.write_stride) // self.stride - 1
             self.delta_f[row, 0] = step * self.dt
-            self.delta_f[row, 1:] = analysis.calculate_delta_f(
-                self.fes_action.fes, self.kt, self.masks
+            self.delta_f[row, 1:] = calculate_delta_f(
+                self.fes_action.fes.data, self.kt, self.masks
             )
         if self.write_stride and step % self.write_stride == 0:
             self.write(step)
@@ -99,8 +99,8 @@ class DeltaFAction(Action):
     def final_run(self, step: int) -> None:
         if not self.stride:  # perform analysis once
             self.delta_f[0] = step * self.dt
-            self.delta_f[1:] = analysis.calculate_delta_f(
-                self.fes_action.fes, self.kt, self.masks
+            self.delta_f[1:] = calculate_delta_f(
+                self.fes_action.fes.data, self.kt, self.masks
             )
         self.write(step)
 
@@ -127,3 +127,30 @@ class DeltaFAction(Action):
                     newline="\n",
                     fmt=self.write_fmt,
                 )
+
+
+def check_mask_shapes(masks: List[np.ndarray], fes: np.ndarray) -> None:
+    """Check if the shape of all masks is equal to the shape of the FES"""
+    if any(mask.shape != fes.shape for mask in masks):
+        raise ValueError("Shapes of mask not equal to FES shape")
+
+
+def calculate_delta_f(fes: np.ndarray, kt: float, masks: List[np.ndarray]):
+    """Calculates the free energy difference between states defined by boolean masks
+
+    If more than two are specified, this returns the difference to the first state for all others
+
+    :param fes: free energy surface to examine
+    :param kt: energy in units of kT
+    :param masks: a list of boolean numpy arrays resembling the states
+
+    :return delta_F: a list of doubles containing the free energy difference to the first state
+    :raises IndexError: if the dimensions of the FES and any of the masks do not match
+    """
+    probabilities = np.exp(-fes / float(kt)).reshape((-1))
+    state_probs = [np.sum(probabilities[m]) for m in masks]
+    delta_f = [
+        -kt * np.log(state_probs[i] / state_probs[0])
+        for i in range(1, len(state_probs))
+    ]
+    return delta_f
