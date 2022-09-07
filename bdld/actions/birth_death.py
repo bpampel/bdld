@@ -154,13 +154,11 @@ class BirthDeath(Action):
             if i not in kill_list:
                 if beta[i] > 0:
                     kill_list.append(i)
-                    dup_list.append(self.random_particle(num_part, i))
+                    dup_list.append(self.random_other(num_part, i))
                     self.stats.kill_count += 1
                 elif beta[i] < 0:
                     dup_list.append(i)
-                    # prevent killing twice
-                    kill_list.append(self.random_particle(num_part, i))
-                    # import pdb; pdb.set_trace()
+                    kill_list.append(self.random_other(num_part, i))
                     self.stats.dup_count += 1
 
         return list(zip(dup_list, kill_list))
@@ -188,8 +186,8 @@ class BirthDeath(Action):
             beta -= np.mean(beta[beta != -np.inf])
         return beta
 
-    def random_particle(self, num_part: int, excl: int) -> int:
-        """Select random particle while excluding current one
+    def random_other(self, num_part: int, excl: int) -> int:
+        """Select random particle while excluding the one given as second argument
 
         :param num_part: total number of particles
         :param excl: particle to exclude
@@ -204,9 +202,10 @@ class BirthDeath(Action):
         """Calculate the density of walkers and bd-probabilities on a grid
 
         This function is a relict and currently not used anywhere in the code
+        Kept here for possible debugging at a later time
 
         :param grid: positions to calculate the kernel values
-        :param grid: energies of the grid values
+        :param energy: energies of the grid values
         :return array: grid rho beta
         """
         rho = []
