@@ -161,7 +161,7 @@ class BirthDeath(Action):
                         kill_list.append(i)
                         dup_list.append(rand_other)
                         self.stats.kill_count += 1
-                    elif beta[i] < 0:
+                    else:  # beta[i] < 0
                         kill_list.append(rand_other)
                         dup_list.append(i)
                         self.stats.dup_count += 1
