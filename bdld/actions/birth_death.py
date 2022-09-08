@@ -39,7 +39,7 @@ class BirthDeath(Action):
         stride: int,
         bw: Union[List[float], np.ndarray],
         kt: float,
-        rate_factor: Optional[float] = None,
+        rate_fac: Optional[float] = None,
         recalc_probs: bool = False,
         correction_variant: Optional[str] = None,
         eq_density: Optional[grid.Grid] = None,
@@ -54,7 +54,7 @@ class BirthDeath(Action):
         :param stride: number of timesteps between birth-death exectutions
         :param bw: bandwidth for gaussian kernels per direction
         :param kt: thermal energy of system
-        :param rate_factor: factor of probabilities in exponential, default 1
+        :param rate_fac: factor of probabilities in exponential, default 1
         :param recalc_probs: Recalculate probabilities after each event
         :param correction_variant: correction from original algorithm
                                    can be "additive", "multiplicative" or None
@@ -70,7 +70,7 @@ class BirthDeath(Action):
         self.kt: float = kt
         self.inv_kt: float = 1 / kt
         # set default only here to allow passing None as argument
-        self.rate_fac: float = rate_factor or 1.0
+        self.rate_fac: float = rate_fac or 1.0
         self.recalc_probs: bool = recalc_probs
         self.rng: np.random.Generator = np.random.default_rng(seed)
         self.stats_stride: Optional[int] = stats_stride
@@ -117,7 +117,7 @@ class BirthDeath(Action):
         :param step: current timestep of simulation
         """
         if step % self.stride == 0:
-            self.calculate_birth_death()
+            self.do_birth_death()
         if self.stats_stride and step % self.stats_stride == 0:
             self.stats.print(step)
 
@@ -126,7 +126,7 @@ class BirthDeath(Action):
         if not self.stats_stride:
             self.stats.print(step)
 
-    def calculate_birth_death(self) -> None:
+    def do_birth_death(self) -> None:
         """Calculate which particles to kill and duplicate and perform the task
 
         The particles will be processed in random order
@@ -135,26 +135,58 @@ class BirthDeath(Action):
         """
         num_part = len(self.particles)
 
+
         beta = self.calc_betas()  # initial calculation of betas
         rand = self.rng.random(num_part)  # rng for all at once
 
-        particle_indices = np.arange(num_part)
-        self.rng.shuffle(particle_indices)
-        for i in particle_indices:
-            if beta[i] > 0:
-                self.kill_attempts += 1
-            if beta[i] < 0:
-                self.dup_attempts += 1
-            prob = 1 - np.exp(-np.abs(beta[i]) * self.dt * self.exp_fac)
-            if rand[i] <= prob:
-                rand_other = self.random_particle(num_part, i)
+        # although this duplicates code, the "in bulk" version is faster this way
+        if not self.recalc_probs:
+            curr_kill_attempts = np.count_nonzero(beta > 0)
+            self.stats.kill_attempts += curr_kill_attempts
+            self.stats.dup_attempts += num_part - curr_kill_attempts
+
+            # lists with particles to be killed and duplicated (in order)
+            dup_list: List[int] = []
+            kill_list: List[int] = []
+
+            prob = 1 - np.exp(-np.abs(beta) * self.dt * self.rate_fac)
+            rand = self.rng.random(num_part)
+            event_particles = np.where(rand <= prob)[0]
+            self.rng.shuffle(event_particles)
+            for i in event_particles:
+                if i not in kill_list:
+                    rand_other = self.random_other(num_part, i)
+                    if beta[i] > 0:
+                        kill_list.append(i)
+                        dup_list.append(rand_other)
+                        self.stats.kill_count += 1
+                    elif beta[i] < 0:
+                        kill_list.append(rand_other)
+                        dup_list.append(i)
+                        self.stats.dup_count += 1
+
+            # perform all events in bulk
+            self.perform_moves(list(zip(dup_list, kill_list)))
+
+        else: # perform each accepted event directly and recalculate probs
+            particle_indices = np.arange(num_part)
+            self.rng.shuffle(particle_indices)
+            for i in particle_indices:
                 if beta[i] > 0:
-                    self.kill_count += 1
-                    self.particles[i] = copy.deepcopy(self.particles[rand_other])
-                elif beta[i] < 0:
-                    self.dup_count += 1
-                    self.particles[rand_other] = copy.deepcopy(self.particles[i])
-                if self.recalc_probs:
+                    self.stats.kill_attempts += 1
+                if beta[i] < 0:
+                    self.stats.dup_attempts += 1
+
+                prob = 1 - np.exp(-np.abs(beta[i]) * self.dt * self.rate_fac)
+                if rand[i] <= prob:
+                    rand_other = self.random_other(num_part, i)
+                    if beta[i] > 0:
+                        event_list = [(i, rand_other)]
+                        self.stats.kill_count += 1
+                    elif beta[i] < 0:
+                        event_list = [(rand_other, i)]
+                        self.stats.dup_count += 1
+                    self.perform_moves(event_list)
                     beta = self.calc_betas()
 
     def calc_betas(self) -> np.ndarray:
@@ -191,6 +223,19 @@ class BirthDeath(Action):
         if num >= excl:
             num += 1
         return num
+
+    def perform_moves(self, event_list: List[Tuple[int, int]]) -> None:
+        """Execute the birth-death moves given in the event_list.
+
+        :param event_list: List with Tuples(i,j) of the particle numbers.
+                           Particle i will be replaced by a copy of particle j
+        """
+        for dup, kill in event_list:
+            self.particles[kill] = copy.deepcopy(self.particles[dup])
+            # this copies all properties: is this desired?
+            # what should be done with the momentum? Keep? Set to 0?
+            # -> violates energy conservation!
+            # keep the old random number for the initial thermostat step or generate new?
 
     def walker_density_grid(self, grid: np.ndarray, energy: np.ndarray) -> np.ndarray:
         """Calculate the density of walkers and bd-probabilities on a grid
