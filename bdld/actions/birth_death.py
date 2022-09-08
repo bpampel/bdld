@@ -151,7 +151,6 @@ class BirthDeath(Action):
             kill_list: List[int] = []
 
             prob = 1 - np.exp(-np.abs(beta) * self.dt * self.rate_fac)
-            rand = self.rng.random(num_part)
             event_particles = np.where(rand <= prob)[0]
             self.rng.shuffle(event_particles)
             for i in event_particles:

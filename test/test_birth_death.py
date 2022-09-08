@@ -249,7 +249,7 @@ class BirthDeathTests(unittest.TestCase):
 
         # this is from running it once by hand: duplicate 3 and kill 0
         # might fail if the rng implementation is different?
-        bd_events_ref = [(3,1), (3,0)]
+        bd_events_ref = [(2,0), (3,1)]
         self.assertEqual(bd_events, bd_events_ref)
 
     def test_run(self):
