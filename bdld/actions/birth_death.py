@@ -126,15 +126,16 @@ class BirthDeath(Action):
         if not self.stats_stride:
             self.stats.print(step)
 
-    def do_birth_death(self) -> None:
+    def do_birth_death(self) -> List[Tuple[int, int]]:
         """Calculate which particles to kill and duplicate and perform the task
 
         The particles will be processed in random order
         By default the beta values will be evaluated only once at the beginning,
         set recalc_probs to change this behavior
+
+        :return event_list: List with Tuples (dup_i, kill_i) of the accepted events
         """
         num_part = len(self.particles)
-
 
         beta = self.calc_betas()  # initial calculation of betas
         rand = self.rng.random(num_part)  # rng for all at once
@@ -154,7 +155,7 @@ class BirthDeath(Action):
             event_particles = np.where(rand <= prob)[0]
             self.rng.shuffle(event_particles)
             for i in event_particles:
-                if i not in kill_list:
+                if i not in kill_list:  # the move was accepted from the old beta!
                     rand_other = self.random_other(num_part, i)
                     if beta[i] > 0:
                         kill_list.append(i)
@@ -166,11 +167,13 @@ class BirthDeath(Action):
                         self.stats.dup_count += 1
 
             # perform all events in bulk
-            self.perform_moves(list(zip(dup_list, kill_list)))
+            event_list = list(zip(dup_list, kill_list))
+            self.perform_moves(event_list)
 
         else: # perform each accepted event directly and recalculate probs
             particle_indices = np.arange(num_part)
             self.rng.shuffle(particle_indices)
+            event_list = []
             for i in particle_indices:
                 if beta[i] > 0:
                     self.stats.kill_attempts += 1
@@ -181,13 +184,16 @@ class BirthDeath(Action):
                 if rand[i] <= prob:
                     rand_other = self.random_other(num_part, i)
                     if beta[i] > 0:
-                        event_list = [(i, rand_other)]
+                        curr_event = (i, rand_other)
                         self.stats.kill_count += 1
                     elif beta[i] < 0:
-                        event_list = [(rand_other, i)]
+                        curr_event = (rand_other, i)
                         self.stats.dup_count += 1
-                    self.perform_moves(event_list)
+                    self.perform_moves([curr_event])
+                    event_list.append(curr_event)
                     beta = self.calc_betas()
+
+        return event_list
 
     def calc_betas(self) -> np.ndarray:
         """Calculate the birth/death rate for every particle"""
@@ -228,7 +234,7 @@ class BirthDeath(Action):
         """Execute the birth-death moves given in the event_list.
 
         :param event_list: List with Tuples(i,j) of the particle numbers.
-                           Particle i will be replaced by a copy of particle j
+                           Particle j will be replaced by a copy of particle i
         """
         for dup, kill in event_list:
             self.particles[kill] = copy.deepcopy(self.particles[dup])

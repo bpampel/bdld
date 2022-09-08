@@ -24,6 +24,7 @@ def setup_bd_action(t: "BirthDeathTests") -> bd.BirthDeath:
         t.bw,
         t.kt,
         t.rate_fac,
+        t.recalc_probs,
         t.correction_variant,
         t.eq_density,
         t.seed,
@@ -63,6 +64,7 @@ class BirthDeathTests(unittest.TestCase):
     bw = np.array([1.0])
     kt = 2.0
     rate_fac = 2.0
+    recalc_probs = False
     eq_density = None
     correction_variant = None
     seed = None
@@ -232,7 +234,7 @@ class BirthDeathTests(unittest.TestCase):
         beta_mult_corr_man -= np.mean(beta_mult_corr_man)
         np.testing.assert_array_almost_equal(beta_mult_corr, beta_mult_corr_man)
 
-    def test_calculate_birth_death(self):
+    def test_do_birth_death(self):
         """Test if birth_death evaluation works correctly
 
         This is a regtest instead of a unittest as otherwise we'd simply repeat the code
@@ -243,11 +245,11 @@ class BirthDeathTests(unittest.TestCase):
         self.seed = 1111  # fix seed
         setup_eq_dens_and_particles(self)
         bd_action = setup_bd_action(self)
-        bd_events = bd_action.calculate_birth_death()
+        bd_events = bd_action.do_birth_death()
 
-        # this is from running it once by hand: kill 0 and duplicate 3
+        # this is from running it once by hand: duplicate 3 and kill 0
         # might fail if the rng implementation is different?
-        bd_events_ref = [(2,0), (3,1)]
+        bd_events_ref = [(3,1), (3,0)]
         self.assertEqual(bd_events, bd_events_ref)
 
     def test_run(self):
