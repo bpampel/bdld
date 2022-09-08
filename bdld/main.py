@@ -3,7 +3,7 @@
 import argparse
 from collections import OrderedDict
 import logging
-from typing import cast, Dict, List, Optional, Tuple
+from typing import cast, Dict, List, Optional, Union
 import sys
 
 import numpy as np
@@ -17,6 +17,7 @@ Action = actions.action.Action
 BirthDeath = actions.birth_death.BirthDeath
 BussiParinelloLD = actions.bussi_parinello_ld.BussiParinelloLD
 OverdampedLD = actions.overdamped_ld.OverdampedLD
+LdType = Union[BussiParinelloLD, OverdampedLD]
 TrajectoryAction = actions.trajectory_action.TrajectoryAction
 HistogramAction = actions.histogram_action.HistogramAction
 FesAction = actions.fes_action.FesAction
@@ -24,6 +25,7 @@ DeltaFAction = actions.delta_f_action.DeltaFAction
 ParticleDistributionAction = actions.particle_distribution.ParticleDistributionAction
 
 Potential = potential.potential.Potential
+
 
 
 def main() -> None:
@@ -153,7 +155,7 @@ def setup_potential(options: Dict) -> Potential:
     return pot
 
 
-def setup_ld(options: Dict, pot: Potential) -> BussiParinelloLD:
+def setup_ld(options: Dict, pot: Potential) -> LdType:
     """Return Langevin Dynamics with given options on the potential"""
     if options["type"] == "bussi-parinello":
         return BussiParinelloLD(
@@ -169,9 +171,15 @@ def setup_ld(options: Dict, pot: Potential) -> BussiParinelloLD:
             options["timestep"],
             options["seed"],
         )
+    else:
+        raise inputparser.OptionError(
+            f'Specified LD type "{options["type"]}" is not implemented',
+            "type",
+            "ld",
+        )
 
 
-def init_particles(options: Dict, ld: BussiParinelloLD) -> None:
+def init_particles(options: Dict, ld: LdType) -> None:
     """Add particles to ld with the given algorithm
 
     random-global: distribute randomly on full range of potential
@@ -249,7 +257,7 @@ def setup_birth_death(options: Dict, ld: BussiParinelloLD) -> BirthDeath:
     )
 
 
-def bd_prob_density(pot: Potential, bd_bw: List[float], kt: float) -> Grid:
+def bd_prob_density(pot: Potential, bd_bw: np.ndarray, kt: float) -> Grid:
     """Return probability density grid needed for BirthDeath
 
     This is usually a unknown quantity, so this has to be replaced by an estimate
@@ -273,7 +281,7 @@ def bd_prob_density(pot: Potential, bd_bw: List[float], kt: float) -> Grid:
     return pot.calculate_probability_density(kt, pot.ranges, n_grid_points)
 
 
-def setup_trajectories(options: Dict, ld: BussiParinelloLD) -> TrajectoryAction:
+def setup_trajectories(options: Dict, ld: LdType) -> TrajectoryAction:
     """Setup TrajectoryAction on ld with given options"""
     return TrajectoryAction(
         ld,
@@ -347,16 +355,14 @@ def setup_delta_f(options: Dict, fes_action: FesAction) -> DeltaFAction:
     )
 
 
-def setup_particle_distribution(
-    options: Dict, ld: BussiParinelloLD
-) -> ParticleDistributionAction:
+def setup_particle_distribution(options: Dict, ld: LdType) -> ParticleDistributionAction:
     """Setup analysis of particle distribution of LD"""
     min_list = inputparser.get_all_numbered_values(options, "state", "-min")
     max_list = inputparser.get_all_numbered_values(options, "state", "-max")
     state_ranges = inputparser.min_max_to_ranges(min_list, max_list)
 
     return ParticleDistributionAction(
-        ld.particles,
+        ld.particles,  # type: ignore
         state_ranges,
         options["stride"],
         options["filename"],

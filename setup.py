@@ -5,6 +5,7 @@ setup(
     version="0.3.1",
     description="Simulation algorithm for Langevin dynamics with additional birth/death steps",
     author="Benjamin Pampel",
+    license="LGPL",
     packages=["bdld", "bdld.actions", "bdld.potential", "bdld.helpers"],
     scripts=["bin/bdld_run"],
     python_requires=">=3.6",

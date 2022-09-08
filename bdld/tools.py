@@ -1,3 +1,5 @@
+"""Collect helper functions that are required by multiple files"""
+
 from typing import List, Tuple
 
 import numpy as np

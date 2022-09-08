@@ -25,7 +25,7 @@ All further options are thus only needed if the trajectories should be written t
 Example
 ^^^^^^^
 
-Just store positions in memory for histogamming, but don't write them to file:
+Just store positions in memory for histogramming, but don't write them to file:
 ::
 
   [trajectories]

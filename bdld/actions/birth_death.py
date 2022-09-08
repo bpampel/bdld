@@ -13,24 +13,33 @@ from bdld.helpers.misc import initialize_file
 
 
 class BirthDeath(Action):
-    """Birth death algorithm
+    """Birth death algorithm.
 
-    :param correction: Grid holding the correction values
+    This has a lot of instance attributes, containing also some statistics.
+
+    :param particles: list of Particles shared with MD
+    :param stride: number of MD timesteps between birth-death exectutions
     :param dt: time between subsequent birth-death evaluations
-    :param kill_count: number of succesful death events
-    :param kill_attempts: number of attempted death events
-    :param dup_count: number of succesful birth events
-    :param dup_attempts: number of succesful birth events
+    :param kt: thermal energy of system
+    :param inv_kt: inverse of kt for faster access
+    :param bw: bandwidth for gaussian kernels per direction
+    :param rate_fac: factor for b/d probabilities in exponential
+    :param correction_variant: correction from original algorithm
+    :param correction: Grid holding the correction values.
+                       Note that these have different meaning depending on the
+                       variant (additive / multiplicative)
+    :param rng: random number generator instance for birth-death moves
+    :param stats: Stats class instance collecting statistics
     """
 
     def __init__(
         self,
         particles: List[BpldParticle],
-        dt: float,
+        md_dt: float,
         stride: int,
         bw: Union[List[float], np.ndarray],
         kt: float,
-        exp_factor: float,
+        rate_factor: Optional[float] = None,
         recalc_probs: bool = False,
         correction_variant: Optional[str] = None,
         eq_density: Optional[grid.Grid] = None,
@@ -38,55 +47,59 @@ class BirthDeath(Action):
         stats_stride: Optional[int] = None,
         stats_filename: Optional[str] = None,
     ) -> None:
-        """Set arguments
+        """Provide all arguments, set up correction if desired
 
         :param particles: list of Particles shared with MD
-        :param dt: timestep of MD
+        :param md_dt: timestep of MD
         :param stride: number of timesteps between birth-death exectutions
         :param bw: bandwidth for gaussian kernels per direction
         :param kt: thermal energy of system
-        :param exp_factor: factor of probabilities in exponential, default 1
+        :param rate_factor: factor of probabilities in exponential, default 1
+        :param recalc_probs: Recalculate probabilities after each event
         :param correction_variant: correction from original algorithm
                                    can be "additive", "multiplicative" or None
-        :param recalc_probs: Recalculate probabilities after each event
-        :param eq_density: Equilibrium probability density of system, (grid, values)
+        :param eq_density: Equilibrium probability density of system
         :param seed: Seed for rng (optional)
         :param stats_stride: Print statistics every n time steps
         :param stats_filename: File to print statistics to (optional, else stdout)
         """
         self.particles: List[BpldParticle] = particles
         self.stride: int = stride
-        self.dt: float = dt * stride
+        self.dt: float = md_dt * stride
         self.bw: np.ndarray = np.array(bw, dtype=float)
+        self.kt: float = kt
         self.inv_kt: float = 1 / kt
-        self.exp_fac: float = exp_factor or 1.
+        # set default only here to allow passing None as argument
+        self.rate_fac: float = rate_factor or 1.0
         self.recalc_probs: bool = recalc_probs
         self.rng: np.random.Generator = np.random.default_rng(seed)
         self.stats_stride: Optional[int] = stats_stride
-        self.stats_filename: Optional[str] = stats_filename
+        self.stats = self.Stats(self, stats_filename)
         print(
             f"Setting up birth/death scheme\n"
             f"Parameters:\n"
             f"  dt = {self.dt}\n"
             f"  bw = {self.bw}\n"
-            f"  kt = {kt}\n"
-            f"  fac = {exp_factor}"
+            f"  kt = {self.kt}\n"
+            f"  rate_fac = {self.rate_fac}"
         )
         if seed:
             print(f"  seed = {seed}")
         if recalc_probs:
             print("  recalculating the probabilities after every successful event")
         self.correction_variant: Optional[str] = correction_variant
+        self.correction: Optional[grid.Grid] = None
         if self.correction_variant:
             if not eq_density:
                 raise ValueError("No equilibrium density for the correction was passed")
             if self.correction_variant == "additive":
                 print("  using the additive correction")
-                self.correction: grid.Grid = calc_prob_correction_kernel(
-                    eq_density, self.bw, "same"
-                )
+                # multiplicative: correction grid holds
+                # -log(K*pi) + log(pi) - {average of the first two terms}
+                self.correction = calc_additive_correction(eq_density, self.bw, "same")
             elif self.correction_variant == "multiplicative":
                 print("  using the multiplicative correction")
+                # multiplicative: correction grid holds -log(K*pi)
                 conv = dens_kernel_convolution(eq_density, self.bw, "same")
                 self.correction = -np.log(
                     grid.sparsify(conv, [101] * conv.n_dim, "linear")
@@ -96,19 +109,6 @@ class BirthDeath(Action):
                     f"Specified correction variant {self.correction_variant} was not understood"
                 )
 
-        if self.stats_filename:
-            fields = [
-                "timestep",
-                "dup_succ",
-                "dup_attempts",
-                "kill_succ",
-                "kill_attempts",
-            ]
-            constants = OrderedDict(
-                [("timestep", self.dt), ("kernel_bandwidth", self.bw), ("kt", kt)]
-            )
-            initialize_file(self.stats_filename, fields, constants)
-        self.reset_stats()
         print()
 
     def run(self, step: int) -> None:
@@ -119,12 +119,12 @@ class BirthDeath(Action):
         if step % self.stride == 0:
             self.calculate_birth_death()
         if self.stats_stride and step % self.stats_stride == 0:
-            self.print_stats(step)
+            self.stats.print(step)
 
     def final_run(self, step: int) -> None:
         """Print out stats if they were not before"""
         if not self.stats_stride:
-            self.print_stats(step)
+            self.stats.print(step)
 
     def calculate_birth_death(self) -> None:
         """Calculate which particles to kill and duplicate and perform the task
@@ -180,8 +180,8 @@ class BirthDeath(Action):
             beta -= np.mean(beta[beta != -np.inf])
         return beta
 
-    def random_particle(self, num_part: int, excl: int) -> int:
-        """Select random particle while excluding current one
+    def random_other(self, num_part: int, excl: int) -> int:
+        """Select random particle while excluding the one given as second argument
 
         :param num_part: total number of particles
         :param excl: particle to exclude
@@ -195,8 +195,11 @@ class BirthDeath(Action):
     def walker_density_grid(self, grid: np.ndarray, energy: np.ndarray) -> np.ndarray:
         """Calculate the density of walkers and bd-probabilities on a grid
 
+        This function is a relict and currently not used anywhere in the code
+        Kept here for possible debugging at a later time
+
         :param grid: positions to calculate the kernel values
-        :param grid: energies of the grid values
+        :param energy: energies of the grid values
         :return array: grid rho beta
         """
         rho = []
@@ -217,64 +220,102 @@ class BirthDeath(Action):
 
         return np.c_[grid, rho, beta]
 
-    def print_stats(self, step: int = None, reset: bool = False) -> None:
-        """Print birth/death probabilities to screen"""
-        if self.stats_filename:
-            stats = np.array(
-                [
-                    step,
-                    self.dup_count,
-                    self.dup_attempts,
-                    self.kill_count,
-                    self.kill_attempts,
-                ]
-            ).reshape(1, 5)
-            with open(self.stats_filename, "ab") as f:
-                np.savetxt(
-                    f,
-                    stats,
-                    delimiter=" ",
-                    newline="\n",
-                    fmt="%d",
-                )
-        else:  # calculate percentages and ratios and write to output
-            try:
-                kill_perc = 100 * self.kill_count / self.kill_attempts
-            except ZeroDivisionError:
-                kill_perc = np.nan
-            try:
-                dup_perc = 100 * self.dup_count / self.dup_attempts
-            except ZeroDivisionError:
-                dup_perc = np.nan
-            try:
-                ratio_succ = self.dup_count / self.kill_count
-            except ZeroDivisionError:
-                ratio_succ = np.nan
-            try:
-                ratio_attempts = self.dup_attempts / self.kill_attempts
-            except ZeroDivisionError:
-                ratio_attempts = np.nan
-            if step:
-                print(f"After {step} time steps:")
-            print(
-                f"Succesful birth events: {self.dup_count}/{self.dup_attempts} ({dup_perc:.4}%)"
-            )
-            print(
-                f"Succesful death events: {self.kill_count}/{self.kill_attempts} ({kill_perc:.4}%)"
-            )
-            print(
-                f"Ratio birth/death: {ratio_succ:.4} (succesful)  {ratio_attempts:.4} (attemps)"
-            )
-            print()
-        if reset:
-            self.reset_stats()
+    class Stats:
+        """Simple data class for grouping the stats
 
-    def reset_stats(self) -> None:
-        """Set all logging counters to zero"""
-        self.dup_count = 0
-        self.dup_attempts = 0
-        self.kill_count = 0
-        self.kill_attempts = 0
+        :param dup_count: number of accepted duplication events
+        :param dup_atempts: number of attempted duplication events
+        :param kill_count: number of accepted kill events
+        :param kill_atempts: number of attempted kill events
+
+        """
+
+        def __init__(
+            self, bd_action: "BirthDeath", filename: Optional[str] = None
+        ) -> None:
+            self.dup_count: int = 0
+            self.dup_attempts: int = 0
+            self.kill_count: int = 0
+            self.kill_attempts: int = 0
+            self.stats_filename: Optional[str] = filename
+
+            if self.stats_filename:
+                fields = [
+                    "timestep",
+                    "dup_succ",
+                    "dup_attempts",
+                    "kill_succ",
+                    "kill_attempts",
+                ]
+                constants = OrderedDict(
+                    [
+                        ("timestep", bd_action.dt),
+                        ("kernel_bandwidth", bd_action.bw),
+                        ("kt", bd_action.kt),
+                    ]
+                )
+                initialize_file(self.stats_filename, fields, constants)
+
+        def reset(self) -> None:
+            """Set all logging counters to zero"""
+            self.dup_count = 0
+            self.dup_attempts = 0
+            self.kill_count = 0
+            self.kill_attempts = 0
+
+        def print(self, step: int, reset: bool = False) -> None:
+            """Print birth/death probabilities to file or screen"""
+            if self.stats_filename:
+                stats = np.array(
+                    [
+                        step,
+                        self.dup_count,
+                        self.dup_attempts,
+                        self.kill_count,
+                        self.kill_attempts,
+                    ]
+                ).reshape(1, 5)
+                with open(self.stats_filename, "ab") as f:
+                    np.savetxt(
+                        f,
+                        stats,
+                        delimiter=" ",
+                        newline="\n",
+                        fmt="%d",
+                    )
+            else:  # calculate percentages and ratios and write to output
+                try:
+                    kill_perc = 100 * self.kill_count / self.kill_attempts
+                except ZeroDivisionError:
+                    kill_perc = np.nan
+                try:
+                    dup_perc = 100 * self.dup_count / self.dup_attempts
+                except ZeroDivisionError:
+                    dup_perc = np.nan
+                try:
+                    ratio_succ = self.dup_count / self.kill_count
+                except ZeroDivisionError:
+                    ratio_succ = np.nan
+                try:
+                    ratio_attempts = self.dup_attempts / self.kill_attempts
+                except ZeroDivisionError:
+                    ratio_attempts = np.nan
+                print(f"After {step} time steps:")
+                print(
+                    "Birth events: "
+                    + f"{self.dup_count}/{self.dup_attempts} ({dup_perc:.4}%)"
+                )
+                print(
+                    "Death events: "
+                    + f"{self.kill_count}/{self.kill_attempts} ({kill_perc:.4}%)"
+                )
+                print(
+                    "Ratio birth/death: "
+                    + f"{ratio_succ:.4} (succesful) / {ratio_attempts:.4} (attemps)"
+                )
+                print()
+            if reset:
+                self.reset()
 
 
 def calc_kernel(dist: np.ndarray, bw: np.ndarray) -> np.ndarray:
@@ -289,7 +330,7 @@ def calc_kernel(dist: np.ndarray, bw: np.ndarray) -> np.ndarray:
     return (
         1
         / ((2 * np.pi) ** (len(bw) / 2) * np.prod(bw))
-        * np.exp(-np.sum(dist ** 2 / (2 * bw ** 2), axis=1))
+        * np.exp(-np.sum(dist**2 / (2 * bw**2), axis=1))
     )
 
 
@@ -341,7 +382,7 @@ def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
     :param bw: bandwidth parameter of kernel
     :return density: estimated density at each walker
     """
-    from scipy.spatial.distance import pdist, squareform
+    from scipy.spatial.distance import pdist, squareform  # type: ignore
 
     n_dim = pos.shape[1]
     if n_dim == 1:  # faster version for 1d, otherwise identical
@@ -354,9 +395,8 @@ def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
         n_part = pos.shape[0]
         gauss_per_dim = np.empty((n_dim, (n_part * (n_part - 1)) // 2), dtype=np.double)
         heights = 1 / (np.sqrt(2 * np.pi) * bw)
-        for i in range(
-            n_dim
-        ):  # significantly faster variant than calling the kernel function
+        for i in range(n_dim):
+            # significantly faster variant than calling the kernel function
             dist = pdist(pos[:, i].reshape(-1, 1), "sqeuclidean")
             gauss_per_dim[i] = heights[i] * np.exp(-dist / (2 * bw[i] ** 2))
         # multiply directions and convert to full matrix
@@ -368,7 +408,11 @@ def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
 def dens_kernel_convolution(
     eq_density: grid.Grid, bw: np.ndarray, conv_mode: str
 ) -> grid.Grid:
-    """Return convolution of the equilibrium probability density with the kernel
+    """Return convolution of the a probability density with the kernel
+
+    This is equivalent to doing a kernel density estimation
+
+    In practice only used to calculate K * pi, i.e. the KDE of the equilibrium density
 
     If the "valid" conv_mode is used the returned grid is smaller than the original one.
     The "same" mode will return a grid with the same ranges, but might have issues
@@ -389,7 +433,7 @@ def dens_kernel_convolution(
     return grid.convolve(eq_density, kernel, mode=conv_mode, method="direct")
 
 
-def calc_prob_correction_kernel(
+def calc_additive_correction(
     eq_density: grid.Grid, bw: np.ndarray, conv_mode: str = "same"
 ) -> grid.Grid:
     """Additive correction for the probabilites due to the Gaussian Kernel
@@ -430,6 +474,6 @@ def nd_trapz(data: np.ndarray, dx: Union[List[float], float]) -> float:
         if dx:  # list not empty
             # recurse with last dimension integrated
             return nd_trapz(nd_trapz(data, dx=dx[-1]), dx[:-1])
-        return data  # innermost iteration gives empty list
+        return data  # innermost iteration gives empty list --> recursion finished
     # single dimension
     return np.trapz(data, dx=dx)

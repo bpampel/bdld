@@ -23,7 +23,7 @@ The respective Langevin equation is
   \mathop{}\!\mathrm{d} p(t) = - \nabla U(q) \mathop{}\!\mathrm{d} t - \gamma p(t) \mathop{}\!\mathrm{d} t + \sqrt{2 m \gamma \beta^{-1} } \mathop{}\!\mathrm{d} W (t)
 
 
-The update rule for the overdamped integrator is given by the simpler equation that can be found in [#2]_:
+The update rule for the overdamped integrator is a Euler-Maruyama scheme [#2]_ given by the simpler equation that was e.g. used in [#3]_:
 
 .. math::
   x(t+\Delta t) = x(t) - \Delta t \nabla U(x(t)) + \sqrt{2 \Delta t} W (t+\Delta t)
@@ -63,6 +63,6 @@ Example
 References
 ^^^^^^^^^^
 
-
-.. [#1] Giovanni Bussi and Michele Parrinello. Accurate sampling using Langevin dynamics. Physical Review E, 75(5):056707, May 2007.
-.. [#2] Yulong Lu, Jianfeng Lu, and James Nolen. Accelerated Langevin Sampling with Birth-Death. arXiv:1905.09863v1
+.. [#1] Giovanni Bussi and Michele Parrinello. Accurate sampling using Langevin dynamics. Physical Review E, 75(5):056707, May 2007. doi: 10.1103/PhysRevE.75.056707
+.. [#2] Gisiro Maruyama. Continuous Markov Processes and Stochastic Equations. Rendiconti del Circolo Matematico di Palermo 4(1):48–90. 1955. doi: 10.1007/10.1007/BF02846028
+.. [#3] Yulong Lu, Jianfeng Lu, and James Nolen. Accelerated Langevin Sampling with Birth-Death. arXiv:1905.09863v1

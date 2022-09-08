@@ -1,15 +1,18 @@
-"""Implement a simple histogramming and FES calculation class"""
+"""Implement a simple histogramming class"""
 
-from typing import List, Optional, Union, Tuple
+from typing import List, Union, Tuple
 import numpy as np
 
 from bdld import grid
 
 
 class Histogram(grid.Grid):
-    """Histogram data and calculate FES from the histogram
+    """Histogram data into grid bins by using numpy's histogramdd
 
-    This uses the Grid class for underlying structure and only adds some histogram functions
+    This uses the Grid class for underlying structure and adds some histogram functions
+    The main difference is that the Histogram stores values for the intervals between the
+    grid points instead of the values *at* the grid points.
+    Note that this is actually a bad way to do it from an OOP perspective (--> Liskov broken)
     Also explicitely stores the bin edges (as opposed to only the n_points of the Grid class)
 
     Also allows histogramming over time, i.e. adding more data to the existing histogram
@@ -18,7 +21,6 @@ class Histogram(grid.Grid):
     :param histo_ranges: extent of histogram (min, max) per dimension
     :param bins: bin edges of the histogram per dimension
     :param data: histogram data
-    :param fes: the free energy values corresponding to the histogram stored in data
     """
 
     def __init__(
@@ -38,7 +40,6 @@ class Histogram(grid.Grid):
         self.stepsizes = grid.stepsizes_from_npoints(ranges, [n + 1 for n in n_bins])
         self.histo_ranges = ranges
         self.n_dim = len(ranges)
-        self.fes: Optional[np.ndarray] = None
         # create bins from arbitrary value, there doesn't seem to be a function doing it
         self.data, self.bins = np.histogramdd(
             np.zeros((1, len(self.n_points))),
@@ -80,30 +81,3 @@ class Histogram(grid.Grid):
 
         The base function would return them with points at the borders"""
         return self.bin_centers()
-
-    def calculate_fes(self, kt: float, mintozero: bool = True) -> grid.Grid:
-        """Calculate free energy surface from histogram
-
-        Overwrites the fes attribute from the class instance and returns the data
-        in plottable form
-
-        :param float kt: thermal energy of the system
-        :param bool mintozero: shift FES to have minimum at zero
-
-        :return fes: Grid with the fes values as data
-        """
-        fes = np.where(
-            self.data == 0, np.inf, -kt * np.log(self.data, where=(self.data != 0))
-        )
-        if mintozero:
-            minimum = np.min(fes)
-            if minimum != np.inf:  # otherwise all values become nan
-                fes -= np.min(fes)
-        self.fes = fes
-        return self.get_fes_grid()
-
-    def get_fes_grid(self) -> grid.Grid:
-        """Returns the fes as Grid instead of numpy array"""
-        new_grid = self.copy_empty()
-        new_grid.data = self.fes
-        return new_grid
