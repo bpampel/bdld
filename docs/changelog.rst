@@ -7,6 +7,7 @@ This file documents the bigger changes between versions
 [0.3.2] - upcoming
 ^^^^^^^^^^^^^^^^^^^^^^
 
+- add `recalculate-probabilities` option to birth-death action for permanent usage
 - fixed periodic boundary conditions
 - FES is no longer data member of Histogram class but stored as separate grid in the FesAction
 - helper functions required only by single action moved to the respective modules
