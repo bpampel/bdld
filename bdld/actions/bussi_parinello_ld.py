@@ -8,7 +8,6 @@ It works by introducing thermostat steps between the velocity Verlet ones, the
 algorithm is designed to yield also the correct sampling in the overdamped limit
 """
 
-from enum import Enum, auto
 from typing import List, Optional, Union
 import numpy as np
 
@@ -22,7 +21,7 @@ class BpldParticle(Particle):
 
     :param energy: stores last energy evaluation
     :param forces: stores last force evaluation per dimension
-    :param float c2: constant for the MD thermostat (mass dependent)
+    :param c2: constant for the MD thermostat (mass dependent)
     """
 
     def __init__(self, *args) -> None:

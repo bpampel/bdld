@@ -1,7 +1,6 @@
 """Module holding action to analyse distribution of particles in states"""
 
 from collections import OrderedDict
-import logging
 from typing import List, Optional, Tuple
 
 import numpy as np

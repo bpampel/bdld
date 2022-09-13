@@ -1,7 +1,7 @@
 """Potential class to be evaluated with md"""
 
 import enum
-from typing import Callable, List, Union, Tuple
+from typing import List, Union, Tuple
 import numpy as np
 
 from bdld import grid
