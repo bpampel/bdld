@@ -11,7 +11,12 @@ from bdld.helpers.misc import initialize_file, make_ordinal
 
 
 class DeltaFAction(Action):
-    """Calculate Delta F from fes and print or save it to file"""
+    """Calculate Delta F from fes and print or save it to file
+
+    If no filename is specified this still calculates the values (for possible usage
+    in other actions) but never actually writes them to file
+
+    """
 
     def __init__(
         self,
@@ -26,7 +31,7 @@ class DeltaFAction(Action):
         """Set up action that calculates free energy differences between states
 
         If no stride is given, this action is not run periodically
-        but can manually be triggered.
+        but can manually be triggered (e.g. with final_run()).
         If a stride is given, it needs to be a multiple of the stride of the
         FesAction to make sense
 
@@ -34,8 +39,7 @@ class DeltaFAction(Action):
         :param masks: List of masks that define the states
         :param stride: calculate delta f every n time steps, optional
         :param filename: filename to save fes to, optional
-        :param fileheader: header for wiles
-        :param write_stride: write to file every n time steps, default None (never)
+        :param write_stride: write to file every n time steps, default 0 (never)
         :param write_fmt: numeric format for saving the data, default "%14.9f"
         :param ref: reference FES to calculate reference values
         """
@@ -43,23 +47,21 @@ class DeltaFAction(Action):
         self.fes_action = fes_action
         check_mask_shapes(masks, fes_action.fes.data)
         self.masks = masks
-        self.stride = stride
+        self.stride = stride or 0
+        self.write_stride = 0  # only set this if a stride is specified
         if self.stride:
             if not self.fes_action.stride or self.stride % self.fes_action.stride != 0:
                 print("Warning: the DeltaF stride is no multiple of the FES stride.")
+            if write_stride and not filename:
+                e = "Specifying a write_stride but no filename makes no sense"
+                raise ValueError(e)
             self.write_stride = write_stride or self.stride * 100
             if self.write_stride % self.stride != 0:
                 e = "The write stride must be a multiple of the update stride."
                 raise ValueError(e)
-            if not filename:
-                e = "Specifying a write_stride but no filename makes no sense"
-                raise ValueError(e)
             # time + (masks -1) values per evaluation
             self.delta_f = np.empty((self.write_stride // self.stride, len(self.masks)))
             self.last_write: int = 0
-            print(
-                f"Saving delta-f of every {make_ordinal(self.stride)} time step to '{filename}'"
-            )
         else:  # just store one data set
             self.delta_f = np.empty((len(self.masks)))
 
@@ -79,6 +81,10 @@ class DeltaFAction(Action):
                 for i, val in enumerate(self.ref_values):
                     constants[f"ref_{fields[i]}"] = val
             initialize_file(self.filename, fields, constants)
+            stride_str = f"of every {make_ordinal(self.stride)} time step " if self.stride else ""
+            print(
+                "Saving delta-f " + stride_str + f"to '{filename}'"
+            )
         self.write_fmt = write_fmt if write_fmt else "%14.9f"
         print()
 

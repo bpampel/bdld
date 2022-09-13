@@ -350,7 +350,7 @@ class Input:
         if not self.fes:
             raise configparser.NoSectionError("fes")
         options = [
-            InputOption("stride", int, True, Input.positive),
+            InputOption("stride", int, False, Input.positive),
             InputOption("filename", str, False),
             InputOption("write-stride", int, False, Input.positive),
             InputOption("fmt", str, False),
@@ -361,7 +361,7 @@ class Input:
     def parse_particle_distribution(self, section: configparser.SectionProxy) -> None:
         """Define and parse if statistics about particles should be printed periodically"""
         options = [
-            InputOption("stride", int, True, Input.positive),
+            InputOption("stride", int, False, Input.positive),
             InputOption("filename", str, False),
             InputOption("write-stride", int, False, Input.positive),
             InputOption("fmt", str, False),

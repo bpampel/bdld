@@ -6,8 +6,9 @@ Free energy difference between states [delta-f]
 Calculate the difference between states from the :ref:`[fes] action <fes>`
 
 
-**stride**: *int*
+**stride**: *int*, optional
   Time steps between calculations.
+  If not specified, it will only be calculated at the end of the simulation.
 
 States are specified as rectangular areas of the coordinates, defined by min and max values.
 
