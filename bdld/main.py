@@ -237,10 +237,27 @@ def setup_birth_death(options: Dict, ld: BussiParinelloLD) -> BirthDeath:
             "birth-death",
         )
 
-    if options["correction-variant"]:
-        eq_density: Optional[Grid] = bd_prob_density(ld.pot, bd_bw, ld.kt)
-    else:
-        eq_density = None
+    # helper function to avoid duplication. Can be removed when correction-variant is removed
+    def get_approx_variant(key):
+        if options[key]:
+            try:
+                approx_variant = ApproxVariant.from_str(options[key])
+            except KeyError as err:
+                e = "The specified {} could not be understood".format(key)
+                raise inputparser.OptionError(e, "birth-death", key) from err
+            return approx_variant
+        return None
+
+    ApproxVariant = actions.birth_death.ApproxVariant
+    approx_variant = ApproxVariant.orig  # default
+    # currently both are accepted but approximation-variant has precedence
+    for key in ["correction-variant", "approximation-variant"]:
+        # keep previous if not existing
+        approx_variant = get_approx_variant(key) or approx_variant
+
+    eq_density = None
+    if approx_variant in [ApproxVariant.add, ApproxVariant.mult]:
+        eq_density = bd_prob_density(ld.pot, bd_bw, ld.kt)
     return BirthDeath(
         ld.particles,
         ld.dt,
@@ -249,7 +266,7 @@ def setup_birth_death(options: Dict, ld: BussiParinelloLD) -> BirthDeath:
         ld.kt,
         options["exponential-factor"],
         options["recalculate-probabilities"],
-        options["correction-variant"],
+        approx_variant,
         eq_density,
         options["seed"] + 1000 if options["seed"] else None,
         options["stats-stride"],

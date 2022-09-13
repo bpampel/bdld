@@ -2,6 +2,7 @@
 
 from collections import OrderedDict
 import copy
+import enum
 from typing import List, Optional, Union, Tuple
 
 import numpy as np
@@ -10,6 +11,27 @@ from bdld.actions.action import Action
 from bdld.actions.bussi_parinello_ld import BpldParticle
 from bdld import grid
 from bdld.helpers.misc import initialize_file
+
+
+class ApproxVariant(enum.Enum):
+    """Enum for the different approximation variants"""
+    orig = "original"
+    add = "additive"
+    mult = "multiplicative"
+
+    @classmethod
+    def from_str(cls, label: str) -> 'ApproxVariant':
+        """Return class instance from matching string"""
+        match label:
+            case "original" | "orig":
+                return ApproxVariant.orig
+            case "additive" | "add":
+                return ApproxVariant.add
+            case "multiplicative" | "mult":
+                return ApproxVariant.mult
+            case _:
+                raise NotImplementedError
+
 
 
 class BirthDeath(Action):
@@ -24,10 +46,10 @@ class BirthDeath(Action):
     :param inv_kt: inverse of kt for faster access
     :param bw: bandwidth for gaussian kernels per direction
     :param rate_fac: factor for b/d probabilities in exponential
-    :param correction_variant: correction from original algorithm
-    :param correction: Grid holding the correction values.
-                       Note that these have different meaning depending on the
-                       variant (additive / multiplicative)
+    :param approx_variant: type of approximation (lambda)
+    :param approx_grid: helper grid storing some values depending only on pi
+                        Note that this has different values depending on the
+                        variant (additive / multiplicative)
     :param rng: random number generator instance for birth-death moves
     :param stats: Stats class instance collecting statistics
     """
@@ -41,7 +63,7 @@ class BirthDeath(Action):
         kt: float,
         rate_fac: Optional[float] = None,
         recalc_probs: bool = False,
-        correction_variant: Optional[str] = None,
+        approx_variant : Optional[ApproxVariant] = None,
         eq_density: Optional[grid.Grid] = None,
         seed: Optional[int] = None,
         stats_stride: Optional[int] = None,
@@ -56,9 +78,9 @@ class BirthDeath(Action):
         :param kt: thermal energy of system
         :param rate_fac: factor of probabilities in exponential, default 1
         :param recalc_probs: Recalculate probabilities after each event
-        :param correction_variant: correction from original algorithm
-                                   can be "additive", "multiplicative" or None
+        :param approx_variant: type of approximation (lambda), defaults to original
         :param eq_density: Equilibrium probability density of system
+                           Required for additive and multiplicative approximations
         :param seed: Seed for rng (optional)
         :param stats_stride: Print statistics every n time steps
         :param stats_filename: File to print statistics to (optional, else stdout)
@@ -87,28 +109,27 @@ class BirthDeath(Action):
             print(f"  seed = {seed}")
         if recalc_probs:
             print("  recalculating the probabilities after every successful event")
-        self.correction_variant: Optional[str] = correction_variant
-        self.correction: Optional[grid.Grid] = None
-        if self.correction_variant:
-            if not eq_density:
-                raise ValueError("No equilibrium density for the correction was passed")
-            if self.correction_variant == "additive":
-                print("  using the additive correction")
-                # multiplicative: correction grid holds
+        self.approx_variant = approx_variant or ApproxVariant.orig
+        self.approx_grid: Optional[grid.Grid] = None
+        match self.approx_variant:
+            case ApproxVariant.orig:
+                print("  using the original approximation")
+            case ApproxVariant.add:
+                if not eq_density:
+                    raise ValueError("No equilibrium density for the additive approximation was passed")
+                print("  using the additive approximation")
+                # multiplicative: approx_grid holds
                 # -log(K*pi) + log(pi) - {average of the first two terms}
-                self.correction = calc_additive_correction(eq_density, self.bw, "same")
-            elif self.correction_variant == "multiplicative":
-                print("  using the multiplicative correction")
-                # multiplicative: correction grid holds -log(K*pi)
+                self.approx_grid = calc_additive_correction(eq_density, self.bw, "same")
+            case ApproxVariant.mult:
+                if not eq_density:
+                    raise ValueError("No equilibrium density for the multiplcative approximation was passed")
+                print("  using the multiplicative approximation")
+                # multiplicative: approx_grid holds -log(K*pi)
                 conv = dens_kernel_convolution(eq_density, self.bw, "same")
-                self.correction = -np.log(
+                self.approx_grid = -np.log(
                     grid.sparsify(conv, [101] * conv.n_dim, "linear")
                 )
-            else:
-                raise ValueError(
-                    f"Specified correction variant {self.correction_variant} was not understood"
-                )
-
         print()
 
     def run(self, step: int) -> None:
@@ -202,19 +223,21 @@ class BirthDeath(Action):
             # density can be zero and make beta -inf. Filter when averaging in next step
             beta = np.log(walker_density(pos, self.bw))
 
-        # if outside of corrections grid: doesn't throw error but sets correction to 0
-        if self.correction_variant == "additive" or not self.correction_variant:
-            ene = np.array([p.energy for p in self.particles])
-            beta += ene * self.inv_kt
-            beta -= np.mean(beta[beta != -np.inf])
-            if self.correction_variant == "additive":
-                beta += self.correction.interpolate(pos, "linear", 0.0).reshape(
-                    len(pos)
-                )
-        elif self.correction_variant == "multiplicative":
-            # do not use actual energies, just add the smoothed density
-            beta += self.correction.interpolate(pos, "linear", 0.0).reshape(len(pos))
-            beta -= np.mean(beta[beta != -np.inf])
+        match self.approx_variant:
+            case ApproxVariant.orig | ApproxVariant.add:
+                # add the energies and subtract the mean energy
+                ene = np.array([p.energy for p in self.particles])
+                beta += ene * self.inv_kt
+                beta -= np.mean(beta[beta != -np.inf])
+                if self.approx_variant == ApproxVariant.add:
+                    # if outside of approx_grid: doesn't throw error but sets correction to 0
+                    beta += self.approx_grid.interpolate(pos, "linear", 0.0).reshape(
+                        len(pos)
+                    )
+            case ApproxVariant.mult:
+                # do not use actual energies, just add the smoothed density
+                beta += self.approx_grid.interpolate(pos, "linear", 0.0).reshape(len(pos))
+                beta -= np.mean(beta[beta != -np.inf])
         return beta
 
     def random_other(self, num_part: int, excl: int) -> int:
