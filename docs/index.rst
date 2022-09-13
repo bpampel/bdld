@@ -12,6 +12,7 @@ Birth-Death augmented Langevin Dynamics
   usage
   input
   developer
+  changelog
 
 
 This python package provides a simple Langevin Dynamics simulation with additional birth-death processes

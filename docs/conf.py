@@ -19,11 +19,11 @@ sys.path.insert(0, os.path.abspath("../"))
 # -- Project information -----------------------------------------------------
 
 project = "Birth-Death Langevin Dynamics"
-copyright = "2021, Benjamin Pampel"
+copyright = "2022, Benjamin Pampel"
 author = "Benjamin Pampel"
 
 # The full version, including alpha/beta/rc tags
-release = "v0.2"
+release = "v0.3.1"
 
 
 # -- General configuration ---------------------------------------------------
