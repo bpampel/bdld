@@ -8,6 +8,8 @@ This file documents the bigger changes between versions
 ^^^^^^^^^^^^^^^^^^^^^^
 
 - add `recalculate-probabilities` option to birth-death action for permanent usage
+- rename `correction-variant` to `approximation-variant` in code and allow this in the input
+- deprecate the `correction-variant` option (but currently still supported)
 - fixed periodic boundary conditions
 - fix crash in DeltaF and ParticleDistribution if no filename was specified
 - FES is no longer data member of Histogram class but stored as separate grid in the FesAction
