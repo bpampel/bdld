@@ -157,7 +157,7 @@ class Input:
         infile.read(self.filename)
 
         for required_sec in ["ld", "potential", "particles"]:
-            if not required_sec in infile.sections():
+            if required_sec not in infile.sections():
                 raise SectionError(required_sec)
 
         self.parse_ld(infile["ld"])
