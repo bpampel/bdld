@@ -30,7 +30,7 @@ class ApproxVariant(enum.Enum):
         elif label in ["multiplicative", "mult"]:
             return ApproxVariant.mult
         else:
-            raise NotImplementedError
+            raise TypeError
 
 
 class BirthDeath(Action):

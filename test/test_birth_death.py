@@ -25,7 +25,7 @@ def setup_bd_action(t: "BirthDeathTests") -> bd.BirthDeath:
         t.kt,
         t.rate_fac,
         t.recalc_probs,
-        t.correction_variant,
+        t.approx_variant,
         t.eq_density,
         t.seed,
         t.stats_stride,
@@ -46,7 +46,7 @@ def setup_eq_dens_and_particles(t: "BirthDeathTests") -> None:
     # set up 4 particles
     particles = []
     positions = np.array([np.array([p]) for p in [0, 0.5, 0.5, 1]])
-    # energies from density (only relevant for corrections)
+    # energies from density (only relevant for approximations)
     energies = (
         -np.log(
             eq_density.interpolate(positions).reshape(
@@ -75,7 +75,7 @@ class BirthDeathTests(unittest.TestCase):
     rate_fac = 2.0
     recalc_probs = False
     eq_density = None
-    correction_variant = None
+    approx_variant = bd.ApproxVariant.orig
     seed = None
     stats_stride = None
     stats_filename = None
@@ -89,12 +89,12 @@ class BirthDeathTests(unittest.TestCase):
         np.testing.assert_equal(bd_action.bw, np.array([1.0]))
         self.assertEqual(bd_action.stats.dup_count, 0)
 
-    def test_init_corrections(self):
-        """Test some more init cases, mostly the correction setup
+    def test_init_approximations(self):
+        """Test some more init cases, mostly the approximations setup
 
-        Tests for the grids of the corrections are in individual functions
+        Tests for the grids of the approximations are in individual functions
         """
-        self.correction_variant = "additive"
+        self.approx_variant = bd.ApproxVariant.add
         with self.assertRaises(ValueError):
             setup_bd_action(self)  # no eq_density
 
@@ -102,17 +102,16 @@ class BirthDeathTests(unittest.TestCase):
         self.eq_density.data = np.ones(10) * 0.1
         bd_action = setup_bd_action(self)
 
-        self.correction_variant = "additive"
+        self.approx_variant = bd.ApproxVariant.from_str("add")
         bd_action = setup_bd_action(self)
 
-        self.correction_variant = "multiplicative"
+        self.approx_variant = bd.ApproxVariant.from_str("mult")
         bd_action = setup_bd_action(self)
 
-        self.correction_variant = "error"
-        with self.assertRaises(ValueError):
-            setup_bd_action(self)  # unknown correction
+        with self.assertRaises(TypeError): # unknown approximation
+            self.approx_variant = bd.ApproxVariant.from_str("err")
 
-    # now test the functions used to calculate the densities and corrections
+    # now test the functions used to calculate the densities and approxs
 
     def test_kernel_1d(self):
         """Test the gaussian kernel in 1d"""
@@ -211,15 +210,15 @@ class BirthDeathTests(unittest.TestCase):
         energies = np.array([p.energy for p in self.particles])
 
         # now alterate over the variants
-        self.correction_variant = None
+        self.approx_variant = bd.ApproxVariant.orig
         bd_action = setup_bd_action(self)
         beta_no_corr = bd_action.calc_betas()
 
-        self.correction_variant = "additive"
+        self.approx_variant = bd.ApproxVariant.add
         bd_action = setup_bd_action(self)
         beta_add_corr = bd_action.calc_betas()
 
-        self.correction_variant = "multiplicative"
+        self.approx_variant = bd.ApproxVariant.mult
         bd_action = setup_bd_action(self)
         beta_mult_corr = bd_action.calc_betas()
 
@@ -242,7 +241,7 @@ class BirthDeathTests(unittest.TestCase):
         np.testing.assert_array_almost_equal(beta_add_corr, beta_add_corr_man)
 
         # for the multiplicative correction: recombine the calculated values
-        self.correction_variant = "multiplicative"
+        self.approx_variant = bd.ApproxVariant.mult
         beta_mult_corr_man = np.log(K_rho) - np.log(
             K_pi.interpolate(positions).reshape(
                 4,
@@ -258,7 +257,7 @@ class BirthDeathTests(unittest.TestCase):
 
         This needs to be run after the previous one, as we use the same particles
         """
-        self.correction_variant = None
+        self.approx_variant = bd.ApproxVariant.orig
         self.seed = 1111  # fix seed
         setup_eq_dens_and_particles(self)
         bd_action = setup_bd_action(self)

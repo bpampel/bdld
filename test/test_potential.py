@@ -18,7 +18,7 @@ class PotentialTests(unittest.TestCase):
         np.testing.assert_array_equal(pot.der[0], [0, 2])
         self.assertFalse(pot.ranges)
         self.assertEqual(f"{pot}", "polynomial with coefficients [0 0 1]")
-        with self.assertRaises(ValueError):  # more than 3 dim
+        with self.assertRaises(NotImplementedError):  # more than 3 dim
             pot = polynomial.PolynomialPotential(np.ones((1, 1, 1, 4)))
 
     def test_evaluate(self):
