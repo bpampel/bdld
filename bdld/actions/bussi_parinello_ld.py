@@ -110,6 +110,7 @@ class BussiParinelloLD(Action):
         :param pos: list or numpy array with initial position of the particle per dimension
         :param partnum: specifies particle number (position in list). Default is -1 (at end)
         :param overwrite: overwrite existing particle instead of inserting (default False)
+        :raises ValueError: when dimensions of pos and potential do not match
         """
         if len(pos) != self.pot.n_dim:
             raise ValueError(

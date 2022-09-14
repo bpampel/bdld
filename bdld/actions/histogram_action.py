@@ -47,6 +47,8 @@ class HistogramAction(Action):
         :param filename: optional filename to save histogram to
         :param write_stride: write to file every n time steps, default None (never)
         :param write_fmt: numeric format for saving the data, default "%14.9f"
+        :raise ValueError: if a write_stride but no filename is passed
+        :raise ValueError: if histogram and system dimensions do not match
         """
         print(
             f"Setting up histogram for the trajectories\n"

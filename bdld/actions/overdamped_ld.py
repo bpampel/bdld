@@ -93,6 +93,7 @@ class OverdampedLD(Action):
         :param mass: mass of particles (ignored in algorithm)
         :param partnum: specifies particle number (position in list). Default is -1 (at end)
         :param overwrite: overwrite existing particle instead of inserting (default False)
+        :raises ValueError: when dimensions of pos and potential do not match
         """
         if len(pos) != self.pot.n_dim:
             raise ValueError(

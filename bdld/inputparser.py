@@ -415,6 +415,8 @@ def numbered_state_options(section: configparser.SectionProxy) -> List[InputOpti
     The state InputOptions are lists regardless of dimensions
 
     :param section: section of configparser to search through
+    :raises OptionError: if number of min and max options don't match
+    :raises OptionError: if no min and max actions were found
     """
     n_states = len(get_all_numbered_values(section, "state", "-min"))
     if n_states != len(get_all_numbered_values(section, "state", "-max")):
@@ -453,6 +455,8 @@ def min_max_to_ranges(
 
     :param min_list: list with all minimum points of the intervals
     :param max_list: list with all maximum points of the intervals
+    :raises ValueError: when the length of the lists do not match
+    :raises ValueError: when the dimensions of any min-max pair don't match
     """
     n_items = len(min_list)
     if n_items != len(max_list):

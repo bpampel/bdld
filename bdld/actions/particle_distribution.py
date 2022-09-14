@@ -39,6 +39,8 @@ class ParticleDistributionAction(Action):
         :param filename: filename to write to, optional
         :param write_stride: write to file every n time steps, default 100
         :param write_fmt: numeric format for saving the data, default "%14.9f"
+        :raise ValueError: if a write_stride but no filename is passed
+        :raise ValueError: if the write_stride is no multiple of the stride
         """
         print("Setting up action to analyse distribution of walkers")
         self.particles = particles

@@ -52,6 +52,7 @@ class BirthDeath(Action):
                         variant (additive / multiplicative)
     :param rng: random number generator instance for birth-death moves
     :param stats: Stats class instance collecting statistics
+    :raises
     """
 
     def __init__(
@@ -84,6 +85,7 @@ class BirthDeath(Action):
         :param seed: Seed for rng (optional)
         :param stats_stride: Print statistics every n time steps
         :param stats_filename: File to print statistics to (optional, else stdout)
+        :raises ValueError: when approx_variant is add or mult and no eq_density is passed
         """
         self.particles: List[BpldParticle] = particles
         self.stride: int = stride
@@ -123,7 +125,7 @@ class BirthDeath(Action):
                 self.approx_grid = calc_additive_correction(eq_density, self.bw, "same")
             case ApproxVariant.mult:
                 if not eq_density:
-                    raise ValueError("No equilibrium density for the multiplcative approximation was passed")
+                    raise ValueError("No equilibrium density for the multiplicative approximation was passed")
                 print("  using the multiplicative approximation")
                 # multiplicative: approx_grid holds -log(K*pi)
                 conv = dens_kernel_convolution(eq_density, self.bw, "same")

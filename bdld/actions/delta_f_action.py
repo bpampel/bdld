@@ -42,6 +42,8 @@ class DeltaFAction(Action):
         :param write_stride: write to file every n time steps, default 0 (never)
         :param write_fmt: numeric format for saving the data, default "%14.9f"
         :param ref: reference FES to calculate reference values
+        :raise ValueError: if a write_stride but no filename is passed
+        :raise ValueError: if the write_stride is no multiple of the stride
         """
         print("Setting up delta-f action")
         self.fes_action = fes_action

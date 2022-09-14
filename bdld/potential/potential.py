@@ -82,8 +82,8 @@ class Potential:
         :param kt: Thermal energy of system
         :param ranges: List of ranges of the grid per dimension (min, max)
         :param grid_points: number of points per dimension
-        :return grid: meshgrid with the positions of the points
-        :return prob: normalized probablities at the grid points
+        :raises ValueError: if dimensions of points or ranges and potential do not match
+        :return prob: grid with normalized probablities
         """
         if len(ranges) != self.n_dim:
             raise ValueError("Dimension of ranges do not match potential")

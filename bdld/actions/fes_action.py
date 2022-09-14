@@ -59,6 +59,10 @@ class FesAction(Action):
         :param plot_filename: filename for plot, optional
         :param plot_domain: specify domain for plots, optional
         :param ref: reference fes for plot, optional
+        :raise ValueError: if a write_stride but no stride is passed
+        :raise ValueError: if a write_stride but no filename is passed
+        :raise ValueError: if a plot_stride but no stride is passed
+        :raise ValueError: if a plot_stride but no plot_filename is passed
         """
         print("Setting up FES calculation for the histogram\n" + "Parameters:")
         self.histo_action = histo_action

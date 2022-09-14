@@ -219,6 +219,8 @@ def convolve(g1: Grid, g2: Grid, mode: str = "valid", method: str = "auto") -> G
 
     :param g1, g2: grids to convolute
     :param mode: convolution mode, see scipy.signal.convolve for details
+    :raises ValueError: if g1 and g2 have different stepsizes
+    :raises NotImplementedError: if mode="full"
     :return grid: New grid containing the convolutin
     """
     if not g1.stepsizes == g2.stepsizes:
@@ -243,7 +245,7 @@ def convolve(g1: Grid, g2: Grid, mode: str = "valid", method: str = "auto") -> G
             ranges.append((gl.ranges[dim][0] + offset, gl.ranges[dim][1] - offset))
         grid = from_npoints(ranges, n_points)
     if mode == "full":
-        raise ValueError("Currently not implemented")
+        raise NotImplementedError
     grid.data = conv
     return grid
 
@@ -266,6 +268,8 @@ def from_npoints(
 
     :param ranges: List with (min,max) positions of the grid
     :param n_points: Either list with points per dimension or single value for all
+    :raises ValueError: if dimensions of ranges and number of points do not match
+    :return grid: empty grid with specified ranges and number of points
     """
     grid = Grid()
     grid.n_dim = len(ranges)
