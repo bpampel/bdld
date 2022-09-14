@@ -23,15 +23,14 @@ class ApproxVariant(enum.Enum):
     @classmethod
     def from_str(cls, label: str) -> "ApproxVariant":
         """Return class instance from matching string"""
-        match label:
-            case "original" | "orig":
-                return ApproxVariant.orig
-            case "additive" | "add":
-                return ApproxVariant.add
-            case "multiplicative" | "mult":
-                return ApproxVariant.mult
-            case _:
-                raise NotImplementedError
+        if label in ["original", "orig"]:
+            return ApproxVariant.orig
+        elif label in ["additive", "add"]:
+            return ApproxVariant.add
+        elif label in ["multiplicative", "mult"]:
+            return ApproxVariant.mult
+        else:
+            raise NotImplementedError
 
 
 class BirthDeath(Action):
@@ -113,29 +112,28 @@ class BirthDeath(Action):
             print("  recalculating the probabilities after every successful event")
         self.approx_variant = approx_variant or ApproxVariant.orig
         self.approx_grid: Optional[grid.Grid] = None
-        match self.approx_variant:
-            case ApproxVariant.orig:
-                print("  using the original approximation")
-            case ApproxVariant.add:
-                if not eq_density:
-                    raise ValueError(
-                        "No equilibrium density for the additive approximation was passed"
-                    )
-                print("  using the additive approximation")
-                # multiplicative: approx_grid holds
-                # -log(K*pi) + log(pi) - {average of the first two terms}
-                self.approx_grid = calc_additive_correction(eq_density, self.bw, "same")
-            case ApproxVariant.mult:
-                if not eq_density:
-                    raise ValueError(
-                        "No equilibrium density for the multiplicative approximation was passed"
-                    )
-                print("  using the multiplicative approximation")
-                # multiplicative: approx_grid holds -log(K*pi)
-                conv = dens_kernel_convolution(eq_density, self.bw, "same")
-                self.approx_grid = -np.log(
-                    grid.sparsify(conv, [101] * conv.n_dim, "linear")
+        if self.approx_variant == ApproxVariant.orig:
+            print("  using the original approximation")
+        elif self.approx_variant == ApproxVariant.add:
+            if not eq_density:
+                raise ValueError(
+                    "No equilibrium density for the additive approximation was passed"
                 )
+            print("  using the additive approximation")
+            # multiplicative: approx_grid holds
+            # -log(K*pi) + log(pi) - {average of the first two terms}
+            self.approx_grid = calc_additive_correction(eq_density, self.bw, "same")
+        elif self.approx_variant == ApproxVariant.mult:
+            if not eq_density:
+                raise ValueError(
+                    "No equilibrium density for the multiplicative approximation was passed"
+                )
+            print("  using the multiplicative approximation")
+            # multiplicative: approx_grid holds -log(K*pi)
+            conv = dens_kernel_convolution(eq_density, self.bw, "same")
+            self.approx_grid = -np.log(
+                grid.sparsify(conv, [101] * conv.n_dim, "linear")
+            )
         print()
 
     def run(self, step: int) -> None:
@@ -229,23 +227,20 @@ class BirthDeath(Action):
             # density can be zero and make beta -inf. Filter when averaging in next step
             beta = np.log(walker_density(pos, self.bw))
 
-        match self.approx_variant:
-            case ApproxVariant.orig | ApproxVariant.add:
-                # add the energies and subtract the mean energy
-                ene = np.array([p.energy for p in self.particles])
-                beta += ene * self.inv_kt
-                beta -= np.mean(beta[beta != -np.inf])
-                if self.approx_variant == ApproxVariant.add:
-                    # if outside of approx_grid: doesn't throw error but sets correction to 0
-                    beta += self.approx_grid.interpolate(pos, "linear", 0.0).reshape(
-                        len(pos)
-                    )
-            case ApproxVariant.mult:
-                # do not use actual energies, just add the smoothed density
+        if self.approx_variant in [ApproxVariant.orig, ApproxVariant.add]:
+            # add the energies and subtract the mean energy
+            ene = np.array([p.energy for p in self.particles])
+            beta += ene * self.inv_kt
+            beta -= np.mean(beta[beta != -np.inf])
+            if self.approx_variant == ApproxVariant.add:
+                # if outside of approx_grid: doesn't throw error but sets correction to 0
                 beta += self.approx_grid.interpolate(pos, "linear", 0.0).reshape(
                     len(pos)
                 )
-                beta -= np.mean(beta[beta != -np.inf])
+        elif self.approx_variant == ApproxVariant.mult:
+            # do not use actual energies, just add the smoothed density
+            beta += self.approx_grid.interpolate(pos, "linear", 0.0).reshape(len(pos))
+            beta -= np.mean(beta[beta != -np.inf])
         return beta
 
     def random_other(self, num_part: int, excl: int) -> int:
