@@ -9,6 +9,7 @@ from bdld import grid
 
 class BoundaryCondition(enum.Enum):
     """Enum for the different boundary conditions"""
+
     reflective = enum.auto()
     periodic = enum.auto()
 

@@ -103,14 +103,20 @@ class TrajectoryAction(Action):
         :param step: current simulation step
         """
         if self.filenames:
-            save_times = get_valid_data(self.times, step, self.stride, 1, self.last_write)
-            save_pos = get_valid_data(self.positions, step, self.stride, 1, self.last_write)
+            save_times = get_valid_data(
+                self.times, step, self.stride, 1, self.last_write
+            )
+            save_pos = get_valid_data(
+                self.positions, step, self.stride, 1, self.last_write
+            )
             if self.store_momentum:
-                save_momentum = get_valid_data(self.momentum, step, self.stride, 1, self.last_write)
+                save_momentum = get_valid_data(
+                    self.momentum, step, self.stride, 1, self.last_write
+                )
             for i, filename in enumerate(self.filenames):
                 # 3d (times, walkers, pot_dims) to 2d array (times, pot_dims) for saving
                 if self.store_momentum:
-                    save_data = np.c_[save_times, save_pos[:, i], save_momentum[:,i]]
+                    save_data = np.c_[save_times, save_pos[:, i], save_momentum[:, i]]
                 else:
                     save_data = np.c_[save_times, save_pos[:, i]]
                 with open(filename, "ab") as f:

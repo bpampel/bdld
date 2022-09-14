@@ -15,12 +15,13 @@ from bdld.helpers.misc import initialize_file
 
 class ApproxVariant(enum.Enum):
     """Enum for the different approximation variants"""
+
     orig = "original"
     add = "additive"
     mult = "multiplicative"
 
     @classmethod
-    def from_str(cls, label: str) -> 'ApproxVariant':
+    def from_str(cls, label: str) -> "ApproxVariant":
         """Return class instance from matching string"""
         match label:
             case "original" | "orig":
@@ -31,7 +32,6 @@ class ApproxVariant(enum.Enum):
                 return ApproxVariant.mult
             case _:
                 raise NotImplementedError
-
 
 
 class BirthDeath(Action):
@@ -64,7 +64,7 @@ class BirthDeath(Action):
         kt: float,
         rate_fac: Optional[float] = None,
         recalc_probs: bool = False,
-        approx_variant : Optional[ApproxVariant] = None,
+        approx_variant: Optional[ApproxVariant] = None,
         eq_density: Optional[grid.Grid] = None,
         seed: Optional[int] = None,
         stats_stride: Optional[int] = None,
@@ -118,14 +118,18 @@ class BirthDeath(Action):
                 print("  using the original approximation")
             case ApproxVariant.add:
                 if not eq_density:
-                    raise ValueError("No equilibrium density for the additive approximation was passed")
+                    raise ValueError(
+                        "No equilibrium density for the additive approximation was passed"
+                    )
                 print("  using the additive approximation")
                 # multiplicative: approx_grid holds
                 # -log(K*pi) + log(pi) - {average of the first two terms}
                 self.approx_grid = calc_additive_correction(eq_density, self.bw, "same")
             case ApproxVariant.mult:
                 if not eq_density:
-                    raise ValueError("No equilibrium density for the multiplicative approximation was passed")
+                    raise ValueError(
+                        "No equilibrium density for the multiplicative approximation was passed"
+                    )
                 print("  using the multiplicative approximation")
                 # multiplicative: approx_grid holds -log(K*pi)
                 conv = dens_kernel_convolution(eq_density, self.bw, "same")
@@ -192,7 +196,7 @@ class BirthDeath(Action):
             event_list = list(zip(dup_list, kill_list))
             self.perform_moves(event_list)
 
-        else: # perform each accepted event directly and recalculate probs
+        else:  # perform each accepted event directly and recalculate probs
             particle_indices = np.arange(num_part)
             self.rng.shuffle(particle_indices)
             event_list = []
@@ -238,7 +242,9 @@ class BirthDeath(Action):
                     )
             case ApproxVariant.mult:
                 # do not use actual energies, just add the smoothed density
-                beta += self.approx_grid.interpolate(pos, "linear", 0.0).reshape(len(pos))
+                beta += self.approx_grid.interpolate(pos, "linear", 0.0).reshape(
+                    len(pos)
+                )
                 beta -= np.mean(beta[beta != -np.inf])
         return beta
 

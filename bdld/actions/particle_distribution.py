@@ -72,10 +72,12 @@ class ParticleDistributionAction(Action):
             for i, state in enumerate(self.states):
                 constants[f"state_{i}"] = str(state)
             initialize_file(self.filename, fields, constants)
-            stride_str = f"of every {make_ordinal(self.stride)} time step " if self.stride else ""
-            print(
-                "Saving distribution " + stride_str + f"to '{filename}'"
+            stride_str = (
+                f"of every {make_ordinal(self.stride)} time step "
+                if self.stride
+                else ""
             )
+            print("Saving distribution " + stride_str + f"to '{filename}'")
         self.write_fmt = write_fmt if write_fmt else "%14.9f"
         print()
 

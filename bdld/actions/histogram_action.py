@@ -56,7 +56,9 @@ class HistogramAction(Action):
             f"  ranges = {ranges}\n"
             f"  n_bins = {n_bins}"
         )
-        n_dim = traj_action.positions.shape[-1]  # last dimension of traj array is dim of pot
+        n_dim = traj_action.positions.shape[
+            -1
+        ]  # last dimension of traj array is dim of pot
         if n_dim != len(n_bins):
             e = (
                 "Dimensions of histogram bins don't match dimensions of system"

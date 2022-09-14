@@ -27,7 +27,6 @@ ParticleDistributionAction = actions.particle_distribution.ParticleDistributionA
 Potential = potential.potential.Potential
 
 
-
 def main() -> None:
     """Main function of simulation
 
@@ -372,7 +371,9 @@ def setup_delta_f(options: Dict, fes_action: FesAction) -> DeltaFAction:
     )
 
 
-def setup_particle_distribution(options: Dict, ld: LdType) -> ParticleDistributionAction:
+def setup_particle_distribution(
+    options: Dict, ld: LdType
+) -> ParticleDistributionAction:
     """Setup analysis of particle distribution of LD"""
     min_list = inputparser.get_all_numbered_values(options, "state", "-min")
     max_list = inputparser.get_all_numbered_values(options, "state", "-max")

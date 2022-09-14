@@ -83,10 +83,12 @@ class DeltaFAction(Action):
                 for i, val in enumerate(self.ref_values):
                     constants[f"ref_{fields[i]}"] = val
             initialize_file(self.filename, fields, constants)
-            stride_str = f"of every {make_ordinal(self.stride)} time step " if self.stride else ""
-            print(
-                "Saving delta-f " + stride_str + f"to '{filename}'"
+            stride_str = (
+                f"of every {make_ordinal(self.stride)} time step "
+                if self.stride
+                else ""
             )
+            print("Saving delta-f " + stride_str + f"to '{filename}'")
         self.write_fmt = write_fmt if write_fmt else "%14.9f"
         print()
 

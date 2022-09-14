@@ -229,7 +229,7 @@ class Input:
             options = [
                 type_option,
                 InputOption("scaling-factor", float, False),
-                InputOption("n_dim", int, False, default=2)
+                InputOption("n_dim", int, False, default=2),
             ]
         else:
             raise OptionError(
@@ -278,7 +278,9 @@ class Input:
         """Define and parse the options of the potential"""
         options = [
             InputOption("stride", int, True, Input.positive),
-            InputOption("correction-variant", str, False),  # not checked here, deprecated
+            InputOption(
+                "correction-variant", str, False
+            ),  # not checked here, deprecated
             InputOption("approximation-variant", str, False),  # not checked here
             InputOption("exponential-factor", float, False, Input.positive),
             InputOption("recalculate-probabilities", bool, False, None, False),
