@@ -2,7 +2,7 @@
 
 from collections import OrderedDict
 import logging
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 import numpy as np
 

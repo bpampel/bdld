@@ -108,6 +108,7 @@ class BussiParinelloLD(Action):
         """Add particle to system
 
         :param pos: list or numpy array with initial position of the particle per dimension
+        :param mass: mass of particle, defaults to 1.0
         :param partnum: specifies particle number (position in list). Default is -1 (at end)
         :param overwrite: overwrite existing particle instead of inserting (default False)
         :raises ValueError: when dimensions of pos and potential do not match

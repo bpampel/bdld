@@ -171,6 +171,7 @@ class Grid:
 
         :param points: the desired points
         :param method: interpolation method to use, defaults to linear
+        :param fill_value: value for points outside the grid, defaults to nan
         """
         return sp_interpolate.griddata(
             self.points(), self.data.flatten(), points, method, fill_value
@@ -219,6 +220,7 @@ def convolve(g1: Grid, g2: Grid, mode: str = "valid", method: str = "auto") -> G
 
     :param g1, g2: grids to convolute
     :param mode: convolution mode, see scipy.signal.convolve for details
+    :param method: one of "direct", "fft" or "auto" (the default)
     :raises ValueError: if g1 and g2 have different stepsizes
     :raises NotImplementedError: if mode="full"
     :return grid: New grid containing the convolutin
@@ -231,7 +233,7 @@ def convolve(g1: Grid, g2: Grid, mode: str = "valid", method: str = "auto") -> G
     conv = signal.convolve(g1.data, g2.data, mode=mode, method=method) * np.prod(
         g1.stepsizes
     )
-    # also get the corresponding grid points depending on the method
+    # also get the corresponding grid points depending on the mode
     if mode == "same":  # easiest case, mirrors grid of first argument
         grid = g1.copy_empty()
     if mode == "valid":  # need to do some math: subtract smaller from larger grid

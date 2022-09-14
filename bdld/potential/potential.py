@@ -1,7 +1,7 @@
 """Potential class to be evaluated with md"""
 
 import enum
-from typing import List, Union, Tuple
+from typing import Callable, List, Union, Tuple
 import numpy as np
 
 from bdld import grid
@@ -27,7 +27,7 @@ class Potential:
         self.n_dim: int = 0
         self.ranges: List[Tuple[float, float]] = []
         self._boundary_condition = None  # default
-        self.apply_boundary_condition = None
+        self.apply_boundary_condition: Callable[[np.ndarray, np.ndarray], None] = lambda: None
         self._set_boundary_condition_function()
 
     def evaluate(self, pos: Union[List[float], np.ndarray]) -> Tuple[float, np.ndarray]:
@@ -128,7 +128,7 @@ class Potential:
     def _set_boundary_condition_function(self) -> None:
         """Set correct apply_boundary_condition function"""
         if self.boundary_condition is None:
-            func = lambda pos, force: None  # do nothing
+            func = lambda pos, force: None # do nothing
         elif self.boundary_condition == BoundaryCondition.reflective:
             func = self.apply_boundary_condition_reflective
         elif self.boundary_condition == BoundaryCondition.periodic:

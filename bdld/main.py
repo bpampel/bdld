@@ -3,7 +3,7 @@
 import argparse
 from collections import OrderedDict
 import logging
-from typing import cast, Dict, List, Optional, Union
+from typing import cast, Dict, List, Union
 import sys
 
 import numpy as np
