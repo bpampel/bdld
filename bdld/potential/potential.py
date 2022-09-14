@@ -174,6 +174,6 @@ class Potential:
         """
         for i, x in enumerate(pos):
             if x < self.ranges[i][0]:
-                x += self.ranges[i][1] - self.ranges[i][0]
+                pos[i] += self.ranges[i][1] - self.ranges[i][0]
             elif x > self.ranges[i][1]:
-                x -= self.ranges[i][1] - self.ranges[i][0]
+                pos[i] -= self.ranges[i][1] - self.ranges[i][0]

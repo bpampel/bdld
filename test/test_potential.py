@@ -1,7 +1,8 @@
+"""Test some potential functionality"""
 import unittest
 import numpy as np
 
-from bdld.potential import polynomial
+from bdld.potential import polynomial, potential
 
 
 class PotentialTests(unittest.TestCase):
@@ -42,6 +43,42 @@ class PotentialTests(unittest.TestCase):
         prob = pot.calculate_probability_density(0.5, [(-1, 1)], [3])
         expect = np.array([np.exp(-2), 1, np.exp(-2)])  # not yet normalized
         np.testing.assert_array_equal(prob.data, expect / np.sum(expect))
+
+    def test_boundary_conditions(self):
+        """Test if boundary conditions are implemented correctly"""
+        ranges = [[0.5, 1], [-1, 0]]
+
+        def init_pos_and_mom():
+            """(Re)initialize positions and momenta"""
+            pos1 = np.array([1.1, -0.5])  # right in first direction
+            pos2 = np.array([0.7, -1.1])  # left in second direction
+            mom1 = np.array([1, -2])
+            mom2 = np.array([1, -2])
+            return (pos1, pos2, mom1, mom2)
+
+        pot = potential.Potential()
+        pot.ranges = ranges
+
+        pos1, pos2, mom1, mom2 = init_pos_and_mom()
+        # check reflective condition
+        pot.boundary_condition = potential.BoundaryCondition.reflective
+        pot.apply_boundary_condition(pos1, mom1)
+        pot.apply_boundary_condition(pos2, mom2)
+
+        np.testing.assert_array_almost_equal(pos1, np.array([1, -0.5]))
+        np.testing.assert_array_almost_equal(pos2, np.array([0.7, -1]))
+        np.testing.assert_array_equal(mom1, np.array([-1, -2]))
+        np.testing.assert_array_equal(mom2, np.array([1, 2]))
+
+        # reset and do periodic condition
+        pos1, pos2, mom1, mom2 = init_pos_and_mom()
+        pot.boundary_condition = potential.BoundaryCondition.periodic
+        pot.apply_boundary_condition(pos1, mom1)
+        pot.apply_boundary_condition(pos2, mom2)
+        np.testing.assert_array_almost_equal(pos1, np.array([0.6, -0.5]))
+        np.testing.assert_array_almost_equal(pos2, np.array([0.7, -0.1]))
+        np.testing.assert_array_equal(mom1, np.array([1, -2]))
+        np.testing.assert_array_equal(mom2, np.array([1, -2]))
 
 
 if __name__ == "__main__":
