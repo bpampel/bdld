@@ -8,6 +8,6 @@ setup(
     license="LGPL",
     packages=["bdld", "bdld.actions", "bdld.potential", "bdld.helpers"],
     scripts=["bin/bdld_run"],
-    python_requires=">=3.6",
+    python_requires=">=3.10",
     install_requires=["numpy>=1.19", "scipy>=1.5", "matplotlib>=3.3"],
 )
