@@ -52,7 +52,7 @@ class GridTests(unittest.TestCase):
     def test_set_from_func(self):
         """Test if grid data can be set from function"""
         g1 = grid.from_npoints([(0, 10)], 11)
-        g1.set_from_func(lambda x: x ** 2)
+        g1.set_from_func(lambda x: x**2)
         np.testing.assert_array_equal(g1.data, np.square(np.arange(0, 11)))
 
     def test_arithmetics(self):

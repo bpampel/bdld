@@ -32,6 +32,7 @@ def setup_bd_action(t: "BirthDeathTests") -> bd.BirthDeath:
         t.stats_filename,
     )
 
+
 def setup_eq_dens_and_particles(t: "BirthDeathTests") -> None:
     """Set eq_density and particles of test to some actual values
 
@@ -39,20 +40,28 @@ def setup_eq_dens_and_particles(t: "BirthDeathTests") -> None:
     reusing the same code more often
     """
     eq_density = grid.from_npoints([(0, 1)], [11])
-    eq_density.data = np.arange(1,12) * 0.1
+    eq_density.data = np.arange(1, 12) * 0.1
     eq_density.data /= np.sum(eq_density.data)
 
     # set up 4 particles
     particles = []
     positions = np.array([np.array([p]) for p in [0, 0.5, 0.5, 1]])
     # energies from density (only relevant for corrections)
-    energies = -np.log(eq_density.interpolate(positions).reshape(4,)) / t.kt
+    energies = (
+        -np.log(
+            eq_density.interpolate(positions).reshape(
+                4,
+            )
+        )
+        / t.kt
+    )
     for pos, ene in zip(positions, energies):
         part = LDParticle(pos)
         part.energy = ene
         particles.append(part)
     t.particles = particles
     t.eq_density = eq_density
+
 
 class BirthDeathTests(unittest.TestCase):
     """Test BirthDeath class and associated functions"""
@@ -223,14 +232,22 @@ class BirthDeathTests(unittest.TestCase):
         # add the additive correction
         # (this is somewhat close to the actual code, but hard to do by hand)
         K_pi = bd.dens_kernel_convolution(self.eq_density, self.bw, "same")
-        integral_term = bd.nd_trapz((np.log(K_pi / self.eq_density) * self.eq_density).data, K_pi.stepsizes)
+        integral_term = bd.nd_trapz(
+            (np.log(K_pi / self.eq_density) * self.eq_density).data, K_pi.stepsizes
+        )
         correction = -np.log(K_pi / self.eq_density) + integral_term
-        beta_add_corr_man = beta_man + correction.interpolate(positions).reshape(4,)
+        beta_add_corr_man = beta_man + correction.interpolate(positions).reshape(
+            4,
+        )
         np.testing.assert_array_almost_equal(beta_add_corr, beta_add_corr_man)
 
         # for the multiplicative correction: recombine the calculated values
         self.correction_variant = "multiplicative"
-        beta_mult_corr_man = np.log(K_rho) - np.log(K_pi.interpolate(positions).reshape(4,))
+        beta_mult_corr_man = np.log(K_rho) - np.log(
+            K_pi.interpolate(positions).reshape(
+                4,
+            )
+        )
         beta_mult_corr_man -= np.mean(beta_mult_corr_man)
         np.testing.assert_array_almost_equal(beta_mult_corr, beta_mult_corr_man)
 
@@ -249,7 +266,7 @@ class BirthDeathTests(unittest.TestCase):
 
         # this is from running it once by hand: duplicate 3 and kill 0
         # might fail if the rng implementation is different?
-        bd_events_ref = [(2,0), (3,1)]
+        bd_events_ref = [(2, 0), (3, 1)]
         self.assertEqual(bd_events, bd_events_ref)
 
     def test_run(self):
@@ -276,9 +293,9 @@ class BirthDeathTests(unittest.TestCase):
 
         # set up, now modify one of the values and print to file
         stats.dup_count = 5
-        stats.print(step = 1, reset = True)
+        stats.print(step=1, reset=True)
         statsfile = np.genfromtxt(f_name)
-        np.testing.assert_equal(statsfile, np.array([1,5,0,0,0]))
+        np.testing.assert_equal(statsfile, np.array([1, 5, 0, 0, 0]))
         os.remove(f_name)
 
         # check if reset has worked
