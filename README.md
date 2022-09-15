@@ -2,6 +2,9 @@
 
 v0.3.1: [![DOI](https://zenodo.org/badge/444764309.svg)](https://zenodo.org/badge/latestdoi/444764309)
 
+Associated paper: Sampling Rare Event Energy Landscapes via Birth-Death Augmented Dynamics
+(currently under review at PRE, [link to arXiv version](https://arxiv.org/abs/2209.00607))
+
 ## Quickstart:
 Download one of the package archives under [dist/](dist/) and install it e.g. with `pip install`
 
