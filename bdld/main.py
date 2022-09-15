@@ -38,7 +38,7 @@ def main() -> None:
         4. run the main loop for the desired time steps
         5. run final actions
     """
-    version = "0.3.1"
+    version = "0.3.2"
     print(f"Starting bdld code v{version}\n\n")
 
     # parse cli argument(s)

@@ -4,8 +4,10 @@ Changelog
 ***************************************
 This file documents the bigger changes between versions
 
-[0.3.2] - upcoming
+[0.3.2] - 2022-09-15
 ^^^^^^^^^^^^^^^^^^^^^^
+
+Release that has mostly cosmetic changes, i.e. better documentation and cleaner code
 
 - add `recalculate-probabilities` option to birth-death action for permanent usage
 - rename `correction-variant` to `approximation-variant` in code and allow this in the input
