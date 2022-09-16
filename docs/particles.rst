@@ -12,9 +12,9 @@ Specify the number of particles and their initial distribution
 **initial-distribution**: *string*
   method to set initial positions of particles. Currently available values:
 
-  * *random-global*: initialize each particle randomly in the potential area
-  * *random-pos*: initialize each particle randomly in one of the given positions
-  * *fractions-pos*: initialize particles with fixed fractions at given positions
+  * :code:`random-global`: initialize each particle randomly in the potential area
+  * :code:`random-pos`: initialize each particle randomly in one of the given positions
+  * :code:`fractions-pos`: initialize particles with fixed fractions at given positions
 
 For *-pos* options you need to specify the wanted positions with :code:`pos1` to :code:`posN`:
 

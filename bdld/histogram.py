@@ -1,15 +1,18 @@
-"""Implement a simple histogramming and FES calculation class"""
+"""Implement a simple histogramming class"""
 
-from typing import List, Optional, Union, Tuple
+from typing import List, Union, Tuple
 import numpy as np
 
 from bdld import grid
 
 
 class Histogram(grid.Grid):
-    """Histogram data and calculate FES from the histogram
+    """Histogram data into grid bins by using numpy's histogramdd
 
-    This uses the Grid class for underlying structure and only adds some histogram functions
+    This uses the Grid class for underlying structure and adds some histogram functions
+    The main difference is that the Histogram stores values for the intervals between the
+    grid points instead of the values *at* the grid points.
+    Note that this is actually a bad way to do it from an OOP perspective (--> Liskov broken)
     Also explicitely stores the bin edges (as opposed to only the n_points of the Grid class)
 
     Also allows histogramming over time, i.e. adding more data to the existing histogram

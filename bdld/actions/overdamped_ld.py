@@ -1,6 +1,10 @@
-"""Simple overdamped Langevin Dynamics taken from the Lu, Lu, Nolen paper"""
+"""Simple overdamped Langevin Dynamics taken from the Lu, Lu, Nolen paper
 
-from enum import Enum
+This corresponds to the Euler-Maruyama algorithm, see e.g. Chapter 9.1 of
+    P. E. Kloeden and E. Platen. Numerical Solution of Stochastic Differential Equations.
+    3rd ed. ISBN: 978-3-540-54062-5.
+"""
+
 from typing import List, Optional, Union
 import numpy as np
 
@@ -14,7 +18,6 @@ class LDParticle(Particle):
 
     :param energy: stores last energy evaluation
     :param forces: stores last force evaluation per dimension
-    :param float c2: constant for the MD thermostat (mass dependent)
     """
 
     def __init__(self, *args) -> None:
@@ -25,7 +28,7 @@ class LDParticle(Particle):
 
 
 class OverdampedLD(Action):
-    """Perform overdamped Langevin Dynamics
+    """Perform overdamped Langevin Dynamics according to the Euler-Maruyama scheme
 
     The implementation is according to the algorithm in the Lu, Lu, Nolen paper
 
@@ -90,6 +93,7 @@ class OverdampedLD(Action):
         :param mass: mass of particles (ignored in algorithm)
         :param partnum: specifies particle number (position in list). Default is -1 (at end)
         :param overwrite: overwrite existing particle instead of inserting (default False)
+        :raises ValueError: when dimensions of pos and potential do not match
         """
         if len(pos) != self.pot.n_dim:
             raise ValueError(

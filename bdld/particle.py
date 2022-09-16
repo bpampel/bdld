@@ -1,5 +1,6 @@
 """MD particle class"""
 
+from typing import List, Optional, Union
 import numpy as np
 
 
@@ -11,17 +12,22 @@ class Particle:
     :param float mass: mass of particle
     """
 
-    def __init__(self, pos, mom=None, mass=1.0):
+    def __init__(
+        self,
+        pos: Union[float, List[float], np.ndarray],
+        mom: Optional[Union[float, List[float], np.ndarray]] = None,
+        mass: float = 1.0,
+    ):
         """Initializes particle with given parameters
 
-        :param pos: scalar, list or numpy.array
-        :param mom: scalar, list or numpy.array, defaults to None
-        :param float mass: defaults to 1.0
+        :param pos: position of particle
+        :param mom: optional momentum of particle, will be zeroed if not given
+        :param mass: mass of particle, defaults to 1.0
         """
         if not isinstance(pos, (list, np.ndarray)):  # single float
             pos = [pos]
         self.pos = np.array(pos, dtype=float)
-        self.mom = None
+        self.mom = np.empty(0)
         self.mass = mass
         self.init_momentum(mom)
 
@@ -35,7 +41,6 @@ class Particle:
             self.mom = np.array(mom, dtype=float)
         if len(self.pos) != len(self.mom):
             raise ValueError(
-                "Dimensions of position and momentum do not match: {} vs {}".format(
-                    len(self.pos), len(self.mom)
-                )
+                "Dimensions of position and momentum do not match: %d vs %d"
+                % (len(self.pos), len(self.mom))
             )

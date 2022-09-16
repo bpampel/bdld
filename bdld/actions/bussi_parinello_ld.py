@@ -1,6 +1,13 @@
-"""Simple Langevin Dynamics with Bussi-Parinello thermostat"""
+"""Simple Langevin Dynamics with Bussi-Parinello thermostat
 
-from enum import Enum, auto
+This is an implementation of the algorithm introduced in
+https://doi.org/10.1103/PhysRevE.75.056707
+see there for reasoning and further details
+
+It works by introducing thermostat steps between the velocity Verlet ones, the
+algorithm is designed to yield also the correct sampling in the overdamped limit
+"""
+
 from typing import List, Optional, Union
 import numpy as np
 
@@ -14,7 +21,7 @@ class BpldParticle(Particle):
 
     :param energy: stores last energy evaluation
     :param forces: stores last force evaluation per dimension
-    :param float c2: constant for the MD thermostat (mass dependent)
+    :param c2: constant for the MD thermostat (mass dependent)
     """
 
     def __init__(self, *args) -> None:
@@ -101,8 +108,10 @@ class BussiParinelloLD(Action):
         """Add particle to system
 
         :param pos: list or numpy array with initial position of the particle per dimension
+        :param mass: mass of particle, defaults to 1.0
         :param partnum: specifies particle number (position in list). Default is -1 (at end)
         :param overwrite: overwrite existing particle instead of inserting (default False)
+        :raises ValueError: when dimensions of pos and potential do not match
         """
         if len(pos) != self.pot.n_dim:
             raise ValueError(

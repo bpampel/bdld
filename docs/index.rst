@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Birth-Death Langevin Dynamics
+Birth-Death augmented Langevin Dynamics
 *****************************
 
 .. toctree::
@@ -11,6 +11,8 @@ Birth-Death Langevin Dynamics
   install
   usage
   input
+  developer
+  changelog
 
 
 This python package provides a simple Langevin Dynamics simulation with additional birth-death processes

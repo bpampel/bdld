@@ -1,23 +1,21 @@
 """Module holding action to analyse distribution of particles in states"""
 
 from collections import OrderedDict
-import logging
 from typing import List, Optional, Tuple
 
 import numpy as np
 
 from bdld.actions.action import Action, get_valid_data
-from bdld.actions.bussi_parinello_ld import BpldParticle
 from bdld.helpers.misc import initialize_file, make_ordinal
+from bdld.particle import Particle
 from bdld.tools import pos_inside_ranges
 
 
 class ParticleDistributionAction(Action):
-    """Class that stories trajectories and writes them to file
+    """Class that calculates the particle distribution and writes it to file
 
-    The write_stride parameter determines how many trajectory
-    points are being held in memory even if they are never written.
-    This allow other actions to use them.
+    If no filename is specified this still calculates the values (for possible usage
+    in other actions) but never actually writes them to file
 
     :param counts: fixed size numpy array holding the time and particle counts per state
                    it is written row-wise (i.e. every row represents a time)
@@ -26,7 +24,7 @@ class ParticleDistributionAction(Action):
 
     def __init__(
         self,
-        particles: List[BpldParticle],
+        particles: List[Particle],
         states: List[List[Tuple[float, float]]],
         stride: Optional[int] = None,
         filename: Optional[str] = None,
@@ -37,33 +35,32 @@ class ParticleDistributionAction(Action):
 
         :param particles: Particle list of LD to analyise
         :param states: List of states to check. Each state is a list of (min, max) ranges per dimension.
-        :param stride: write every nth time step to file, default 1
-        :param filename: base of filename(s) to write to
+        :param stride: calculate distribution every n time steps, default 1
+        :param filename: filename to write to, optional
         :param write_stride: write to file every n time steps, default 100
         :param write_fmt: numeric format for saving the data, default "%14.9f"
+        :raise ValueError: if a write_stride but no filename is passed
+        :raise ValueError: if the write_stride is no multiple of the stride
         """
         print("Setting up action to analyse distribution of walkers")
         self.particles = particles
         self.states = states
-        self.stride: int = stride or 1
-        self.write_stride: int = write_stride or 100
+        self.stride: int = stride or 0
+        self.write_stride = 0  # only set this if a stride is specified
 
         if self.stride:
+            if write_stride and not filename:
+                e = "Specifying a write_stride but no filename makes no sense"
+                raise ValueError(e)
             self.write_stride = write_stride or self.stride * 100
             if self.write_stride % self.stride != 0:
                 e = "The write stride must be a multiple of the update stride."
-                raise ValueError(e)
-            if not filename:
-                e = "Specifying a write_stride but no filename makes no sense"
                 raise ValueError(e)
             # extra col for time
             self.counts = np.empty(
                 (self.write_stride // self.stride, len(self.states) + 1)
             )
             self.last_write: int = 0
-            print(
-                f"Saving distribution of every {make_ordinal(self.stride)} time step to '{filename}'"
-            )
         else:  # just store one data set
             self.counts = np.empty((len(self.states) + 1))
 
@@ -75,6 +72,12 @@ class ParticleDistributionAction(Action):
             for i, state in enumerate(self.states):
                 constants[f"state_{i}"] = str(state)
             initialize_file(self.filename, fields, constants)
+            stride_str = (
+                f"of every {make_ordinal(self.stride)} time step "
+                if self.stride
+                else ""
+            )
+            print("Saving distribution " + stride_str + f"to '{filename}'")
         self.write_fmt = write_fmt if write_fmt else "%14.9f"
         print()
 

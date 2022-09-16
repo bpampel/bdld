@@ -27,7 +27,7 @@ class Potential:
         self.n_dim: int = 0
         self.ranges: List[Tuple[float, float]] = []
         self._boundary_condition = None  # default
-        self.apply_boundary_condition = None
+        self.apply_boundary_condition: Callable = lambda: None
         self._set_boundary_condition_function()
 
     def evaluate(self, pos: Union[List[float], np.ndarray]) -> Tuple[float, np.ndarray]:
@@ -83,7 +83,8 @@ class Potential:
         :param kt: Thermal energy of system
         :param ranges: List of ranges of the grid per dimension (min, max)
         :param grid_points: number of points per dimension
-        :return prob: grid holding the probability density
+        :raises ValueError: if dimensions of points or ranges and potential do not match
+        :return prob: grid with normalized probablities
         """
         if len(ranges) != self.n_dim:
             raise ValueError("Dimension of ranges do not match potential")
@@ -166,10 +167,10 @@ class Potential:
         can be changed in place
 
         :param pos: position of particle per direction
-        :param mom: momentum of particle per direction (not actually changed
+        :param mom: momentum of particle per direction (not actually changed)
         """
         for i, x in enumerate(pos):
             if x < self.ranges[i][0]:
-                x += self.ranges[i][0]
+                pos[i] += self.ranges[i][1] - self.ranges[i][0]
             elif x > self.ranges[i][1]:
-                x -= self.ranges[i][1]
+                pos[i] -= self.ranges[i][1] - self.ranges[i][0]

@@ -54,7 +54,11 @@ class InputOption:
     """Bundle information about a config option into class
 
     :param key: keyword in config
-    :param keytype: expected type (one of OptionType)"""
+    :param keytype: expected type (one of OptionType)
+    :param compulsory: if the key is required
+    :param condition: optional Condition the value must satisfy
+    :param default: optional default value
+    """
 
     def __init__(
         self,
@@ -89,7 +93,7 @@ class InputOption:
             if self.keytype == int:
                 val = section.getint(self.key)
             if self.keytype == bool:
-                val = section.getbool(self.key)
+                val = section.getboolean(self.key)
         except ValueError as e:
             raise OptionError(
                 f"could not be converted to {self.keytype.__name__}",
@@ -123,7 +127,7 @@ class Input:
     :param data: nested dictionary containing all sections with all parsed options
     """
 
-    # define conditions here
+    # define some conditions here
     positive = Condition(lambda x: x > 0, "must be greater than zero")
     all_positive = Condition(
         lambda lst: all(x > 0 for x in lst), "all values must be greater than zero"
@@ -166,10 +170,10 @@ class Input:
         ]
 
         # mandatory sections, that can be there only once
-        for sec in required_sections:
-            if not self.infile.has_section(sec):
-                raise SectionError(sec)
-            self.parse_section(sec)
+        for req_sec in required_sections:
+            if not self.infile.has_section(req_sec):
+                raise SectionError(req_sec)
+            self.parse_section(req_sec)
 
         for section_type in optional_sections:
             # multiple of these sections are possible, get all that start with the type
@@ -177,7 +181,7 @@ class Input:
                 sec for sec in self.infile.sections() if sec.find(section_type) == 0
             ]
             for sec in numbered_secs:
-                self.parse_section(sec)
+                self.parse_section(section_type, sec)
 
         for sec in self.infile.sections():  # only not parsed ones left
             logging.warning(
@@ -205,6 +209,7 @@ class Input:
         if not label:  # default: use just the section type
             label = section_type
 
+        options = []  # fallback if no option is found
         if section_type == "ld":
             options = self.ld_opts(self.infile[label])
         elif section_type == "potential":
@@ -352,7 +357,12 @@ class Input:
 
         options = [
             InputOption("stride", int, True, Input.positive),
-            InputOption("correction-variant", str, False),  # not checked here
+            InputOption(
+                "correction-variant", str, False
+            ),  # not checked here, deprecated
+            InputOption("approximation-variant", str, False),  # not checked here
+            InputOption("exponential-factor", float, False, Input.positive),
+            InputOption("recalculate-probabilities", bool, False, None, False),
             InputOption(
                 "equilibrium-density-method", str, False, allowed_eq_dens_methods
             ),
@@ -378,6 +388,7 @@ class Input:
         options = [
             InputOption("filename", str, False),
             InputOption("stride", int, False, Input.positive),
+            InputOption("momentum", bool, False),
             InputOption("write-stride", int, False, Input.positive),
             InputOption("fmt", str, False),
         ]
@@ -428,7 +439,7 @@ class Input:
         if "fes" not in self.data.keys():
             raise configparser.NoSectionError("fes")
         options = [
-            InputOption("stride", int, True, Input.positive),
+            InputOption("stride", int, False, Input.positive),
             InputOption("filename", str, False),
             InputOption("write-stride", int, False, Input.positive),
             InputOption("fmt", str, False),
@@ -440,7 +451,7 @@ class Input:
     ) -> List[InputOption]:
         """Define and parse if statistics about particles should be printed periodically"""
         options = [
-            InputOption("stride", int, True, Input.positive),
+            InputOption("stride", int, False, Input.positive),
             InputOption("filename", str, False),
             InputOption("write-stride", int, False, Input.positive),
             InputOption("fmt", str, False),
@@ -478,6 +489,8 @@ def numbered_state_options(section: configparser.SectionProxy) -> List[InputOpti
     The state InputOptions are lists regardless of dimensions
 
     :param section: section of configparser to search through
+    :raises OptionError: if number of min and max options don't match
+    :raises OptionError: if no min and max actions were found
     """
     n_states = len(get_all_numbered_values(section, "state", "-min"))
     if n_states != len(get_all_numbered_values(section, "state", "-max")):
@@ -516,6 +529,8 @@ def min_max_to_ranges(
 
     :param min_list: list with all minimum points of the intervals
     :param max_list: list with all maximum points of the intervals
+    :raises ValueError: when the length of the lists do not match
+    :raises ValueError: when the dimensions of any min-max pair don't match
     """
     n_items = len(min_list)
     if n_items != len(max_list):

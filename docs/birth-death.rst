@@ -11,12 +11,21 @@ Perform birth-death events during the simulation.
 **kernel-bandwidth**: *float* or *list of floats*
   Bandwidth of the Gaussian kernel per dimension
 
-**correction-variant**: *string*, optional
-  use a correction to deviate from the original algorithm. Possible values are:
+**aproximation-variant** or **correction-variant**: *string*, optional
+  Specify the approximation (Lambda) to use. Defaults to *original*
+  **correction-variant** is currently still accepted to support old input files but is deprecated and will be removed in a later version.
+  If both are specified, no error is thrown and the **approximation-variant** value is used.
+  Possible values are:
 
-  * *additive*: the first proposed correction
-  * *multiplicative*: the second proposed correction
-    p
+  * *original* or *orig*: the original approximation by Lu et al. Default value
+  * *additive* or *add*
+  * *multiplicative* or *mult*
+
+**exponential-factor**: *float*, optional
+  factor in the exponential of the birth-death probabilities, also referred to as *rate factor*
+
+**recalculate-probabilities**: *bool*, optional
+  Recalculate the probabilities after each succesful birth-death event
 
 **equilibrium-density-method**: *string*, optional
   Specify the method to calculate the equilibrium density. Must be one of:

@@ -10,6 +10,10 @@ from scipy import interpolate as sp_interpolate
 from bdld.helpers.misc import write_2d_sliced_to_file
 
 
+# types for arithmetic operations
+arith_types = Union[float, int, np.ndarray, "Grid"]
+
+
 class Grid:
     """Rectangular grid with evenly distributed points
 
@@ -20,7 +24,10 @@ class Grid:
     """
 
     def __init__(self) -> None:
-        """Create empty, uninitialized class. Should usually not invoked directly"""
+        """Create empty, uninitialized class.
+
+        Should usually not be invoked directly
+        """
         self._data: np.ndarray = np.empty(0)
         self.ranges: List[Tuple[float, float]] = []
         self.n_points: List[int] = []
@@ -66,33 +73,33 @@ class Grid:
         return self._perform_math_on_self(operator.neg)
 
     # allow arithmetic operators to manipulate data directly
-    def __add__(self, other: Union[float, int, np.ndarray]):
+    def __add__(self, other: arith_types):
         return self._perform_arithmetic_operation(other, operator.add)
 
-    def __radd__(self, other: Union[float, int, np.ndarray]):
+    def __radd__(self, other: arith_types):
         return self.__add__(other)
 
-    def __sub__(self, other: Union[float, int, np.ndarray]):
+    def __sub__(self, other: arith_types):
         return self._perform_arithmetic_operation(other, operator.sub)
 
     # no __rsub__ or __rdiv__ as that is ambiguous
 
-    def __mul__(self, other: Union[float, int, np.ndarray]):
+    def __mul__(self, other: arith_types):
         return self._perform_arithmetic_operation(other, operator.mul)
 
-    def __rmul__(self, other: Union[float, int, np.ndarray]):
+    def __rmul__(self, other: arith_types):
         return self.__mul__(other)
 
-    def __truediv__(self, other: Union[float, int, np.ndarray]):
+    def __truediv__(self, other: arith_types):
         return self._perform_arithmetic_operation(other, operator.truediv)
 
-    def __floordiv__(self, other: Union[float, int, np.ndarray]):
+    def __floordiv__(self, other: arith_types):
         return self._perform_arithmetic_operation(other, operator.floordiv)
 
-    def __mod__(self, other: Union[float, int, np.ndarray]):
+    def __mod__(self, other: arith_types):
         return self._perform_arithmetic_operation(other, operator.mod)
 
-    def __pow__(self, other: Union[float, int, np.ndarray]):
+    def __pow__(self, other: arith_types):
         return self._perform_arithmetic_operation(other, operator.pow)
 
     # exp and log implementations allow usage of e.g. np.exp(my_grid)
@@ -104,14 +111,15 @@ class Grid:
         """Logarithm of data, relies on numpy"""
         return self._perform_math_on_self(np.log)
 
+    # Helper function to shorten implementations"""
     def _perform_math_on_self(self, oper: Callable[..., Any]) -> "Grid":
         new_grid = self.copy_empty()
         new_grid.data = oper(self.data)
         return new_grid
 
     def _perform_arithmetic_operation(
-        self, other: Union[float, int, np.ndarray], oper: Callable[..., Any]
-    ):  # -> Grid::
+        self, other: arith_types, oper: Callable[..., Any]
+    ) -> "Grid":
         new_grid = self.copy_empty()
         if isinstance(other, (float, int, np.ndarray)):
             new_grid.data = oper(self.data, other)
@@ -163,6 +171,7 @@ class Grid:
 
         :param points: the desired points
         :param method: interpolation method to use, defaults to linear
+        :param fill_value: value for points outside the grid, defaults to nan
         """
         return sp_interpolate.griddata(
             self.points(), self.data.flatten(), points, method, fill_value
@@ -266,17 +275,20 @@ def convolve(g1: Grid, g2: Grid, mode: str = "valid", method: str = "auto") -> G
 
     :param g1, g2: grids to convolute
     :param mode: convolution mode, see scipy.signal.convolve for details
+    :param method: one of "direct", "fft" or "auto" (the default)
+    :raises ValueError: if g1 and g2 have different stepsizes
+    :raises NotImplementedError: if mode="full"
     :return grid: New grid containing the convolutin
     """
     if not g1.stepsizes == g2.stepsizes:
         raise ValueError("Spacing of grids does not match")
     stepsizes = g1.stepsizes
     n_dim = g1.n_dim
-    # to get the same values in the continuous limit: multiply by stepsizes
+    # to get the correct values in the continuous limit: multiply by stepsizes
     conv = signal.convolve(g1.data, g2.data, mode=mode, method=method) * np.prod(
         g1.stepsizes
     )
-    # also get the corresponding grid points depending on the method
+    # also get the corresponding grid points depending on the mode
     if mode == "same":  # easiest case, mirrors grid of first argument
         grid = g1.copy_empty()
     if mode == "valid":  # need to do some math: subtract smaller from larger grid
@@ -290,7 +302,7 @@ def convolve(g1: Grid, g2: Grid, mode: str = "valid", method: str = "auto") -> G
             ranges.append((gl.ranges[dim][0] + offset, gl.ranges[dim][1] - offset))
         grid = from_npoints(ranges, n_points)
     if mode == "full":
-        raise ValueError("Currently not implemented")
+        raise NotImplementedError
     grid.data = conv
     return grid
 
@@ -313,6 +325,8 @@ def from_npoints(
 
     :param ranges: List with (min,max) positions of the grid
     :param n_points: Either list with points per dimension or single value for all
+    :raises ValueError: if dimensions of ranges and number of points do not match
+    :return grid: empty grid with specified ranges and number of points
     """
     grid = Grid()
     grid.n_dim = len(ranges)

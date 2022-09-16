@@ -1,4 +1,4 @@
-"""Module holding misc functions that didn't fit in anywhere else"""
+"""Collect helper functions that are required by multiple files"""
 
 from typing import List, Tuple
 

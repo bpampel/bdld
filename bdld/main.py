@@ -3,7 +3,7 @@
 import argparse
 from collections import OrderedDict
 import logging
-from typing import cast, Dict, List, Optional, Tuple
+from typing import cast, Dict, List, Union
 import sys
 
 import numpy as np
@@ -16,6 +16,7 @@ Action = actions.action.Action
 BirthDeath = actions.birth_death.BirthDeath
 BussiParinelloLD = actions.bussi_parinello_ld.BussiParinelloLD
 OverdampedLD = actions.overdamped_ld.OverdampedLD
+LdType = Union[BussiParinelloLD, OverdampedLD]
 TrajectoryAction = actions.trajectory_action.TrajectoryAction
 HistogramAction = actions.histogram_action.HistogramAction
 FesAction = actions.fes_action.FesAction
@@ -36,7 +37,7 @@ def main() -> None:
         4. run the main loop for the desired time steps
         5. run final actions
     """
-    version = "0.3"
+    version = "0.3.2"
     print(f"Starting bdld code v{version}\n\n")
 
     # parse cli argument(s)
@@ -157,7 +158,7 @@ def setup_potential(options: Dict) -> Potential:
     return pot
 
 
-def setup_ld(options: Dict, pot: Potential) -> BussiParinelloLD:
+def setup_ld(options: Dict, pot: Potential) -> LdType:
     """Return Langevin Dynamics with given options on the potential"""
     if options["type"] == "bussi-parinello":
         return BussiParinelloLD(
@@ -181,7 +182,7 @@ def setup_ld(options: Dict, pot: Potential) -> BussiParinelloLD:
         )
 
 
-def init_particles(options: Dict, ld: BussiParinelloLD) -> None:
+def init_particles(options: Dict, ld: LdType) -> None:
     """Add particles to ld with the given algorithm
 
     random-global: distribute randomly on full range of potential
@@ -230,7 +231,7 @@ def setup_birth_death(
     Currently this requires to get the true probability density values from the
     potential for the corrections of the algorithm, so this is also set up here
     """
-    ld = cast(BussiParinelloLD, actions_dict["ld"])
+    ld = cast(LdType, actions_dict["ld"])
     if ld.pot.n_dim == 1:
         bd_bw = np.array([options["kernel-bandwidth"]])
     else:
@@ -242,30 +243,52 @@ def setup_birth_death(
             "birth-death",
         )
 
-    if options["equilibrium-density-method"] in [None, "potential", "uniform"]:
-        # warn if histogram options were also specified
-        for opt in ["density-estimate-histogram", "density-estimate-stride"]:
-            if options[opt]:
-                logging.warning(
-                    "birth-death: option %s specified but will not be used", opt
-                )
-        if options["equilibrium-density-method"] == "uniform":
-            # create "grid" with just 2 points at the edges, will be linearly interpolated anyway
-            prob_density = grid.from_npoints(ld.pot.ranges, 2)
-            prob_density.data = np.ones(prob_density.points().shape)
-            prob_density.normalize(in_place=True)
-        else:  # exact eq_density from potential as default
-            prob_density = actions.birth_death.prob_density(ld.pot, bd_bw, ld.kt)
-        histogram = None
-    elif options["equilibrium-density-method"] == "histogram":
-        try:
-            histogram = actions_dict[options["density-estimate-histogram"]].histo  # type: ignore
-        except KeyError as e:
-            raise inputparser.OptionError(
-                f'Specified histogram action "{options["density-estimate-histogram"]}" could not be found',
-                "density-estimate-histogram",
-                "birth-death",
-            ) from e
+    # helper function to avoid duplication. Can be removed when correction-variant is removed
+    def get_approx_variant(key):
+        if options[key]:
+            try:
+                approx_variant = ApproxVariant.from_str(options[key])
+            except KeyError as err:
+                e = "The specified {} could not be understood".format(key)
+                raise inputparser.OptionError(e, "birth-death", key) from err
+            return approx_variant
+        return None
+
+    ApproxVariant = actions.birth_death.ApproxVariant
+    approx_variant = ApproxVariant.orig  # default
+    # currently both are accepted but approximation-variant has precedence
+    for key in ["correction-variant", "approximation-variant"]:
+        # keep previous if not existing
+        approx_variant = get_approx_variant(key) or approx_variant
+
+    eq_density = None
+    # not required if original approximation is used --> ignore options
+    if approx_variant in [ApproxVariant.add, ApproxVariant.mult]:
+        if options["equilibrium-density-method"] in [None, "potential", "uniform"]:
+            # warn if histogram options were also specified
+            for opt in ["density-estimate-histogram", "density-estimate-stride"]:
+                if options[opt]:
+                    logging.warning(
+                        "birth-death: option %s specified but will not be used", opt
+                    )
+            if options["equilibrium-density-method"] == "uniform":
+                # create "grid" with just 2 points at the edges, will be linearly interpolated anyway
+                eq_density = grid.from_npoints(ld.pot.ranges, 2)
+                eq_density.data = np.ones(eq_density.points().shape)
+                eq_density.normalize(in_place=True)
+            else:  # exact eq_density from potential as default
+                eq_density = actions.birth_death.calc_eq_density_from_pot(ld.pot, bd_bw, ld.kt)
+            histogram = None
+        elif options["equilibrium-density-method"] == "histogram":
+            # pass histogram of specified HistogramAction
+            try:
+                histogram = actions_dict[options["density-estimate-histogram"]].histo  # type: ignore
+            except KeyError as e:
+                raise inputparser.OptionError(
+                    f'Specified histogram action "{options["density-estimate-histogram"]}" could not be found',
+                    "density-estimate-histogram",
+                    "birth-death",
+                ) from e
 
     return BirthDeath(
         ld.particles,
@@ -273,8 +296,10 @@ def setup_birth_death(
         options["stride"],
         bd_bw,
         ld.kt,
-        options["correction-variant"],
-        prob_density,
+        options["exponential-factor"],
+        options["recalculate-probabilities"],
+        approx_variant,
+        eq_density,
         histogram,
         options["density-estimate-stride"],
         options["seed"] + 1000 if options["seed"] else None,
@@ -283,12 +308,13 @@ def setup_birth_death(
     )
 
 
-def setup_trajectories(options: Dict, ld: BussiParinelloLD) -> TrajectoryAction:
+def setup_trajectories(options: Dict, ld: LdType) -> TrajectoryAction:
     """Setup TrajectoryAction on ld with given options"""
     return TrajectoryAction(
         ld,
         options["stride"],
         options["filename"],
+        options["momentum"],
         options["write-stride"],
         options["fmt"],
     )
@@ -357,7 +383,7 @@ def setup_delta_f(options: Dict, fes_action: FesAction) -> DeltaFAction:
 
 
 def setup_particle_distribution(
-    options: Dict, ld: BussiParinelloLD
+    options: Dict, ld: LdType
 ) -> ParticleDistributionAction:
     """Setup analysis of particle distribution of LD"""
     min_list = inputparser.get_all_numbered_values(options, "state", "-min")
@@ -365,7 +391,7 @@ def setup_particle_distribution(
     state_ranges = inputparser.min_max_to_ranges(min_list, max_list)
 
     return ParticleDistributionAction(
-        ld.particles,
+        ld.particles,  # type: ignore
         state_ranges,
         options["stride"],
         options["filename"],

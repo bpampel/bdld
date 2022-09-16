@@ -2,7 +2,7 @@
 
 from collections import OrderedDict
 import logging
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -47,6 +47,8 @@ class HistogramAction(Action):
         :param filename: optional filename to save histogram to
         :param write_stride: write to file every n time steps, default None (never)
         :param write_fmt: numeric format for saving the data, default "%14.9f"
+        :raise ValueError: if a write_stride but no filename is passed
+        :raise ValueError: if histogram and system dimensions do not match
         """
         print(
             f"Setting up histogram for the trajectories\n"
@@ -54,7 +56,9 @@ class HistogramAction(Action):
             f"  ranges = {ranges}\n"
             f"  n_bins = {n_bins}"
         )
-        n_dim = traj_action.traj.shape[-1]  # last dimension of traj array is dim of pot
+        n_dim = traj_action.positions.shape[
+            -1
+        ]  # last dimension of traj array is dim of pot
         if n_dim != len(n_bins):
             e = (
                 "Dimensions of histogram bins don't match dimensions of system"
@@ -119,7 +123,7 @@ class HistogramAction(Action):
         if self.filename:
             self.write()
 
-    def get_traj_data(self, step: int) -> np.array:
+    def get_traj_data(self, step: int) -> np.ndarray:
         """Get the right data from the trajectory array
 
         :param step: current simulation step
@@ -131,7 +135,7 @@ class HistogramAction(Action):
             else self.traj_action.last_write - self.traj_action.write_stride
         )
         return get_valid_data(
-            self.traj_action.traj,
+            self.traj_action.positions,
             step,
             self.stride,
             1,  # assumes that traj data is stored even if not written

@@ -39,7 +39,7 @@ Custom potential build by a polynomial in up to 3 dimensions.
 
 In 1D the coefficients can be directly specified with
 
-**coeff**: *list of floats*
+**coeffs**: *list of floats*
   Coefficients of polynomial in increasing order, starting with constant order
 
 Alternatively (and compulsory in more than one dimension) the path to the file holding the coefficients can be specified:

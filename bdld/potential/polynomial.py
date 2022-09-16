@@ -27,12 +27,13 @@ class PolynomialPotential(Potential):
 
         :param coeffs: The coefficient i,j,k has to be given in coeffs[i,j,k]
         :param ranges: (min, max) values of potential (optional)
+        :raises NotImplementedError: if more than 2 dimensions are passed
         """
         super().__init__()  # not actually needed but enforces having the values
 
         self.coeffs: np.ndarray = np.array(coeffs)
         if self.coeffs.ndim > 3:
-            raise ValueError(
+            raise NotImplementedError(
                 "Class can't be used for potentials in more than 3 dimensions"
             )
         self.n_dim: int = self.coeffs.ndim
