@@ -54,3 +54,18 @@ loop.
 
 The core of this code is surely the `BirthDeath <source/bdld.actions.html#module-bdld.actions.birth_death>`_
 action, see there for how the algorithm is implemented.
+
+
+
+Currently under development / Upcoming
+======================================
+
+The `bd_estimate_FES` branch hosts first attempts of using the *estimated FES* for the birth-death term (instead of the exact one from the potential which is typically not available).
+
+While the basic idea is implemented, this is still work-in-progress to allow for more sophisticated schemes.
+
+Several problems have to be addressed:
+
+ - The main branch only allows to have each action type once, so the same histogram/FES has to be used for the birth-death scheme as for the sampling analysis. The code therefore rewrites parts of the `main.py` and `inputparser.py` to allow multiple actions of the same type.
+ - We want to be able to have more options on how to determine/set the equilibrium density (similarly to a "target distribution"). As a first idea, I plan implemented a "uniform density" to test the behavior, as well as estimating it from a specific histogram.
+ - More sophisticated histogram schemes could then be implemented (e.g. as simple idea: introduce decay)

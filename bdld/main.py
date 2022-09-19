@@ -261,7 +261,9 @@ def setup_birth_death(
         # keep previous if not existing
         approx_variant = get_approx_variant(key) or approx_variant
 
+    # defaults
     eq_density = None
+    histogram = None
     # not required if original approximation is used --> ignore options
     if approx_variant in [ApproxVariant.add, ApproxVariant.mult]:
         if options["equilibrium-density-method"] in [None, "potential", "uniform"]:
@@ -280,7 +282,6 @@ def setup_birth_death(
                 eq_density = actions.birth_death.calc_eq_density_from_pot(
                     ld.pot, bd_bw, ld.kt
                 )
-            histogram = None
         elif options["equilibrium-density-method"] == "histogram":
             # pass histogram of specified HistogramAction
             try:
