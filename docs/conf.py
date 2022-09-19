@@ -23,7 +23,7 @@ copyright = "2022, Benjamin Pampel"
 author = "Benjamin Pampel"
 
 # The full version, including alpha/beta/rc tags
-release = "v0.3.1"
+release = "v0.3.2"
 
 
 # -- General configuration ---------------------------------------------------
