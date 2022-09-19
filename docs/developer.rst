@@ -60,7 +60,7 @@ action, see there for how the algorithm is implemented.
 Currently under development / Upcoming
 ======================================
 
-The `bd_estimate_FES` branch hosts first attempts of using the *estimated FES* for the birth-death term (instead of the exact one from the potential which is typically not available).
+The `bd-estimate-FES` branch hosts first attempts of using the *estimated FES* for the birth-death term (instead of the exact one from the potential which is typically not available).
 
 While the basic idea is implemented, this is still work-in-progress to allow for more sophisticated schemes.
 
