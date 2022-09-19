@@ -12,23 +12,19 @@ from typing import List, Optional, Union
 import numpy as np
 
 from bdld.actions.action import Action
-from bdld.particle import Particle
+from bdld.actions.overdamped_ld import LDParticle
 from bdld.potential import potential
 
 
-class BpldParticle(Particle):
-    """Derived Particle class that additionally stores MD related variables
+class BpldParticle(LDParticle):
+    """Derived LDParticle class that additionally stores a thermostat constant
 
-    :param energy: stores last energy evaluation
-    :param forces: stores last force evaluation per dimension
     :param c2: constant for the MD thermostat (mass dependent)
     """
 
     def __init__(self, *args) -> None:
         """Creates particle from base class with additional attributes"""
         super().__init__(*args)
-        self.energy: float = 0.0
-        self.forces: np.ndarray = np.empty(0)
         self.c2: float = 0.0  # second thermostat constant depends on mass
 
 
@@ -101,7 +97,7 @@ class BussiParinelloLD(Action):
     def add_particle(
         self,
         pos: Union[List, np.ndarray],
-        mass=1.0,
+        mass: float = 1.0,
         partnum: int = -1,
         overwrite: bool = False,
     ) -> None:

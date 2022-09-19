@@ -7,8 +7,8 @@ This file documents the bigger changes between versions
 [0.3.3] - upcoming
 ^^^^^^^^^^^^^^^^^^
 
-- multiple actions of the same type can now be specified
-- Birth-death: equilibrium density can be estimated from a fes action
+- (not finished) multiple actions of the same type can now be specified
+- (not finished) Birth-death: equilibrium density can be estimated from a fes action
 
 
 [0.3.2] - 2022-09-15

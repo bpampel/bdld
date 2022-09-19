@@ -9,7 +9,7 @@ from typing import List, Optional, Union, Tuple
 import numpy as np
 
 from bdld.actions.action import Action
-from bdld.actions.bussi_parinello_ld import BpldParticle
+from bdld.actions.overdamped_ld import LDParticle
 from bdld import grid
 from bdld.potential.potential import Potential
 from bdld.helpers.misc import initialize_file
@@ -58,7 +58,7 @@ class BirthDeath(Action):
 
     def __init__(
         self,
-        particles: List[BpldParticle],
+        particles: List[LDParticle],
         md_dt: float,
         stride: int,
         bw: Union[List[float], np.ndarray],
@@ -95,7 +95,7 @@ class BirthDeath(Action):
         :param stats_filename: File to print statistics to (optional, else stdout)
         :raises ValueError: when approx_variant is add or mult and no eq_density is passed
         """
-        self.particles: List[BpldParticle] = particles
+        self.particles: List[LDParticle] = particles
         self.stride: int = stride
         self.dt: float = md_dt * stride
         self.bw: np.ndarray = np.array(bw, dtype=float)
@@ -120,9 +120,9 @@ class BirthDeath(Action):
             print(f"  seed = {seed}")
         if recalc_probs:
             print("  recalculating the probabilities after every successful event")
-        self.approx_variant = approx_variant or ApproxVariant.orig
+        self.approx_variant: ApproxVariant = approx_variant or ApproxVariant.orig
         self.approx_grid: Optional[grid.Grid] = None
-        print("  using the {} approximation".format(approx_variant.value))
+        print("  using the {} approximation".format(self.approx_variant.value))
         if self.approx_variant in [ApproxVariant.add, ApproxVariant.mult]:
             # set up the approx_grid
             # use potential if it was given, otherwise set up periodic update from fes/histogram
@@ -138,7 +138,9 @@ class BirthDeath(Action):
                 eq_density = histogram.normalize(ensure_valid=True)
             else:
                 raise ValueError(
-                    "No way of calculating the equilibrium density for the {} aproximation was passed".format(approx_variant.value)
+                    "No way of calculating the equilibrium density for the {} aproximation was passed".format(
+                        self.approx_variant.value
+                    )
                 )
             self.update_approx_grid(eq_density)
         print()
@@ -150,7 +152,7 @@ class BirthDeath(Action):
         """
         if self.density_estimate_stride and step % self.density_estimate_stride == 0:
             eq_density = self.histogram.normalize(ensure_valid=True)
-            self.update_correction(eq_density)
+            self.update_approx_grid(eq_density)
         if step % self.stride == 0:
             self.do_birth_death()
         if self.stats_stride and step % self.stats_stride == 0:
@@ -312,13 +314,13 @@ class BirthDeath(Action):
         Currently this only works with the passed equilibrium density
         In the future this should also contain ways to estimate the eq_density
 
-        :param eq_density: equilibrium density (\pi) to use
+        :param eq_density: equilibrium density (pi) to use
         """
-        if self.correction_variant == ApproxVariant.add:
+        if self.approx_variant == ApproxVariant.add:
             # additive: approx_grid holds
             # -log(K*pi) + log(pi) - {average of the first two terms}
-            self.approx_grid = calc_prob_correction_kernel(eq_density, self.bw, "same")
-        elif self.correction_variant == ApproxVariant.mult:
+            self.approx_grid = calc_additive_correction(eq_density, self.bw, "same")
+        elif self.approx_variant == ApproxVariant.mult:
             # multiplicative: approx_grid holds -log(K*pi)
             conv = dens_kernel_convolution(eq_density, self.bw, "same")
             self.approx_grid = -np.log(conv.sparsify([101] * conv.n_dim, "linear"))

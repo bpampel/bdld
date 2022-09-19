@@ -277,7 +277,9 @@ def setup_birth_death(
                 eq_density.data = np.ones(eq_density.points().shape)
                 eq_density.normalize(in_place=True)
             else:  # exact eq_density from potential as default
-                eq_density = actions.birth_death.calc_eq_density_from_pot(ld.pot, bd_bw, ld.kt)
+                eq_density = actions.birth_death.calc_eq_density_from_pot(
+                    ld.pot, bd_bw, ld.kt
+                )
             histogram = None
         elif options["equilibrium-density-method"] == "histogram":
             # pass histogram of specified HistogramAction

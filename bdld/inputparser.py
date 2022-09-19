@@ -419,7 +419,7 @@ class Input:
 
     def fes_opts(self, section: configparser.SectionProxy) -> List[InputOption]:
         """Define and parse the fes section"""
-        if "histogram" not in self.data.keys():
+        if "histogram" not in self.data:
             raise configparser.NoSectionError("histogram")
         options = [
             InputOption("kt", float, True, Input.positive),
@@ -436,7 +436,7 @@ class Input:
 
     def delta_f_opts(self, section: configparser.SectionProxy) -> List[InputOption]:
         """Define and parse if delta f should be calculated section"""
-        if "fes" not in self.data.keys():
+        if "fes" not in self.data:
             raise configparser.NoSectionError("fes")
         options = [
             InputOption("stride", int, False, Input.positive),
