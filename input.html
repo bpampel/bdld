@@ -1,0 +1,192 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Input file &#8212; Birth-Death Langevin Dynamics v0.3.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Information for developers" href="developer.html" />
+    <link rel="prev" title="Usage" href="usage.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="input-file">
+<span id="input"></span><h1>Input file<a class="headerlink" href="#input-file" title="Permalink to this heading">¶</a></h1>
+<p>This is an explanation of the syntax of the input file and an overview over the possible actions that can be specified.</p>
+<section id="syntax">
+<h2>Syntax<a class="headerlink" href="#syntax" title="Permalink to this heading">¶</a></h2>
+<p>The input files are read with the <a class="reference external" href="https://docs.python.org/3/library/configparser.html">configparser package</a> .
+In short, the file is structured into sections, which are marked with square brackets, e.g.:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">potential</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Each setting for the section is then specified with a line containing:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">option</span><span class="p">:</span> <span class="n">value</span>
+</pre></div>
+</div>
+<p>to set the option <em>option</em> to <em>value</em>.</p>
+<p>The configparser format allows to specify options that should be shared among all sections under a <cite>[DEFAULT]</cite> section, such as:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">DEFAULT</span><span class="p">]</span>
+<span class="n">kt</span><span class="p">:</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p>which sets the thermal energy to 1 for all sections.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Unknown options do not result in errors, they are simply ignored.</p>
+<p>Therefore, beware of typos in non-essential sections or options:
+the program will run without error, but might not do what is expected!</p>
+</div>
+<p>For more details of the file syntax see the <a class="reference external" href="https://docs.python.org/3/library/configparser.html">configparser documentation</a> .</p>
+</section>
+<section id="option-types">
+<h2>Option types<a class="headerlink" href="#option-types" title="Permalink to this heading">¶</a></h2>
+<p>The option values have different types.
+The desired type for each option is given in the specific section.
+These are not strictly checked, but python has to be able to convert the entered value into the desired type.</p>
+<p>Possible types are:</p>
+<ul class="simple">
+<li><p><em>int</em>, e.g. <cite>2</cite></p></li>
+<li><p><em>float</em>, e.g. <cite>5.83</cite></p></li>
+<li><p><em>string</em>, e.g. <cite>my_filename</cite></p></li>
+<li><p><em>bool</em>, e.g <cite>true</cite> or <cite>false</cite></p></li>
+</ul>
+<p>Some options allow or require to enter lists. Simply seperate multiple values by a comma, like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">list</span><span class="o">-</span><span class="n">allowing</span><span class="o">-</span><span class="n">option</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span>
+</pre></div>
+</div>
+<p>(whitespace is ignored)</p>
+</section>
+<section id="overview-of-actions">
+<h2>Overview of actions<a class="headerlink" href="#overview-of-actions" title="Permalink to this heading">¶</a></h2>
+<p>Each action is listed here shortly, for more details visit the specific pages.</p>
+<dl class="simple">
+<dt><a class="reference internal" href="ld.html#ld"><span class="std std-ref">[ld]</span></a></dt><dd><p>Langevin dynamics options, always required. Specify e.g. timestep, friction, temperature and number of steps here.</p>
+</dd>
+<dt><a class="reference internal" href="potential.html#potential"><span class="std std-ref">[potential]</span></a></dt><dd><p>The potential to use for the Langevin Dynamics, always required. Either one of the hardcoded ones, or specify polynomial coefficients.</p>
+</dd>
+<dt><a class="reference internal" href="particles.html#particles"><span class="std std-ref">[particles]</span></a></dt><dd><p>Number of independent particles/walkers and the initial conditions, always required.</p>
+</dd>
+<dt><a class="reference internal" href="birth-death.html#birth-death"><span class="std std-ref">[birth-death]</span></a></dt><dd><p>Options for the birth-death events. Can be omitted for pure Langevin Dynamics.</p>
+</dd>
+</dl>
+<p>The following actions are for receiving output from the simulation, some of them after performing analysis.
+They will not alter the movement of the particles.</p>
+<p>Note that while all of them are optional, some are required for other actions, e.g. you need a histogram to calculate the FES.</p>
+<dl class="simple">
+<dt><a class="reference internal" href="trajectories.html#trajectories"><span class="std std-ref">[trajectories]</span></a></dt><dd><p>Store trajectories of the particles, optional.</p>
+</dd>
+<dt><a class="reference internal" href="histogram.html#histogram"><span class="std std-ref">[histogram]</span></a></dt><dd><p>Save positions of walkers in histogram, optional. Requires the [trajectories] action.</p>
+</dd>
+<dt><a class="reference internal" href="fes.html#fes"><span class="std std-ref">[fes]</span></a></dt><dd><p>Write estimates of the free energy surface to files, optional. Requires the [histogram] action.</p>
+</dd>
+<dt><a class="reference internal" href="delta-f.html#delta-f"><span class="std std-ref">[delta-f]</span></a></dt><dd><p>Calculate the free energy difference between specified states, optional. Requires the [fes] action.</p>
+</dd>
+<dt><a class="reference internal" href="particle-distribution.html#particle-distribution"><span class="std std-ref">[particle-distribution]</span></a></dt><dd><p>Count the number of particles in given states, optional.</p>
+</dd>
+</dl>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Birth-Death Langevin Dynamics</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Input file</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#syntax">Syntax</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#option-types">Option types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#overview-of-actions">Overview of actions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="developer.html">Information for developers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="usage.html" title="previous chapter">Usage</a></li>
+      <li>Next: <a href="developer.html" title="next chapter">Information for developers</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Benjamin Pampel.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.1.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/input.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

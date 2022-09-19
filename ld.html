@@ -1,0 +1,170 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Langevin Dynamics [ld] &#8212; Birth-Death Langevin Dynamics v0.3.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="langevin-dynamics-ld">
+<span id="ld"></span><h1>Langevin Dynamics [ld]<a class="headerlink" href="#langevin-dynamics-ld" title="Permalink to this heading">¶</a></h1>
+<p>This section sets the option for the Langevin Dynamics.</p>
+<section id="integrators">
+<h2>Integrators<a class="headerlink" href="#integrators" title="Permalink to this heading">¶</a></h2>
+<p>Currently two different integrators are implemented, which are specified with the <strong>type</strong> option:</p>
+<dl class="simple">
+<dt><strong>type</strong>: <em>string</em></dt><dd><p>the integrator to use</p>
+</dd>
+</dl>
+<p>The available options are <em>“bussi-parinello”</em> and <em>“overdamped”</em>.</p>
+<p>The Bussi-Parinello option uses the algorithm and the thermostat described by Bussi and Parinello <a class="footnote-reference brackets" href="#id4" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>4<span class="fn-bracket">]</span></a>.</p>
+<p>The respective Langevin equation is</p>
+<div class="math notranslate nohighlight">
+\[\mathop{}\!\mathrm{d} p(t) = - \nabla U(q) \mathop{}\!\mathrm{d} t - \gamma p(t) \mathop{}\!\mathrm{d} t + \sqrt{2 m \gamma \beta^{-1} } \mathop{}\!\mathrm{d} W (t)\]</div>
+<p>The update rule for the overdamped integrator is a Euler-Maruyama scheme <a class="footnote-reference brackets" href="#id5" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>5<span class="fn-bracket">]</span></a> given by the simpler equation that was e.g. used in <a class="footnote-reference brackets" href="#id6" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>6<span class="fn-bracket">]</span></a>:</p>
+<div class="math notranslate nohighlight">
+\[x(t+\Delta t) = x(t) - \Delta t \nabla U(x(t)) + \sqrt{2 \Delta t} W (t+\Delta t)\]</div>
+</section>
+<section id="options">
+<h2>Options<a class="headerlink" href="#options" title="Permalink to this heading">¶</a></h2>
+<dl class="simple">
+<dt><strong>timestep</strong>: <em>float</em></dt><dd><p>integration time step in dimensionless units</p>
+</dd>
+<dt><strong>n_steps</strong>: <em>int</em></dt><dd><p>number of time steps the simulation should run</p>
+</dd>
+<dt><strong>seed</strong>: <em>int</em>, optional</dt><dd><p>starting seed for the random number generator of the noise term</p>
+</dd>
+<dt><strong>kt</strong>: <em>float</em>, required only for bussi-parinello</dt><dd><p>thermal energy of the simulation in energy units (<span class="math notranslate nohighlight">\(k_B T = \beta^{-1}\)</span>)</p>
+</dd>
+<dt><strong>friction</strong>: <em>float</em>, required only for bussi-parinello</dt><dd><p>friction parameter <span class="math notranslate nohighlight">\(\gamma\)</span></p>
+</dd>
+</dl>
+</section>
+<section id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">ld</span><span class="p">]</span>
+<span class="nb">type</span><span class="p">:</span> <span class="n">bussi</span><span class="o">-</span><span class="n">parinello</span>
+<span class="n">timestep</span><span class="p">:</span> <span class="mf">0.005</span>
+<span class="n">kt</span><span class="p">:</span> <span class="mf">1.0</span>
+<span class="n">friction</span><span class="p">:</span> <span class="mf">10.0</span>
+<span class="n">n_steps</span><span class="p">:</span> <span class="mi">10000</span>
+</pre></div>
+</div>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this heading">¶</a></h2>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id4" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">4</a><span class="fn-bracket">]</span></span>
+<p>Giovanni Bussi and Michele Parrinello. Accurate sampling using Langevin dynamics. Physical Review E, 75(5):056707, May 2007. doi: 10.1103/PhysRevE.75.056707</p>
+</aside>
+<aside class="footnote brackets" id="id5" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">5</a><span class="fn-bracket">]</span></span>
+<p>Gisiro Maruyama. Continuous Markov Processes and Stochastic Equations. Rendiconti del Circolo Matematico di Palermo 4(1):48–90. 1955. doi: 10.1007/10.1007/BF02846028</p>
+</aside>
+<aside class="footnote brackets" id="id6" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">6</a><span class="fn-bracket">]</span></span>
+<p>Yulong Lu, Jianfeng Lu, and James Nolen. Accelerated Langevin Sampling with Birth-Death. arXiv:1905.09863v1</p>
+</aside>
+</aside>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Birth-Death Langevin Dynamics</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input.html">Input file</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer.html">Information for developers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Benjamin Pampel.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.1.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/ld.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

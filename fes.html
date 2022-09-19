@@ -1,0 +1,145 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Free energy surface of system [fes] &#8212; Birth-Death Langevin Dynamics v0.3.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="free-energy-surface-of-system-fes">
+<span id="fes"></span><h1>Free energy surface of system [fes]<a class="headerlink" href="#free-energy-surface-of-system-fes" title="Permalink to this heading">¶</a></h1>
+<p>Estimate the free energy surface from the <a class="reference internal" href="histogram.html#histogram"><span class="std std-ref">[histogram] action</span></a></p>
+<p>This uses the given temperature to calculate the free energy of each histogram bin.
+The output is aligned to have the minimum at zero.</p>
+<p>It can also plot the FES directly via matplotlib.</p>
+<dl class="simple">
+<dt><strong>stride</strong>: <em>int</em></dt><dd><p>Time steps between FES calculations.</p>
+</dd>
+<dt><strong>kt</strong>: <em>float</em></dt><dd><p>Thermal energy of the system, should usually be the same as the one specified in the [ld] section</p>
+</dd>
+<dt><strong>filename</strong>: <em>string</em>, optional</dt><dd><p>Filename to write the FES to.</p>
+</dd>
+<dt><strong>write-stride</strong>: <em>int</em>, optional</dt><dd><p>Write FES to file every n time steps (filename will be appended by <code class="code docutils literal notranslate"><span class="pre">_t</span></code> (with the current time step t).
+If not specified the FES will only be written once at the end of the simulation.</p>
+</dd>
+<dt><strong>fmt</strong>: <em>string</em>, defaults to “%14.9”</dt><dd><p>c-style format specifier used when writing data to file</p>
+</dd>
+<dt><strong>plot-filename</strong>: <em>string</em>, optional</dt><dd><p>If specified, the FES will be plotted and saved to the specified path.
+This works only for 1D and 2D.</p>
+</dd>
+<dt><strong>plot-stride</strong>: <em>int</em>, optional</dt><dd><p>Plot FES to file every n time steps, not only at the end of the simulation</p>
+</dd>
+<dt><strong>plot-domain</strong>: <em>list of floats</em>, optional</dt><dd><p>Range of free energy values that should be shown in plot</p>
+</dd>
+</dl>
+<section id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this heading">¶</a></h2>
+<p>Calculate FES every 100 steps, save it to file every 500 steps and save a plot at the end of the simulation:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">fes</span><span class="p">]</span>
+<span class="n">stride</span><span class="p">:</span> <span class="mi">100</span>
+<span class="n">write</span><span class="o">-</span><span class="n">stride</span><span class="p">:</span> <span class="mi">500</span>
+<span class="n">filename</span><span class="p">:</span> <span class="n">fes</span>
+<span class="n">plot</span><span class="o">-</span><span class="n">filename</span><span class="p">:</span> <span class="n">fes</span><span class="o">.</span><span class="n">png</span>
+<span class="n">plot</span><span class="o">-</span><span class="n">domain</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">8.5</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Birth-Death Langevin Dynamics</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input.html">Input file</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer.html">Information for developers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Benjamin Pampel.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.1.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/fes.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

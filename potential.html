@@ -1,0 +1,220 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Potential [potential] &#8212; Birth-Death Langevin Dynamics v0.3.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="potential-potential">
+<span id="potential"></span><h1>Potential [potential]<a class="headerlink" href="#potential-potential" title="Permalink to this heading">¶</a></h1>
+<p>Specify the potential the particles should “feel”.</p>
+<p>Depending on the chosen <cite>type</cite> there are different options available / compulsory, which are explained in the following sections.</p>
+<p>Besides specific hardcoded potentials, there are options to enter custom potentials.</p>
+<dl class="simple">
+<dt><strong>type</strong>: <em>string</em></dt><dd><p>Specify the type of the potential. Currently available values</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#polynomial">polynomial</a>: specify polynomial coefficients for potential</p></li>
+<li><p><a class="reference internal" href="#mueller-brown">mueller-brown</a>: 2D potential with 3 metastable states seperate by barriers.</p></li>
+</ul>
+</dd>
+<dt><strong>boundary-condition</strong>: <em>string</em></dt><dd><p>What should happen if particles go outside the specified range. If not specified, nothing happens. Currently available values:</p>
+<ul class="simple">
+<li><p><em>periodic</em>: move outside particles to other side of potential</p></li>
+<li><p><em>reflective</em>: move outside particles to the boundary and reverse their momentum</p></li>
+</ul>
+</dd>
+</dl>
+<section id="polynomial-potential">
+<span id="polynomial"></span><h2>Polynomial potential<a class="headerlink" href="#polynomial-potential" title="Permalink to this heading">¶</a></h2>
+<p>Custom potential build by a polynomial in up to 3 dimensions.</p>
+<dl class="simple">
+<dt><strong>n_dim</strong>: <em>int</em></dt><dd><p>Number of dimensions of the potential</p>
+</dd>
+<dt><strong>min</strong>: <em>float</em> or <em>list of floats</em></dt><dd><p>Minimum point(s) of the potential (per dimension)</p>
+</dd>
+<dt><strong>min</strong>: <em>float</em> or <em>list of floats</em></dt><dd><p>Maximum point(s) of the potential (per dimension)</p>
+</dd>
+</dl>
+<p>In 1D the coefficients can be directly specified with</p>
+<dl class="simple">
+<dt><strong>coeffs</strong>: <em>list of floats</em></dt><dd><p>Coefficients of polynomial in increasing order, starting with constant order</p>
+</dd>
+</dl>
+<p>Alternatively (and compulsory in more than one dimension) the path to the file holding the coefficients can be specified:</p>
+<dl class="simple">
+<dt><strong>coeffs-file</strong>: <em>string</em></dt><dd><p>Path to the file holding the coefficients
+The first <code class="code docutils literal notranslate"><span class="pre">n_dim</span></code> columns hold the polynomial orders while column N+1 holds the coefficients.
+Remaining columns or lines starting with <code class="code docutils literal notranslate"><span class="pre">#</span></code> are ignored.
+The syntax is compatible with coefficient files used by the <code class="code docutils literal notranslate"><span class="pre">ves_md_linearexpansion</span></code> tool of plumed.</p>
+</dd>
+</dl>
+</section>
+<section id="muller-brown-potential">
+<span id="mueller-brown"></span><h2>Müller-Brown potential<a class="headerlink" href="#muller-brown-potential" title="Permalink to this heading">¶</a></h2>
+<p>2D potential created by a sum of four exponential terms.</p>
+<p>More information about this potential can be found in <a class="footnote-reference brackets" href="#id2" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.</p>
+<p>The potential ranges are hardcoded to <code class="code docutils literal notranslate"><span class="pre">[(-1.5,</span> <span class="pre">1.5),</span> <span class="pre">(-0.5,</span> <span class="pre">2.5)]</span></code></p>
+<dl class="simple">
+<dt><strong>scaling-factor</strong>: <em>float</em>, optional</dt><dd><p>Scale the potential by the given factor</p>
+</dd>
+</dl>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading">¶</a></h2>
+<p>The following input directly sets up a potential of the form <span class="math notranslate nohighlight">\(0.2*x - 4*x^2 + x^4\)</span></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">potential</span><span class="p">]</span>
+<span class="nb">type</span><span class="p">:</span> <span class="n">polynomial</span>
+<span class="n">n_dim</span><span class="p">:</span> <span class="mi">1</span>
+<span class="n">coeffs</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span>
+<span class="nb">min</span><span class="p">:</span> <span class="o">-</span><span class="mf">2.5</span>
+<span class="nb">max</span><span class="p">:</span> <span class="mf">2.5</span>
+</pre></div>
+</div>
+<p>When using a potential of higher dimensionality, the coefficients are given in an extra file.
+This is the exemplary input for the Wolfe-Quapp potential</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">potential</span><span class="p">]</span>
+<span class="nb">type</span><span class="p">:</span> <span class="n">polynomial</span>
+<span class="n">n_dim</span><span class="p">:</span> <span class="mi">2</span>
+<span class="n">coeffs</span><span class="o">-</span><span class="n">file</span><span class="p">:</span> <span class="n">wolfe_quapp</span><span class="o">.</span><span class="n">coeffs</span>
+<span class="nb">min</span><span class="p">:</span> <span class="o">-</span><span class="mf">2.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.5</span>
+<span class="nb">max</span><span class="p">:</span> <span class="mf">2.5</span><span class="p">,</span> <span class="mf">2.5</span>
+</pre></div>
+</div>
+<p>The <cite>wolfe_quapp.coeffs</cite> file specifying the coefficients might look like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="ch">#! FIELDS idx_dim1 idx_dim2 pot.coeffs index description</span>
+<span class="c1">#! SET type LinearBasisSet</span>
+<span class="c1">#! SET ndimensions  2</span>
+<span class="c1">#! SET ncoeffs_total  25</span>
+<span class="c1">#! SET shape_dim1  5</span>
+<span class="c1">#! SET shape_dim2  5</span>
+       <span class="mi">0</span>       <span class="mi">0</span>         <span class="mf">0.0000000000000000e+00</span>       <span class="mi">0</span>  <span class="mi">1</span><span class="o">*</span><span class="mi">1</span>
+       <span class="mi">1</span>       <span class="mi">0</span>         <span class="mf">0.3000000000000000e+00</span>       <span class="mi">1</span>  <span class="n">s</span><span class="o">^</span><span class="mi">1</span><span class="o">*</span><span class="mi">1</span>
+       <span class="mi">2</span>       <span class="mi">0</span>        <span class="o">-</span><span class="mf">2.0000000000000000e+00</span>       <span class="mi">2</span>  <span class="n">s</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="mi">1</span>
+       <span class="mi">4</span>       <span class="mi">0</span>         <span class="mf">1.0000000000000000e+00</span>       <span class="mi">4</span>  <span class="n">s</span><span class="o">^</span><span class="mi">4</span><span class="o">*</span><span class="mi">1</span>
+       <span class="mi">0</span>       <span class="mi">1</span>         <span class="mf">0.1000000000000000e+00</span>       <span class="mi">5</span>  <span class="mi">1</span><span class="o">*</span><span class="n">s</span><span class="o">^</span><span class="mi">1</span>
+       <span class="mi">1</span>       <span class="mi">1</span>        <span class="o">+</span><span class="mf">1.0000000000000000e+00</span>       <span class="mi">6</span>  <span class="n">s</span><span class="o">^</span><span class="mi">1</span><span class="o">*</span><span class="n">s</span><span class="o">^</span><span class="mi">1</span>
+       <span class="mi">0</span>       <span class="mi">2</span>        <span class="o">-</span><span class="mf">4.0000000000000000e+00</span>      <span class="mi">10</span>  <span class="mi">1</span><span class="o">*</span><span class="n">s</span><span class="o">^</span><span class="mi">2</span>
+       <span class="mi">0</span>       <span class="mi">4</span>         <span class="mf">1.0000000000000000e+00</span>      <span class="mi">20</span>  <span class="mi">1</span><span class="o">*</span><span class="n">s</span><span class="o">^</span><span class="mi">4</span>
+<span class="c1">#!-------------------</span>
+</pre></div>
+</div>
+<p>Note that the parser actually ignores all header comments as well as the index and description column.
+Using a file with just the first three columns gives the same result.</p>
+<p>When using the Müller-Brown potential most of the properties are hardcoded, so only few options remain. Here we choose to employ reflective boundary conditions to avoid particles outside the range due to the low scaling factor.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">potential</span><span class="p">]</span>
+<span class="nb">type</span><span class="p">:</span> <span class="n">mueller</span><span class="o">-</span><span class="n">brown</span>
+<span class="n">scaling</span><span class="o">-</span><span class="n">factor</span><span class="p">:</span> <span class="mf">0.1</span>
+<span class="n">boundary</span><span class="o">-</span><span class="n">condition</span><span class="p">:</span> <span class="n">reflective</span>
+</pre></div>
+</div>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this heading">¶</a></h2>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id2" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>Klaus Müller and Leo D. Brown. Location of saddle points and minimum energy paths by a constrained simplex optimization procedure. Theoretica Chimica Acta, 53(1), 1979.</p>
+</aside>
+</aside>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Birth-Death Langevin Dynamics</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input.html">Input file</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer.html">Information for developers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Benjamin Pampel.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.1.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/potential.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
