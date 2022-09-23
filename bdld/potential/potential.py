@@ -94,7 +94,7 @@ class Potential:
         fes.set_from_func(self.energy)
         prob = np.exp(-fes / kt)
         # normalize with volume element from stepsizes
-        prob /= np.sum(prob.data) * np.prod(prob.stepsizes)
+        # prob /= np.sum(prob.data) * np.prod(prob.stepsizes)
         return prob
 
     def get_fields(self) -> List[str]:
