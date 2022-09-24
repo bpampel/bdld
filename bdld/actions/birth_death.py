@@ -404,9 +404,9 @@ def calc_kernel(dist: np.ndarray, bw: np.ndarray) -> np.ndarray:
     :param bw: bandwidth per dimension
     """
     return (
-        1
-        / ((2 * np.pi) ** (len(bw) / 2) * np.prod(bw))
-        * np.exp(-np.sum(dist**2 / (2 * bw**2), axis=1))
+        # 1
+        # / ((2 * np.pi) ** (len(bw) / 2) * np.prod(bw))
+        np.exp(-np.sum(dist**2 / (2 * bw**2), axis=1))
     )
 
 
@@ -463,14 +463,14 @@ def _walker_density_pdist(pos: np.ndarray, bw: np.ndarray) -> np.ndarray:
     n_dim = pos.shape[1]
     if n_dim == 1:  # faster version for 1d, otherwise identical
         dist = pdist(pos, "sqeuclidean")
-        height = 1 / (np.sqrt(2 * np.pi) * bw[0])
+        height = 1 # / (np.sqrt(2 * np.pi) * bw[0])
         gauss = height * np.exp(-dist / (2 * bw[0] ** 2))
         gauss = squareform(gauss)  # sparse representation into full matrix
         np.fill_diagonal(gauss, height)  # diagonal is 0, fill with correct value
     else:
         n_part = pos.shape[0]
         gauss_per_dim = np.empty((n_dim, (n_part * (n_part - 1)) // 2), dtype=np.double)
-        heights = 1 / (np.sqrt(2 * np.pi) * bw)
+        heights = 1 # / (np.sqrt(2 * np.pi) * bw)
         for i in range(n_dim):
             # significantly faster variant than calling the kernel function
             dist = pdist(pos[:, i].reshape(-1, 1), "sqeuclidean")
