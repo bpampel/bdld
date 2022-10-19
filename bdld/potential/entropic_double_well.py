@@ -38,6 +38,10 @@ class EntropicDoubleWellPotential(Potential):
 
     There sigma_x = sigma_y = 0.1 and a = 1 which is used as default here
 
+    The range of the potential is currently assumed to be [-1.5, 1.5] in both
+    directions. This is somewhat arbitrary but covers the range with energies
+    smaller 10 for the default parameters.
+
     :param sigma_x: barrier width parameter, default 0.1
     :param sigma_y: barrier opening parameter, default 0.1
     :param a: scale potential by float, default 1.0
