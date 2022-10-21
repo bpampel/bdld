@@ -9,15 +9,6 @@ import numpy as np
 
 from bdld.potential.potential import Potential
 
-# coefficients
-A = np.array([-200.0, -100.0, -175.0, 15.0])
-a = np.array([-1.0, -1.0, -6.5, 0.7])
-b = np.array([0.0, 0.0, 11.0, 0.6])
-c = np.array([-10.0, -10.0, -6.5, 0.7])
-x0 = np.array([1.0, 0.0, -0.5, -1.0])
-y0 = np.array([0.0, 0.5, 1.5, 1.0])
-pot_shift = +30.33319242243656
-
 
 class EntropicDoubleWellPotential(Potential):
     """Entropic double-well potential
@@ -60,7 +51,7 @@ class EntropicDoubleWellPotential(Potential):
         super().__init__()  # not actually needed but enforces having the values
 
         self.n_dim = 2
-        self.ranges = [(-1, 1), (-1, 1)]
+        self.ranges = [(-1.5, 1.5), (-1.5, 1.5)]
         self.sigma_x = sigma_x or 0.1
         self.sigma_y = sigma_y or 0.1
         self.a = scaling_factor or 1.0
