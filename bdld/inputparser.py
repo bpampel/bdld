@@ -231,6 +231,14 @@ class Input:
                 InputOption("scaling-factor", float, False),
                 InputOption("n_dim", int, False, default=2),
             ]
+        elif pot_type == "entropic-double-well":
+            options = [
+                type_option,
+                InputOption("sigma_x", float, False),
+                InputOption("sigma_y", float, False),
+                InputOption("scaling-factor", float, False),
+                InputOption("n_dim", int, False, default=2),
+            ]
         else:
             raise OptionError(
                 f'Specified potential type "{pot_type}" is not implemented',

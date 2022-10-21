@@ -139,6 +139,10 @@ def setup_potential(options: Dict) -> Potential:
             pot = potential.polynomial.PolynomialPotential(coeffs, ranges)
     elif options["type"] == "mueller-brown":
         pot = potential.mueller_brown.MuellerBrownPotential(options["scaling-factor"])
+    elif options["type"] == "entropic-double-well":
+        pot = potential.entropic_double_well.EntropicDoubleWellPotential(
+            options["sigma_x"], options["sigma_y"], options["scaling-factor"]
+        )
     else:
         raise inputparser.OptionError(
             f'Specified potential type "{options["type"]}" is not implemented',
