@@ -1,6 +1,6 @@
 """Entropic double-well potential
 
-Described also in Eq. 30 of Faradjian & Elber J. Chem. Phys. 120, 10880 (2004)
+Described also in Eq. 30 of Faradjian & Elber, J. Chem. Phys. 120, 10880 (2004)
 https://doi.org/10.1063/1.1738640
 """
 

@@ -14,6 +14,10 @@ Besides specific hardcoded potentials, there are options to enter custom potenti
 
   * `polynomial`_: specify polynomial coefficients for potential
   * `mueller-brown`_: 2D potential with 3 metastable states seperate by barriers.
+  * `entropic-double-well`_: 2D potential with 3 metastable states seperate by barriers.
+
+                InputOption("n_dim", int, False, default=2),
+            ]
 
 **boundary-condition**: *string*
   What should happen if particles go outside the specified range. If not specified, nothing happens. Currently available values:
@@ -58,7 +62,7 @@ Müller-Brown potential
 
 2D potential created by a sum of four exponential terms.
 
-More information about this potential can be found in [#]_.
+More information about this potential can be found in [1]_.
 
 The potential ranges are hardcoded to :code:`[(-1.5, 1.5), (-0.5, 2.5)]`
 
@@ -66,6 +70,24 @@ The potential ranges are hardcoded to :code:`[(-1.5, 1.5), (-0.5, 2.5)]`
   Scale the potential by the given factor
 
 
+
+Entropic double-well potential
+^^^^^^^^^^^^^^^^^^^^^^
+
+Symmetric 2D potential with two (equipotential) states separated by an entropic barrier at x=0.
+
+A special version of this was used in [1]_ (see Eq. 30 there)
+
+The potential ranges are hardcoded to :code:`[(-1.5, 1.5), (-1.5, 1.5)]`
+
+**sigma-x**: *float*, optional
+  Defines the width of the barrier in x direction, default 0.1
+    - sigma_y 
+  Scale the potential by the given factor
+**sigma-y**: *float*, optional
+  Defines the width of the opening of the barrier in y direction
+**scaling-factor**: *float*, optional
+  Scale the potential by the given factor, default 1.0
 
 
 Examples
@@ -115,7 +137,7 @@ Note that the parser actually ignores all header comments as well as the index a
 Using a file with just the first three columns gives the same result.
 
 
-When using the Müller-Brown potential most of the properties are hardcoded, so only few options remain. Here we choose to employ reflective boundary conditions to avoid particles outside the range due to the low scaling factor.
+When using the Müller-Brown or entropic double-well potentials most of the properties are hardcoded, so only few options remain. Here we choose to employ reflective boundary conditions to avoid particles outside the range due to the low scaling factor.
 ::
 
   [potential]
@@ -127,4 +149,6 @@ When using the Müller-Brown potential most of the properties are hardcoded, so 
 References
 ^^^^^^^^^^
 
-.. [#] Klaus Müller and Leo D. Brown. Location of saddle points and minimum energy paths by a constrained simplex optimization procedure. Theoretica Chimica Acta, 53(1), 1979.
+.. [1] Klaus Müller and Leo D. Brown. Location of saddle points and minimum energy paths by a constrained simplex optimization procedure. Theoretica Chimica Acta, 53(1), 1979.
+
+.. [2] Eq. 30 of Faradjian & Elber, J. Chem. Phys. 120, 10880 (2004), https://doi.org/10.1063/1.1738640
