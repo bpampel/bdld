@@ -93,16 +93,16 @@ class EntropicDoubleWellPotential(Potential):
         x = pos[0]
         y = pos[1]
         force[0] = self.a * (
-            6 * x**5
-            - 2
+            -6 * x**5
+            + 2
             * x
             * np.exp(-((x / self.sigma_x) ** 2))
-            * (1 - np.exp(-y / self.sigma_y) ** 2)
+            * (1 - np.exp(-((y / self.sigma_y) ** 2)))
             / self.sigma_x**2
         )
         force[1] = self.a * (
-            6 * y**5
-            - 2
+            -6 * y**5
+            + 2
             * y
             * np.exp(-((x / self.sigma_x) ** 2) - (y / self.sigma_y) ** 2)
             / self.sigma_y**2
