@@ -19,7 +19,7 @@ class EntropicDoubleWellPotential(Potential):
     f(x,y) = a * (x**6 + y**6 + exp(-(x/sigma_x)**2) * (1-exp(-(y/sigma_y)**2)) )
 
     where sigma_x, sigma_y are width parameters of the entropic barrier:
-    - sigma_x defines the width of the barrier in x direction, sigma
+    - sigma_x defines the width of the barrier in x direction
     - sigma_y defines the width of the opening of the barrier in y direction
 
     Additionally the whole potential is scaled by the factor a
