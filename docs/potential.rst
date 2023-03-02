@@ -16,9 +16,6 @@ Besides specific hardcoded potentials, there are options to enter custom potenti
   * `mueller-brown`_: 2D potential with 3 metastable states seperate by barriers.
   * `entropic-double-well`_: 2D potential with 3 metastable states seperate by barriers.
 
-                InputOption("n_dim", int, False, default=2),
-            ]
-
 **boundary-condition**: *string*
   What should happen if particles go outside the specified range. If not specified, nothing happens. Currently available values:
 
