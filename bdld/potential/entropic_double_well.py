@@ -44,7 +44,7 @@ class EntropicDoubleWellPotential(Potential):
         sigma_y: Optional[float] = None,
         scaling_factor: Optional[float] = None,
     ) -> None:
-        """Initialize Müller-Brown potential
+        """Initialize entropic double-well potential
 
         :param scaling_factor: Scale potential by float, optional
         """
